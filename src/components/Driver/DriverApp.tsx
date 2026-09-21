@@ -114,68 +114,74 @@ export default function DriverApp() {
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-100 pb-20 md:pb-6">
       {/* Top Driver Bar */}
-      <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <img
-              src={currentDriver.avatar}
-              alt={currentDriver.name}
-              className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500"
-            />
-            <span
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-950 ${
-                currentDriver.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
-              }`}
-            />
-          </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-bold text-sm text-white">{currentDriver.name}</span>
-              <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
-                {currentDriver.vehicleNumber}
-              </span>
+      <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md space-y-2.5">
+        {/* Row 1: Profile & Primary Online Switch */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
+            <div className="relative shrink-0">
+              <img
+                src={currentDriver.avatar}
+                alt={currentDriver.name}
+                className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500"
+              />
+              <span
+                className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-950 ${
+                  currentDriver.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
+                }`}
+              />
             </div>
-            <p className="text-[10px] text-slate-400 capitalize">
-              {currentDriver.vehicleModel} • ⭐ {currentDriver.rating || 4.9} ({currentDriver.totalTrips} trips)
-            </p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-2 flex-wrap sm:flex-nowrap gap-y-1">
+                <span className="font-bold text-sm text-white truncate">{currentDriver.name}</span>
+                <span className="text-[10px] bg-slate-800/90 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded font-mono font-bold whitespace-nowrap shrink-0 tracking-wider inline-block">
+                  {currentDriver.vehicleNumber}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 capitalize truncate mt-0.5">
+                {currentDriver.vehicleModel} • ⭐ {currentDriver.rating || 4.9} ({currentDriver.totalTrips} trips)
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Online / Offline Switch & Driver Registration */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowDriverRegModal(true)}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow transition-all"
-            title="Register as New Driver Partner"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Register Driver</span>
-            <span className="sm:hidden">Join</span>
-          </button>
-
-          <select
-            value={currentDriver.id}
-            onChange={(e) => setSelectedDriverId(e.target.value)}
-            className="text-[10px] bg-slate-800 border border-slate-700 text-slate-200 rounded px-1.5 py-1 focus:outline-none"
-            title="Switch Driver Profile"
-          >
-            {drivers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name.split(' ')[0]} ({d.kycStatus})
-              </option>
-            ))}
-          </select>
-
+          {/* Primary Online/Offline Switch */}
           <button
             onClick={() => toggleDriverOnline(currentDriver.id)}
-            className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-bold shadow transition-all ${
+            className={`shrink-0 flex items-center space-x-1.5 px-3.5 py-2 rounded-full text-xs font-black shadow-lg transition-all ${
               currentDriver.isOnline
-                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
-                : 'bg-rose-900/50 text-rose-300 border border-rose-700 hover:bg-rose-900'
+                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 ring-2 ring-emerald-400/40'
+                : 'bg-rose-950/80 text-rose-300 border border-rose-700 hover:bg-rose-900'
             }`}
           >
             <Power className="w-3.5 h-3.5" />
-            <span>{currentDriver.isOnline ? 'GO OFFLINE' : 'GO ONLINE'}</span>
+            <span className="whitespace-nowrap">{currentDriver.isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+          </button>
+        </div>
+
+        {/* Row 2: Secondary Quick Bar (Register Driver & Switch Profile) */}
+        <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs gap-2">
+          <div className="flex items-center space-x-1.5 min-w-0 flex-1">
+            <span className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">Switch:</span>
+            <select
+              value={currentDriver.id}
+              onChange={(e) => setSelectedDriverId(e.target.value)}
+              className="text-[11px] bg-slate-900 border border-slate-800 text-slate-300 rounded-lg px-2 py-1 focus:outline-none truncate max-w-[180px]"
+              title="Switch Driver Profile"
+            >
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.vehicleNumber}) - {d.kycStatus}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={() => setShowDriverRegModal(true)}
+            className="shrink-0 flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
+            title="Register as New Driver Partner"
+          >
+            <UserPlus className="w-3 h-3" />
+            <span className="whitespace-nowrap">+ Register Driver</span>
           </button>
         </div>
       </div>
