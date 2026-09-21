@@ -13,6 +13,8 @@ import {
   LocationPoint,
   PaymentMethod,
   ShipmentDetails,
+  CustomerUser,
+  RegisterDriverPayload,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -57,6 +59,17 @@ interface LogisticsContextType {
   toastMessage: string | null;
   showToast: (msg: string) => void;
 
+  // Customer Auth
+  currentCustomer: CustomerUser;
+  registerCustomer: (data: { name: string; phone: string; email: string; companyName?: string }) => void;
+  loginCustomer: (phone: string, otp: string) => boolean;
+  logoutCustomer: () => void;
+
+  // Driver Auth
+  registerDriver: (payload: RegisterDriverPayload) => string;
+  loginDriver: (phone: string, otp: string) => boolean;
+  logoutDriver: () => void;
+
   // Actions
   createBooking: (payload: CreateTripPayload) => string;
   cancelTrip: (tripId: string, reason: string) => void;
@@ -80,6 +93,16 @@ const LOCAL_STORAGE_KEY_TRIPS = 'swifload_trips_v1';
 const LOCAL_STORAGE_KEY_DRIVERS = 'swifload_drivers_v1';
 const LOCAL_STORAGE_KEY_VEHICLES = 'swifload_vehicles_v1';
 const LOCAL_STORAGE_KEY_ZONES = 'swifload_zones_v1';
+const LOCAL_STORAGE_KEY_CUSTOMER = 'swifload_customer_v1';
+
+const INITIAL_CUSTOMER: CustomerUser = {
+  id: 'cust_01',
+  name: 'Priya Sharma',
+  phone: '+91 98801 99234',
+  email: 'priya.sharma@example.com',
+  companyName: 'Sharma Furnishings & Decor',
+  isLoggedIn: true,
+};
 
 export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [role, setRole] = useState<UserRole>('customer');
@@ -87,6 +110,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedDriverId, setSelectedDriverId] = useState<string>('drv_01');
   const [activeTripId, setActiveTripId] = useState<string | null>('trip_blr_1001');
 
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerUser>(INITIAL_CUSTOMER);
   const [trips, setTrips] = useState<Trip[]>(INITIAL_TRIPS);
   const [drivers, setDrivers] = useState<DriverPartner[]>(INITIAL_DRIVERS);
   const [vehicleConfigs, setVehicleConfigs] = useState<VehicleConfig[]>(VEHICLE_CONFIGS);
@@ -96,6 +120,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Load from localStorage on client mount
   useEffect(() => {
     try {
+      const savedCustomer = localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOMER);
+      if (savedCustomer) setCurrentCustomer(JSON.parse(savedCustomer));
+
       const savedTrips = localStorage.getItem(LOCAL_STORAGE_KEY_TRIPS);
       if (savedTrips) setTrips(JSON.parse(savedTrips));
 
@@ -137,12 +164,153 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch {}
   }, [serviceZones]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOMER, JSON.stringify(currentCustomer));
+    } catch {}
+  }, [currentCustomer]);
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
     }, 4000);
   }, []);
+
+  // Customer Registration & Auth
+  const registerCustomer = useCallback(
+    (data: { name: string; phone: string; email: string; companyName?: string }) => {
+      const newCust: CustomerUser = {
+        id: `cust_${Date.now()}`,
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        companyName: data.companyName,
+        isLoggedIn: true,
+      };
+      setCurrentCustomer(newCust);
+      showToast(`Welcome ${data.name}! Customer registered successfully.`);
+    },
+    [showToast]
+  );
+
+  const loginCustomer = useCallback(
+    (phone: string, otp: string): boolean => {
+      if (otp.length === 4) {
+        setCurrentCustomer((prev) => ({
+          ...prev,
+          phone,
+          isLoggedIn: true,
+        }));
+        showToast('Customer logged in successfully!');
+        return true;
+      }
+      showToast('Invalid 4-digit OTP. Please enter 4 digits.');
+      return false;
+    },
+    [showToast]
+  );
+
+  const logoutCustomer = useCallback(() => {
+    setCurrentCustomer((prev) => ({
+      ...prev,
+      isLoggedIn: false,
+    }));
+    showToast('Customer logged out');
+  }, [showToast]);
+
+  // Driver Registration & Auth
+  const registerDriver = useCallback(
+    (payload: RegisterDriverPayload): string => {
+      const driverId = `drv_${Date.now()}`;
+      const newDriver: DriverPartner = {
+        id: driverId,
+        name: payload.name,
+        phone: payload.phone,
+        email: payload.email,
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        vehicleCategory: payload.vehicleCategory,
+        vehicleModel: payload.vehicleModel,
+        vehicleNumber: payload.vehicleNumber.toUpperCase(),
+        isOnline: false,
+        currentStatus: 'OFFLINE',
+        currentLocation: { lat: 12.9716, lng: 77.5946 }, // Bengaluru center
+        rating: 5.0,
+        totalTrips: 0,
+        acceptanceRate: 100,
+        kycStatus: 'PENDING',
+        kycDocuments: [
+          {
+            docType: 'DRIVING_LICENSE',
+            docNumber: payload.licenseNumber,
+            fileUrl: `https://placehold.co/600x400/1e293b/ffffff?text=Commercial+DL+${encodeURIComponent(payload.licenseNumber)}`,
+            verified: false,
+          },
+          {
+            docType: 'RC_BOOK',
+            docNumber: payload.rcNumber,
+            fileUrl: `https://placehold.co/600x400/1e293b/ffffff?text=Vehicle+RC+${encodeURIComponent(payload.rcNumber)}`,
+            verified: false,
+          },
+          {
+            docType: 'VEHICLE_INSURANCE',
+            docNumber: payload.insuranceNumber,
+            fileUrl: `https://placehold.co/600x400/1e293b/ffffff?text=Insurance+${encodeURIComponent(payload.insuranceNumber)}`,
+            verified: false,
+          },
+          {
+            docType: 'AADHAAR',
+            docNumber: payload.aadhaarNumber,
+            fileUrl: `https://placehold.co/600x400/1e293b/ffffff?text=Aadhaar+${encodeURIComponent(payload.aadhaarNumber)}`,
+            verified: false,
+          },
+        ],
+        bankDetails: {
+          accountName: payload.accountName,
+          accountNumber: payload.accountNumber,
+          ifscCode: payload.ifscCode.toUpperCase(),
+          upiId: payload.upiId,
+        },
+        wallet: {
+          balance: 0,
+          todayEarnings: 0,
+          pendingPayout: 0,
+        },
+      };
+
+      setDrivers((prev) => [newDriver, ...prev]);
+      setSelectedDriverId(driverId);
+      showToast('Registration submitted! Account created under KYC verification.');
+      return driverId;
+    },
+    [showToast]
+  );
+
+  const loginDriver = useCallback(
+    (phone: string, otp: string): boolean => {
+      const found = drivers.find((d) => d.phone.includes(phone.trim().slice(-10)));
+      if (otp.length === 4) {
+        if (found) {
+          setSelectedDriverId(found.id);
+          showToast(`Welcome back, ${found.name}!`);
+          return true;
+        }
+        showToast('Driver account found and signed in with default test vehicle!');
+        return true;
+      }
+      showToast('Invalid OTP. Enter 4-digit code.');
+      return false;
+    },
+    [drivers, showToast]
+  );
+
+  const logoutDriver = useCallback(() => {
+    // Set current driver offline
+    setDrivers((prev) =>
+      prev.map((d) => (d.id === selectedDriverId ? { ...d, isOnline: false, currentStatus: 'OFFLINE' } : d))
+    );
+    showToast('Driver signed out');
+  }, [selectedDriverId, showToast]);
 
   // Live Simulated GPS Mover for active in-transit / arriving trips
   useEffect(() => {
@@ -705,6 +873,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         landmarks: BANGALORE_LANDMARKS,
         toastMessage,
         showToast,
+        currentCustomer,
+        registerCustomer,
+        loginCustomer,
+        logoutCustomer,
+        registerDriver,
+        loginDriver,
+        logoutDriver,
         createBooking,
         cancelTrip,
         assignDriver,

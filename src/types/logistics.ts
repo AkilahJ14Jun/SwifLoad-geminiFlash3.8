@@ -157,3 +157,31 @@ export interface ServiceZone {
   surgeMultiplier: number;
   pincodes: string[];
 }
+
+export interface CustomerUser {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  companyName?: string;
+  isLoggedIn: boolean;
+  savedAddresses?: LocationPoint[];
+}
+
+export interface RegisterDriverPayload {
+  name: string;
+  phone: string;
+  email: string;
+  vehicleCategory: VehicleCategory;
+  vehicleModel: string;
+  vehicleNumber: string;
+  licenseNumber: string;
+  rcNumber: string;
+  insuranceNumber: string;
+  aadhaarNumber: string;
+  accountName: string;
+  accountNumber: string;
+  ifscCode: string;
+  upiId: string;
+}
+

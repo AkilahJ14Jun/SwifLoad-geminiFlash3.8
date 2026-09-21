@@ -45,10 +45,24 @@ export default function CustomerApp() {
     cancelTrip,
     submitRating,
     showToast,
+    currentCustomer,
+    registerCustomer,
+    loginCustomer,
+    logoutCustomer,
   } = useLogistics();
 
   // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'profile' | 'support'
   const [activeTab, setActiveTab] = useState<'book' | 'tracking' | 'history' | 'profile' | 'support'>('book');
+
+  // Customer Auth / Registration Modal State
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
+  const [regName, setRegName] = useState<string>('');
+  const [regPhone, setRegPhone] = useState<string>('');
+  const [regEmail, setRegEmail] = useState<string>('');
+  const [regCompany, setRegCompany] = useState<string>('');
+  const [authOtp, setAuthOtp] = useState<string>('1234');
+  const [otpSent, setOtpSent] = useState<boolean>(false);
 
   // Booking Flow States
   const [pickupPoint, setPickupPoint] = useState<LocationPoint>(landmarks[2]); // Koramangala
@@ -61,8 +75,8 @@ export default function CustomerApp() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI_GPAY');
   const [isScheduled, setIsScheduled] = useState<boolean>(false);
   const [scheduleTime, setScheduleTime] = useState<string>('Tomorrow, 10:00 AM');
-  const [senderName, setSenderName] = useState<string>('Priya Sharma');
-  const [senderPhone, setSenderPhone] = useState<string>('+91 98801 99234');
+  const [senderName, setSenderName] = useState<string>(currentCustomer?.name || 'Priya Sharma');
+  const [senderPhone, setSenderPhone] = useState<string>(currentCustomer?.phone || '+91 98801 99234');
   const [receiverName, setReceiverName] = useState<string>('Vikram Mehta');
   const [receiverPhone, setReceiverPhone] = useState<string>('+91 98450 88712');
   const [showShipmentModal, setShowShipmentModal] = useState<boolean>(false);
@@ -153,8 +167,19 @@ export default function CustomerApp() {
           </div>
         </div>
 
-        {/* Profile / Support Shortcut */}
+        {/* Profile / Register / Support Shortcut */}
         <div className="flex items-center space-x-2">
+          <button
+            onClick={() => {
+              setAuthMode('register');
+              setShowAuthModal(true);
+            }}
+            className="px-2.5 py-1 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg flex items-center space-x-1 transition-all shadow"
+            title="Register new customer profile"
+          >
+            <span>+ New Customer</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('support')}
             className="px-2.5 py-1 text-xs bg-emerald-800/60 hover:bg-emerald-800 rounded-lg flex items-center space-x-1 transition-colors"
@@ -698,21 +723,89 @@ export default function CustomerApp() {
         {/* ================= TAB 4: PROFILE ================= */}
         {activeTab === 'profile' && (
           <div className="space-y-4 max-w-xl mx-auto">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 text-center space-y-3">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 text-white text-2xl font-bold flex items-center justify-center mx-auto shadow-md">
-                PS
+            {currentCustomer && currentCustomer.isLoggedIn ? (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 text-center space-y-3">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 text-white text-2xl font-bold flex items-center justify-center mx-auto shadow-md">
+                  {currentCustomer.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">{currentCustomer.name}</h3>
+                  <p className="text-xs text-slate-500">{currentCustomer.phone} • {currentCustomer.email}</p>
+                  {currentCustomer.companyName && (
+                    <p className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block mt-1">
+                      🏢 {currentCustomer.companyName}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center space-x-2 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setAuthMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow"
+                  >
+                    + Register New Customer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode('login');
+                      setShowAuthModal(true);
+                    }}
+                    className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
+                  >
+                    Switch Account
+                  </button>
+                  <button
+                    onClick={logoutCustomer}
+                    className="text-xs px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl"
+                  >
+                    Sign Out
+                  </button>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-base text-slate-900">{senderName}</h3>
-                <p className="text-xs text-slate-500">{senderPhone}</p>
-                <span className="inline-block mt-1 text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">
-                  Verified Shipper
-                </span>
+            ) : (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto text-2xl font-black">
+                  📦
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Welcome to SwifLoad Shipper Portal</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                    Register your business or personal account to book freight vehicles, track live GPS deliveries, and generate tax receipts.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setAuthMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow"
+                  >
+                    Register as New Customer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode('login');
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl"
+                  >
+                    Login with Mobile OTP
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3 text-xs">
-              <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Saved Addresses</h4>
+              <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Saved Business Addresses</h4>
               {landmarks.slice(0, 3).map((lm, i) => (
                 <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
                   <div>
@@ -1079,6 +1172,188 @@ export default function CustomerApp() {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: CUSTOMER AUTH & REGISTRATION ================= */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl text-slate-900 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {authMode === 'register' ? 'Register as New Customer' : 'Customer Mobile Login'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {authMode === 'register'
+                    ? 'Create your shipper profile for Bangalore freight services'
+                    : 'Sign in with your mobile number and OTP'}
+                </p>
+              </div>
+              <button onClick={() => setShowAuthModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                onClick={() => setAuthMode('register')}
+                className={`py-2 rounded-lg transition-colors ${
+                  authMode === 'register' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Register New
+              </button>
+              <button
+                onClick={() => setAuthMode('login')}
+                className={`py-2 rounded-lg transition-colors ${
+                  authMode === 'login' ? 'bg-white text-slate-900 shadow' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Sign In with OTP
+              </button>
+            </div>
+
+            {/* Registration Form */}
+            {authMode === 'register' ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!regName.trim() || !regPhone.trim()) {
+                    showToast('Please enter your full name and mobile number.');
+                    return;
+                  }
+                  registerCustomer({
+                    name: regName.trim(),
+                    phone: regPhone.trim().startsWith('+91') ? regPhone.trim() : `+91 ${regPhone.trim()}`,
+                    email: regEmail.trim() || `${regName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+                    companyName: regCompany.trim() || undefined,
+                  });
+                  setSenderName(regName.trim());
+                  setSenderPhone(regPhone.trim().startsWith('+91') ? regPhone.trim() : `+91 ${regPhone.trim()}`);
+                  setShowAuthModal(false);
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="font-bold text-slate-700">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rahul Sharma"
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Mobile Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 98450 11223"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. rahul@example.com"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700">Company / Shop Name (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sharma Hardware Mart"
+                    value={regCompany}
+                    onChange={(e) => setRegCompany(e.target.value)}
+                    className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-emerald-900">4-Digit Verification OTP</label>
+                    <span className="text-[10px] text-emerald-700 font-mono">Test OTP: 1234</span>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={authOtp}
+                    onChange={(e) => setAuthOtp(e.target.value)}
+                    className="w-full p-2 bg-white border border-emerald-300 rounded-lg text-center font-mono font-bold tracking-widest text-base focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                >
+                  Verify OTP & Register Account
+                </button>
+              </form>
+            ) : (
+              /* Login Form */
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!regPhone.trim()) {
+                    showToast('Please enter your mobile phone number.');
+                    return;
+                  }
+                  const ok = loginCustomer(regPhone, authOtp);
+                  if (ok) {
+                    setShowAuthModal(false);
+                  }
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="font-bold text-slate-700">Registered Mobile Number</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 98801 99234"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    className="w-full mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700">Enter 4-Digit OTP</label>
+                    <span className="text-[10px] text-slate-500 font-mono">Test OTP: 1234</span>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={authOtp}
+                    onChange={(e) => setAuthOtp(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-center font-mono font-bold tracking-widest text-base focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                >
+                  Sign In with OTP
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

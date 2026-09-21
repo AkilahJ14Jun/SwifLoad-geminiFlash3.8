@@ -23,8 +23,11 @@ import {
   Wallet,
   ArrowUpRight,
   ExternalLink,
+  UserPlus,
+  X,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
+import { VehicleCategory } from '@/types/logistics';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
 
@@ -37,6 +40,7 @@ export default function DriverApp() {
     advanceTripStatus,
     toggleDriverOnline,
     requestDriverPayout,
+    registerDriver,
     showToast,
   } = useLogistics();
 
@@ -47,6 +51,23 @@ export default function DriverApp() {
   const [payoutAmount, setPayoutAmount] = useState<number>(500);
   const [showPayoutModal, setShowPayoutModal] = useState<boolean>(false);
   const [showIncomingTripModal, setShowIncomingTripModal] = useState<boolean>(false);
+
+  // Driver Onboarding & Registration State
+  const [showDriverRegModal, setShowDriverRegModal] = useState<boolean>(false);
+  const [driverName, setDriverName] = useState<string>('');
+  const [driverPhone, setDriverPhone] = useState<string>('');
+  const [driverEmail, setDriverEmail] = useState<string>('');
+  const [driverVehCat, setDriverVehCat] = useState<VehicleCategory>('tata_ace');
+  const [driverVehModel, setDriverVehModel] = useState<string>('Tata Ace Gold Diesel');
+  const [driverVehNumber, setDriverVehNumber] = useState<string>('');
+  const [driverDL, setDriverDL] = useState<string>('');
+  const [driverRC, setDriverRC] = useState<string>('');
+  const [driverInsurance, setDriverInsurance] = useState<string>('');
+  const [driverAadhaar, setDriverAadhaar] = useState<string>('');
+  const [bankAccName, setBankAccName] = useState<string>('');
+  const [bankAccNum, setBankAccNum] = useState<string>('');
+  const [bankIFSC, setBankIFSC] = useState<string>('');
+  const [driverUpi, setDriverUpi] = useState<string>('');
 
   // Current Driver
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
@@ -120,8 +141,18 @@ export default function DriverApp() {
           </div>
         </div>
 
-        {/* Online / Offline Switch */}
+        {/* Online / Offline Switch & Driver Registration */}
         <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowDriverRegModal(true)}
+            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow transition-all"
+            title="Register as New Driver Partner"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Register Driver</span>
+            <span className="sm:hidden">Join</span>
+          </button>
+
           <select
             value={currentDriver.id}
             onChange={(e) => setSelectedDriverId(e.target.value)}
@@ -534,6 +565,18 @@ export default function DriverApp() {
                   </div>
                 ))}
               </div>
+
+              {/* Onboard Another Partner Action */}
+              <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <span className="text-xs text-slate-400">Want to onboard another driver partner or vehicle?</span>
+                <button
+                  onClick={() => setShowDriverRegModal(true)}
+                  className="w-full sm:w-auto text-xs px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl flex items-center justify-center space-x-1 shadow"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Register New Driver Partner</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -698,6 +741,262 @@ export default function DriverApp() {
                 ACCEPT TRIP
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: DRIVER ONBOARDING & REGISTRATION ================= */}
+      {showDriverRegModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-lg w-full p-5 space-y-4 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-white flex items-center space-x-2">
+                  <span>⚡ Join SwifLoad Driver Fleet</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">
+                    Bengaluru Hub
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Register your vehicle and submit KYC documents for fast platform activation
+                </p>
+              </div>
+              <button onClick={() => setShowDriverRegModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!driverName.trim() || !driverPhone.trim() || !driverVehNumber.trim()) {
+                  showToast('Please enter your name, mobile phone, and vehicle registration number.');
+                  return;
+                }
+
+                registerDriver({
+                  name: driverName.trim(),
+                  phone: driverPhone.trim().startsWith('+91') ? driverPhone.trim() : `+91 ${driverPhone.trim()}`,
+                  email: driverEmail.trim() || `${driverName.toLowerCase().replace(/\s+/g, '.')}@swifload.test`,
+                  vehicleCategory: driverVehCat,
+                  vehicleModel: driverVehModel.trim() || 'Commercial Carrier',
+                  vehicleNumber: driverVehNumber.trim().toUpperCase(),
+                  licenseNumber: driverDL.trim() || 'KA0520230099881',
+                  rcNumber: driverRC.trim() || driverVehNumber.trim().toUpperCase(),
+                  insuranceNumber: driverInsurance.trim() || 'POL-ICICI-882194',
+                  aadhaarNumber: driverAadhaar.trim() || 'XXXX-XXXX-9912',
+                  accountName: bankAccName.trim() || driverName.trim(),
+                  accountNumber: bankAccNum.trim() || '50100982341098',
+                  ifscCode: (bankIFSC.trim() || 'HDFC0000240').toUpperCase(),
+                  upiId: driverUpi.trim() || `${driverName.toLowerCase().replace(/\s+/g, '')}@okaxis`,
+                });
+
+                setShowDriverRegModal(false);
+                setActiveDriverTab('kyc');
+              }}
+              className="space-y-4 text-xs"
+            >
+              {/* 1. Personal Details */}
+              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  1. Personal & Contact Details
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-300">Driver Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Anand Kumar"
+                      value={driverName}
+                      onChange={(e) => setDriverName(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-300">Mobile Phone *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. 91081 22938"
+                      value={driverPhone}
+                      onChange={(e) => setDriverPhone(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-300">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. anand.kv@example.com"
+                    value={driverEmail}
+                    onChange={(e) => setDriverEmail(e.target.value)}
+                    className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Vehicle Details */}
+              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  2. Vehicle Selection & Registration
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-300">Vehicle Category *</label>
+                    <select
+                      value={driverVehCat}
+                      onChange={(e) => setDriverVehCat(e.target.value as VehicleCategory)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="2wheeler">2-Wheeler (Bike - 20kg)</option>
+                      <option value="3wheeler">3-Wheeler (Auto - 500kg)</option>
+                      <option value="tata_ace">Tata Ace (Chota Hathi - 1000kg)</option>
+                      <option value="pickup_8ft">8ft Pickup (Bolero - 1700kg)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-300">Vehicle Model Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Tata Ace EV / Piaggio Ape"
+                      value={driverVehModel}
+                      onChange={(e) => setDriverVehModel(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-300">Vehicle Number Plate (KA...) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. KA-03-NA-1844"
+                    value={driverVehNumber}
+                    onChange={(e) => setDriverVehNumber(e.target.value)}
+                    className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* 3. KYC Document Numbers */}
+              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  3. Commercial KYC Verification Info
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-300">Commercial Driving Licence No</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. KA0320230099881"
+                      value={driverDL}
+                      onChange={(e) => setDriverDL(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-300">Vehicle RC Certificate No</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. KA03NA1844"
+                      value={driverRC}
+                      onChange={(e) => setDriverRC(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-300">Insurance Policy No</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ICICI-LOMB-7741"
+                      value={driverInsurance}
+                      onChange={(e) => setDriverInsurance(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-300">Aadhaar Number (Last 4 digits)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. XXXX-XXXX-9023"
+                      value={driverAadhaar}
+                      onChange={(e) => setDriverAadhaar(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Bank & Payout Details */}
+              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  4. Bank Account & UPI for Daily Payouts
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-300">Account Holder Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Anand Kumar V"
+                      value={bankAccName}
+                      onChange={(e) => setBankAccName(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-300">Bank Account Number</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 50100982341098"
+                      value={bankAccNum}
+                      onChange={(e) => setBankAccNum(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-300">IFSC Code</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HDFC0000240"
+                      value={bankIFSC}
+                      onChange={(e) => setBankIFSC(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-300">UPI ID for Instant Payout</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. anandkv@okaxis"
+                      value={driverUpi}
+                      onChange={(e) => setDriverUpi(e.target.value)}
+                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center space-x-2">
+                <span>🛡️</span>
+                <span>
+                  After submitting, your profile will be sent to the Operations Admin for review and KYC activation.
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-xl transition-transform active:scale-95"
+              >
+                Submit Driver Onboarding Application ➔
+              </button>
+            </form>
           </div>
         </div>
       )}
