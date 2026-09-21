@@ -1,0 +1,706 @@
+'use client';
+
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import {
+  Power,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  DollarSign,
+  TrendingUp,
+  MapPin,
+  Navigation,
+  Phone,
+  MessageSquare,
+  Camera,
+  Upload,
+  Clock,
+  HelpCircle,
+  XCircle,
+  Check,
+  ChevronRight,
+  Wallet,
+  ArrowUpRight,
+  ExternalLink,
+} from 'lucide-react';
+import { useLogistics } from '@/context/LogisticsContext';
+
+const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
+
+export default function DriverApp() {
+  const {
+    drivers,
+    selectedDriverId,
+    setSelectedDriverId,
+    trips,
+    advanceTripStatus,
+    toggleDriverOnline,
+    requestDriverPayout,
+    showToast,
+  } = useLogistics();
+
+  const [activeDriverTab, setActiveDriverTab] = useState<'trips' | 'earnings' | 'kyc' | 'support'>('trips');
+  const [pickupOtpInput, setPickupOtpInput] = useState<string>('');
+  const [deliveryOtpInput, setDeliveryOtpInput] = useState<string>('');
+  const [podPhotoUrl, setPodPhotoUrl] = useState<string>('');
+  const [payoutAmount, setPayoutAmount] = useState<number>(500);
+  const [showPayoutModal, setShowPayoutModal] = useState<boolean>(false);
+  const [showIncomingTripModal, setShowIncomingTripModal] = useState<boolean>(false);
+
+  // Current Driver
+  const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
+
+  // Active assigned trip for this driver
+  const assignedTrip = trips.find(
+    (t) =>
+      t.driverId === currentDriver.id &&
+      ['DRIVER_ASSIGNED', 'ARRIVING_PICKUP', 'AT_PICKUP', 'IN_TRANSIT', 'ARRIVED_DESTINATION'].includes(t.status)
+  );
+
+  // Completed trips by this driver
+  const completedDriverTrips = trips.filter(
+    (t) => t.driverId === currentDriver.id && t.status === 'DELIVERED'
+  );
+
+  const handleAdvanceStatus = () => {
+    if (!assignedTrip) return;
+
+    if (assignedTrip.status === 'AT_PICKUP') {
+      const res = advanceTripStatus(assignedTrip.id, pickupOtpInput);
+      if (res.success) {
+        setPickupOtpInput('');
+      }
+      return;
+    }
+
+    if (assignedTrip.status === 'ARRIVED_DESTINATION') {
+      const res = advanceTripStatus(
+        assignedTrip.id,
+        deliveryOtpInput,
+        podPhotoUrl || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=500&auto=format&fit=crop&q=80'
+      );
+      if (res.success) {
+        setDeliveryOtpInput('');
+        setPodPhotoUrl('');
+      }
+      return;
+    }
+
+    advanceTripStatus(assignedTrip.id);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-slate-900 text-slate-100 pb-20 md:pb-6">
+      {/* Top Driver Bar */}
+      <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <img
+              src={currentDriver.avatar}
+              alt={currentDriver.name}
+              className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500"
+            />
+            <span
+              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-950 ${
+                currentDriver.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
+              }`}
+            />
+          </div>
+          <div>
+            <div className="flex items-center space-x-1.5">
+              <span className="font-bold text-sm text-white">{currentDriver.name}</span>
+              <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono">
+                {currentDriver.vehicleNumber}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 capitalize">
+              {currentDriver.vehicleModel} • ⭐ {currentDriver.rating || 4.9} ({currentDriver.totalTrips} trips)
+            </p>
+          </div>
+        </div>
+
+        {/* Online / Offline Switch */}
+        <div className="flex items-center space-x-2">
+          <select
+            value={currentDriver.id}
+            onChange={(e) => setSelectedDriverId(e.target.value)}
+            className="text-[10px] bg-slate-800 border border-slate-700 text-slate-200 rounded px-1.5 py-1 focus:outline-none"
+            title="Switch Driver Profile"
+          >
+            {drivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name.split(' ')[0]} ({d.kycStatus})
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => toggleDriverOnline(currentDriver.id)}
+            className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-bold shadow transition-all ${
+              currentDriver.isOnline
+                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                : 'bg-rose-900/50 text-rose-300 border border-rose-700 hover:bg-rose-900'
+            }`}
+          >
+            <Power className="w-3.5 h-3.5" />
+            <span>{currentDriver.isOnline ? 'GO OFFLINE' : 'GO ONLINE'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KYC Warning Banner if not verified */}
+      {currentDriver.kycStatus !== 'VERIFIED' && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between text-amber-300 text-xs">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <span>
+              KYC Status: <strong>{currentDriver.kycStatus}</strong>. Documents awaiting admin verification.
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveDriverTab('kyc')}
+            className="text-[11px] underline font-semibold text-amber-200"
+          >
+            View Docs
+          </button>
+        </div>
+      )}
+
+      {/* Main Container */}
+      <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4">
+        {/* ================= TAB 1: ACTIVE TRIPS & DISPATCH ================= */}
+        {activeDriverTab === 'trips' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            {/* If there is an active assigned trip */}
+            {assignedTrip ? (
+              <div className="bg-slate-950 rounded-2xl border border-slate-800 p-4 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                      Active Dispatch: {assignedTrip.bookingCode}
+                    </span>
+                  </div>
+                  <span className="text-xs font-black text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-lg">
+                    Earnings: ₹{assignedTrip.fare.driverEarnings}
+                  </span>
+                </div>
+
+                {/* Map View with route */}
+                <LeafletMap
+                  pickup={{ lat: assignedTrip.pickup.lat, lng: assignedTrip.pickup.lng, label: 'Pickup' }}
+                  drop={{ lat: assignedTrip.drop.lat, lng: assignedTrip.drop.lng, label: 'Drop' }}
+                  driver={{
+                    lat: assignedTrip.driverLocation?.lat || currentDriver.currentLocation.lat,
+                    lng: assignedTrip.driverLocation?.lng || currentDriver.currentLocation.lng,
+                    label: 'You (Driver)',
+                  }}
+                  className="h-44 w-full rounded-xl border border-slate-800"
+                />
+
+                {/* Deep link Google Maps Navigation button */}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${
+                    assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT'
+                      ? `${assignedTrip.drop.lat},${assignedTrip.drop.lng}`
+                      : `${assignedTrip.pickup.lat},${assignedTrip.pickup.lng}`
+                  }`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-colors shadow"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>
+                    Open In Google Maps Navigation (
+                    {assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT' ? 'To Drop' : 'To Pickup'}
+                    )
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                {/* Locations */}
+                <div className="space-y-2 text-xs bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                  <div className="flex items-start space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-slate-200">Pickup ({assignedTrip.pickup.area})</div>
+                      <div className="text-[11px] text-slate-400">{assignedTrip.pickup.address}</div>
+                      <div className="text-[10px] text-slate-500">Contact: {assignedTrip.pickup.senderOrReceiverName || assignedTrip.customerName}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-2 pt-2 border-t border-slate-800">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-slate-200">Drop Destination ({assignedTrip.drop.area})</div>
+                      <div className="text-[11px] text-slate-400">{assignedTrip.drop.address}</div>
+                      <div className="text-[10px] text-slate-500">Contact: {assignedTrip.drop.senderOrReceiverName || 'Receiver'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Goods details */}
+                <div className="flex items-center justify-between text-xs bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
+                  <div>
+                    <span className="text-slate-400">Cargo:</span>{' '}
+                    <span className="font-semibold text-slate-200">{assignedTrip.shipment.goodsCategory} (~{assignedTrip.shipment.approxWeightKg}kg)</span>
+                  </div>
+                  {assignedTrip.shipment.hasHelperRequired && (
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded">
+                      Helper Assistance Req.
+                    </span>
+                  )}
+                </div>
+
+                {/* Masked Call Customer */}
+                <div className="flex items-center space-x-2">
+                  <a
+                    href={`tel:${assignedTrip.customerPhone}`}
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors border border-slate-700"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Masked Call Customer</span>
+                  </a>
+                  <a
+                    href={`https://wa.me/919880199234?text=Hello%20Customer,%20I%20am%20your%20SwifLoad%20driver`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 bg-teal-900/50 hover:bg-teal-900 text-teal-300 rounded-xl border border-teal-700"
+                    title="WhatsApp"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </a>
+                </div>
+
+                {/* TRIP EXECUTION ACTIONS BY STATUS */}
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Current Trip Stage</div>
+
+                  {assignedTrip.status === 'DRIVER_ASSIGNED' && (
+                    <button
+                      onClick={handleAdvanceStatus}
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                    >
+                      I Am En Route to Pickup Location ➔
+                    </button>
+                  )}
+
+                  {assignedTrip.status === 'ARRIVING_PICKUP' && (
+                    <button
+                      onClick={handleAdvanceStatus}
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                    >
+                      I Have Arrived at Pickup Point ➔
+                    </button>
+                  )}
+
+                  {assignedTrip.status === 'AT_PICKUP' && (
+                    <div className="space-y-2">
+                      <div className="text-xs text-amber-300 font-medium">
+                        Ask sender for 4-digit Pickup OTP before loading goods:
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          maxLength={4}
+                          placeholder="e.g. 4821"
+                          value={pickupOtpInput}
+                          onChange={(e) => setPickupOtpInput(e.target.value)}
+                          className="flex-1 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
+                        />
+                        <button
+                          onClick={handleAdvanceStatus}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs"
+                        >
+                          Verify & Start Trip
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-slate-400 italic">Demo Tip: Valid Pickup OTP is {assignedTrip.shipment.pickupOtp}</div>
+                    </div>
+                  )}
+
+                  {assignedTrip.status === 'IN_TRANSIT' && (
+                    <button
+                      onClick={handleAdvanceStatus}
+                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                    >
+                      I Have Reached Drop Destination ➔
+                    </button>
+                  )}
+
+                  {assignedTrip.status === 'ARRIVED_DESTINATION' && (
+                    <div className="space-y-3">
+                      <div className="text-xs text-amber-300 font-medium">
+                        Collect Drop OTP from recipient & optional delivery proof:
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          maxLength={4}
+                          placeholder="Drop OTP"
+                          value={deliveryOtpInput}
+                          onChange={(e) => setDeliveryOtpInput(e.target.value)}
+                          className="flex-1 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
+                        />
+                        <button
+                          onClick={handleAdvanceStatus}
+                          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs"
+                        >
+                          Confirm Delivery
+                        </button>
+                      </div>
+
+                      {/* Payment Collection notice if COD */}
+                      {assignedTrip.paymentMethod === 'CASH_ON_DELIVERY' && (
+                        <div className="p-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl text-xs text-amber-300 flex items-center justify-between">
+                          <span>Collect Cash on Drop:</span>
+                          <span className="font-extrabold text-white text-sm">₹{assignedTrip.fare.totalFare}</span>
+                        </div>
+                      )}
+
+                      <div className="text-[10px] text-slate-400 italic">Demo Tip: Valid Delivery OTP is {assignedTrip.shipment.deliveryOtp}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* When driver has no active trip */
+              <div className="bg-slate-950 rounded-2xl border border-slate-800 p-6 text-center space-y-4 shadow-xl">
+                <div className="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 mx-auto flex items-center justify-center text-xl">
+                  {currentDriver.isOnline ? '📡' : '💤'}
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {currentDriver.isOnline ? 'Searching for Nearby Bookings' : 'You are currently OFFLINE'}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                    {currentDriver.isOnline
+                      ? 'Stay online to receive instant pickup requests in your vehicle category.'
+                      : 'Toggle to ONLINE to start accepting freight bookings and earning.'}
+                  </p>
+                </div>
+
+                {currentDriver.isOnline && (
+                  <button
+                    onClick={() => setShowIncomingTripModal(true)}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow transition-transform active:scale-95"
+                  >
+                    Simulate Incoming Trip Offer
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Quick Earnings Bar */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">Today's Earnings</div>
+                <div className="text-lg font-black text-emerald-400 mt-0.5">₹{currentDriver.wallet.todayEarnings}</div>
+              </div>
+              <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">Available Balance</div>
+                <div className="text-lg font-black text-white mt-0.5">₹{currentDriver.wallet.balance}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 2: EARNINGS & PAYOUTS ================= */}
+        {activeDriverTab === 'earnings' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            {/* Wallet Card */}
+            <div className="bg-gradient-to-br from-emerald-900 to-slate-950 rounded-2xl p-4 border border-emerald-700/50 shadow-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-emerald-300 text-xs font-semibold">
+                  <Wallet className="w-4 h-4" />
+                  <span>SwifLoad Driver Wallet</span>
+                </div>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded">
+                  UPI Instant Transfer
+                </span>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-300">Withdrawable Balance</div>
+                <div className="text-3xl font-black text-white mt-0.5">₹{currentDriver.wallet.balance}</div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-emerald-800/60 text-xs">
+                <div>
+                  <div className="text-[10px] text-slate-400">Pending IMPS Payout</div>
+                  <div className="font-bold text-amber-300">₹{currentDriver.wallet.pendingPayout}</div>
+                </div>
+                <button
+                  onClick={() => setShowPayoutModal(true)}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1"
+                >
+                  <span>Request Payout</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Bank details preview */}
+            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 text-xs space-y-2">
+              <div className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Registered Payout Account</div>
+              <div className="flex justify-between text-slate-400">
+                <span>Account Name</span>
+                <span className="text-white font-medium">{currentDriver.bankDetails.accountName}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Bank / IFSC</span>
+                <span className="text-white font-medium">{currentDriver.bankDetails.ifscCode}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Direct UPI ID</span>
+                <span className="text-emerald-400 font-mono font-medium">{currentDriver.bankDetails.upiId}</span>
+              </div>
+            </div>
+
+            {/* Trip Earnings History */}
+            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3">
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Completed Trips & Payouts</h4>
+              {completedDriverTrips.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">No completed trips today yet.</p>
+              ) : (
+                completedDriverTrips.map((tr) => (
+                  <div key={tr.id} className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-slate-200">{tr.bookingCode}</div>
+                      <div className="text-[11px] text-slate-400">{tr.pickup.area} ➔ {tr.drop.area} ({tr.distanceKm}km)</div>
+                      <div className="text-[10px] text-slate-500">{new Date(tr.createdAt).toLocaleTimeString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-black text-emerald-400 text-sm">+₹{tr.fare.driverEarnings}</div>
+                      <div className="text-[10px] text-slate-500">Gross: ₹{tr.fare.totalFare}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 3: KYC & VEHICLE DOCUMENTS ================= */}
+        {activeDriverTab === 'kyc' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-white">KYC Onboarding & Verification</h3>
+                  <p className="text-xs text-slate-400">Government compliance documents for commercial transport</p>
+                </div>
+                <span
+                  className={`text-xs font-extrabold px-2.5 py-1 rounded-full ${
+                    currentDriver.kycStatus === 'VERIFIED'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                  }`}
+                >
+                  {currentDriver.kycStatus}
+                </span>
+              </div>
+
+              {/* Document checklist */}
+              <div className="space-y-2.5 pt-2 text-xs">
+                {currentDriver.kycDocuments.map((doc, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-semibold text-slate-200 flex items-center space-x-1.5">
+                        {doc.verified ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-amber-400" />
+                        )}
+                        <span>{doc.docType.replace('_', ' ')}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">{doc.docNumber}</div>
+                    </div>
+
+                    <a
+                      href={doc.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-blue-400 hover:text-blue-300 font-medium underline"
+                    >
+                      View Doc
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 4: SUPPORT ================= */}
+        {activeDriverTab === 'support' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3 text-xs">
+              <h3 className="font-bold text-sm text-white">Driver Partner SOS & Support</h3>
+              <p className="text-slate-400">
+                In case of accident, dispute, fuel breakdown, or customer no-show:
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <a
+                  href="tel:+918023456780"
+                  className="p-3 bg-rose-900/30 border border-rose-800 rounded-xl text-rose-300 flex flex-col items-center text-center font-bold space-y-1"
+                >
+                  <Phone className="w-5 h-5 text-rose-400" />
+                  <span>24/7 Driver SOS</span>
+                </a>
+                <a
+                  href="https://wa.me/919845012345?text=Driver%20Partner%20Help%20Request"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-3 bg-teal-900/30 border border-teal-800 rounded-xl text-teal-300 flex flex-col items-center text-center font-bold space-y-1"
+                >
+                  <MessageSquare className="w-5 h-5 text-teal-400" />
+                  <span>WhatsApp Helpdesk</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Driver Bottom Nav */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-4 py-2 flex items-center justify-between z-30 shadow-2xl">
+        <button
+          onClick={() => setActiveDriverTab('trips')}
+          className={`flex flex-col items-center space-y-0.5 ${
+            activeDriverTab === 'trips' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+          }`}
+        >
+          <Navigation className="w-5 h-5" />
+          <span className="text-[10px]">Dispatch</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDriverTab('earnings')}
+          className={`flex flex-col items-center space-y-0.5 ${
+            activeDriverTab === 'earnings' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+          }`}
+        >
+          <TrendingUp className="w-5 h-5" />
+          <span className="text-[10px]">Earnings</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDriverTab('kyc')}
+          className={`flex flex-col items-center space-y-0.5 ${
+            activeDriverTab === 'kyc' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+          }`}
+        >
+          <ShieldCheck className="w-5 h-5" />
+          <span className="text-[10px]">KYC Docs</span>
+        </button>
+
+        <button
+          onClick={() => setActiveDriverTab('support')}
+          className={`flex flex-col items-center space-y-0.5 ${
+            activeDriverTab === 'support' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+          }`}
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span className="text-[10px]">SOS Support</span>
+        </button>
+      </div>
+
+      {/* ================= MODAL: PAYOUT REQUEST ================= */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl">
+            <h3 className="font-bold text-sm">Instant Bank IMPS Payout</h3>
+            <p className="text-xs text-slate-400">
+              Transfer your balance directly to your bank account ({currentDriver.bankDetails.accountName}):
+            </p>
+
+            <div>
+              <label className="text-[10px] text-slate-400 uppercase font-bold">Amount to Withdraw (₹)</label>
+              <input
+                type="number"
+                value={payoutAmount}
+                max={currentDriver.wallet.balance}
+                onChange={(e) => setPayoutAmount(Number(e.target.value))}
+                className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 font-black text-lg"
+              />
+              <div className="text-[10px] text-slate-500 mt-1">Available balance: ₹{currentDriver.wallet.balance}</div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setShowPayoutModal(false)}
+                className="flex-1 py-2 text-xs font-semibold bg-slate-800 text-slate-300 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  requestDriverPayout(currentDriver.id, payoutAmount);
+                  setShowPayoutModal(false);
+                }}
+                className="flex-1 py-2 text-xs font-bold bg-emerald-500 text-slate-950 rounded-xl hover:bg-emerald-400"
+              >
+                Confirm Transfer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: INCOMING TRIP SIMULATOR ================= */}
+      {showIncomingTripModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border-2 border-emerald-500 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl animate-pulse">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <span className="text-xs font-black uppercase text-emerald-400 tracking-wider">⚡ New Trip Request!</span>
+              <span className="text-xs bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full">25s Left</span>
+            </div>
+
+            <div className="text-center py-2">
+              <div className="text-xs text-slate-400">Guaranteed Driver Payout</div>
+              <div className="text-3xl font-black text-emerald-400">₹480</div>
+              <div className="text-xs text-slate-400 mt-0.5">Est. Distance: 7.2 km (Tata Ace)</div>
+            </div>
+
+            <div className="space-y-2 text-xs bg-slate-900 p-3 rounded-xl border border-slate-800">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="font-semibold text-slate-200">Pickup: Koramangala 4th Block (1.2 km away)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                <span className="font-semibold text-slate-200">Drop: Indiranagar 100ft Road</span>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setShowIncomingTripModal(false)}
+                className="flex-1 py-3 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl"
+              >
+                Decline
+              </button>
+              <button
+                onClick={() => {
+                  showToast('Trip offer accepted!');
+                  setShowIncomingTripModal(false);
+                }}
+                className="flex-1 py-3 text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl shadow-lg"
+              >
+                ACCEPT TRIP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,70 @@
+Need to build a fully modular on-demand logistics mobile app solution for Android and iOS.
+
+Build a **Starter MVP** for a single-city on-demand goods-transport marketplace. The scope should cover three primary roles: **customer/shipper, driver-partner, and operations admin**—with fleet-owner and business-account functions added during growth. This app’s public offering similarly spans consumer booking, driver earnings/trip management, and enterprise logistics controls. 
+
+## Starter MVP
+
+### Customer app
+
+- Mobile-number login with OTP and basic profile management
+- Select pickup and drop address through map search, pin placement, and saved addresses
+- Choose vehicle category, such as two-wheeler, three-wheeler, mini-truck, or pickup
+- Enter shipment details: goods category, approximate weight/quantity, optional photo, loading/unloading requirement, and recipient contact
+- Instant or rule-based fare estimate based on distance, vehicle type, demand, and serviceability zone
+- Schedule “now” bookings; optionally support scheduled bookings also
+- Booking confirmation with driver/vehicle details after allocation
+- Real-time driver location and trip-status timeline: driver assigned, arriving, pickup, in transit, delivered, cancelled
+- One-tap call or masked-call connection with the driver
+- Digital payment via UPI/payment gateway, GPay, PhonePe, Netbanking (only IMPS), plus cash-on-delivery options
+- Booking history, invoice/receipt, and trip details
+- Cancellation flow with configurable cancellation charges
+- Ratings, feedback, and basic help/support ticket or WhatsApp support link
+- Push notifications and SMS/WhatsApp fallback for booking, assignment, pickup, delivery, and cancellation events
+
+### Driver-partner app
+
+- OTP-based login and driver onboarding application
+- Upload KYC and vehicle documents: licence, RC, insurance, bank/UPI payout details, and vehicle photos
+- Admin approval/rejection of driver and vehicle onboarding
+- Online/offline availability toggle
+- Nearby-trip request screen showing pickup/drop locations, distance, estimated earnings, vehicle requirement, and expected route
+- Accept, reject, or timeout trip offers
+- In-app navigation deep links to Google Maps
+- Trip workflow: arrive at pickup, start trip, reach destination, complete delivery
+- OTP or delivery confirmation at pickup/drop; photo proof can be included if required
+- Customer calling/messaging through a privacy-safe mechanism
+- Daily and trip-level earnings summary, completed-trip history, and pending payout amount
+- Cancellation/no-show reason capture
+- In-app support contact and basic issue reporting
+
+Driver transparency is particularly important: The driver-partner should publicly highlight upfront trip distance/earnings, order history, cancellation updates, payouts, and support. 
+
+### Operations admin portal
+
+- Admin login with role-based access: super admin, dispatcher, support, finance
+- Live bookings board with filters by status, area, vehicle type, and assigned driver
+- Driver and vehicle onboarding/approval management
+- Manual dispatch and driver reassignment
+- Pricing configuration: base fare, per-km rate, waiting/loading fee, surge multiplier, cancellation fee, service zones
+- Serviceability configuration by city, pincode, zone, or geo-fence
+- Live driver map with online/offline and trip status
+- Customer, driver, trip, payment, and cancellation records
+- Basic dashboard: total bookings, completed trips, cancellations, GMV, driver earnings, and platform commission
+- Refund, adjustment, and cash-collection tracking
+- Support tools for viewing a trip timeline and adding internal notes
+- CSV export for trips, users, payouts, and finance reconciliation
+- Audit trail for pricing changes, trip reassignment, refunds, and status overrides
+
+### MVP platform essentials
+
+- Backend APIs, database, API documentation, and secure authentication
+- GPS/location streaming with battery-conscious update intervals
+- Payment-gateway integration, e.g., via UPI,GPay/Razorpay/PhonePe,Netbanking (only IMPS) gateway
+- Maps, routing, distance matrix, geocoding, and geofencing integration
+- Notification stack: FCM, SMS/OTP, optional WhatsApp
+- Centralized logs, error monitoring, backups, and basic operational alerts
+- Consent, privacy policy, terms, data retention policy, and secure handling of KYC documents
+- Android-first customer and driver apps plus a responsive web admin portal
+
+
+
