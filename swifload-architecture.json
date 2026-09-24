@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "SwifLoad — Intra-City Logistics Platform",
+    "subtitle": "Runtime architecture · Next.js 14 + Capacitor 6",
+    "output": "swifload-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AkilahJ14Jun/SwifLoad-geminiFlash3.8",
+      "provider": "github",
+      "revision": "a96b65b8b32e852b6c06ccaf91ac7a28a0e1d8f3"
+    },
+    "views": [
+      {
+        "id": "booking-path",
+        "label": "Primary booking path",
+        "focus": ["shipper", "customer-app", "logistics-ctx", "pricing-engine", "driver-app", "leaflet-map"],
+        "note": "Follow the shipper's booking from app through fare calculation, dispatch, OTP handshake, and live tracking."
+      },
+      {
+        "id": "ops-view",
+        "label": "Operations command",
+        "focus": ["admin-portal", "logistics-ctx", "local-storage", "leaflet-map"],
+        "note": "Admin monitors live dispatch, KYC, pricing zones, and fleet radar via shared context state."
+      }
+    ]
+  },
+  "components": [
+    { "id": "shipper",        "type": "external",  "label": "Shipper / Customer", "sublabel": "Browser · WebView",           "pos": [40,  220], "size": [140, 60] },
+    { "id": "google-maps",    "type": "external",  "label": "Google Maps",        "sublabel": "Driver Navigation",           "pos": [40,  460], "size": [140, 60] },
+    { "id": "web-platform",   "type": "frontend",  "label": "Web Platform",       "sublabel": "Marketing & Booking Widget",  "pos": [280, 80],  "size": [160, 60], "sources": [{ "path": "src/app/page.tsx" }] },
+    { "id": "customer-app",   "type": "frontend",  "label": "Customer App",       "sublabel": "Book · Track · History",      "pos": [280, 220], "size": [160, 60], "sources": [{ "path": "src/components/Customer/CustomerApp.tsx" }] },
+    { "id": "driver-app",     "type": "frontend",  "label": "Driver App",         "sublabel": "Dispatch · OTP · Wallet",     "pos": [280, 360], "size": [160, 60], "sources": [{ "path": "src/components/Driver/DriverApp.tsx" }] },
+    { "id": "admin-portal",   "type": "frontend",  "label": "Admin Portal",       "sublabel": "Dispatch · KYC · Pricing",    "pos": [280, 540], "size": [160, 60], "sources": [{ "path": "src/components/Admin/AdminPortal.tsx" }] },
+    { "id": "pricing-engine", "type": "backend",   "label": "Pricing Engine",     "sublabel": "Fare · Surge · GST",          "pos": [600, 80],  "size": [160, 60], "sources": [{ "path": "src/lib/pricing.ts" }] },
+    { "id": "logistics-ctx",  "type": "backend",   "label": "Logistics Context",  "sublabel": "State Machine & Simulator",   "pos": [600, 220], "size": [170, 60], "sources": [{ "path": "src/context/LogisticsContext.tsx" }] },
+    { "id": "leaflet-map",    "type": "frontend",  "label": "Leaflet Map",        "sublabel": "Live GPS Tracking",           "pos": [600, 400], "size": [160, 60], "sources": [{ "path": "src/components/Map/LeafletMap.tsx" }] },
+    { "id": "local-storage",  "type": "database",  "label": "localStorage",       "sublabel": "Trips · Drivers · Zones",     "pos": [920, 220], "size": [140, 60] },
+    { "id": "carto-tiles",    "type": "external",  "label": "CartoDB Voyager",    "sublabel": "Raster Map Tiles",            "pos": [920, 400], "size": [140, 60] },
+    { "id": "capacitor-shell","type": "cloud",     "label": "Capacitor Shell",    "sublabel": "Android · iOS",               "pos": [920, 80],  "size": [140, 60], "sources": [{ "path": "capacitor.config.ts" }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Client-Side Runtime (Browser / WebView)", "wraps": ["web-platform", "customer-app", "driver-app", "admin-portal", "logistics-ctx", "pricing-engine", "leaflet-map", "local-storage"] },
+    { "kind": "security-group", "label": "Admin Privilege Boundary", "wraps": ["admin-portal"] }
+  ],
+  "connections": [
+    { "id": "shipper-to-customer", "from": "shipper",       "to": "customer-app",   "label": "book & track",    "variant": "emphasis" },
+    { "id": "shipper-to-web",      "from": "shipper",       "to": "web-platform",   "label": "browse",          "variant": "emphasis",  "fromSide": "top",    "toSide": "left" },
+    { "id": "customer-to-ctx",     "from": "customer-app",  "to": "logistics-ctx",  "label": "trip actions" },
+    { "id": "web-to-pricing",      "from": "web-platform",  "to": "pricing-engine",  "label": "estimate fare" },
+    { "id": "driver-to-ctx",       "from": "driver-app",    "to": "logistics-ctx",  "label": "OTP · status",    "labelDx": -50 },
+    { "id": "admin-to-ctx",        "from": "admin-portal",  "to": "logistics-ctx",  "label": "dispatch",        "variant": "security" },
+    { "id": "ctx-to-pricing",      "from": "logistics-ctx", "to": "pricing-engine",  "label": "calculateFare",  "fromSide": "top",    "toSide": "bottom" },
+    { "id": "ctx-to-storage",      "from": "logistics-ctx", "to": "local-storage",   "label": "persist state" },
+    { "id": "ctx-to-map",          "from": "logistics-ctx", "to": "leaflet-map",     "label": "telemetry",      "variant": "dashed",   "fromSide": "bottom", "toSide": "top" },
+    { "id": "map-to-carto",        "from": "leaflet-map",   "to": "carto-tiles",     "label": "tile fetch",     "variant": "dashed" },
+    { "id": "driver-to-gmaps",     "from": "driver-app",    "to": "google-maps",     "label": "nav deep link",  "variant": "dashed",   "fromSide": "left",   "toSide": "right" },
+    { "id": "cap-to-storage",      "from": "capacitor-shell","to": "local-storage",  "label": "WebView bridge", "variant": "dashed",   "fromSide": "bottom", "toSide": "top",   "labelDy": 24 }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Booking & Pricing",
+      "items": [
+        "Haversine × 1.32 road tortuosity factor for Bengaluru",
+        "Dynamic zone surge detection (1.15×–1.25×)",
+        "₹45–₹480 base fares across 4 vehicle tiers",
+        "5% Logistics GST + 18% platform commission"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Security & Trust",
+      "items": [
+        "Dual OTP handshake — Pickup OTP + Delivery OTP",
+        "Privacy-masked driver calling via virtual bridge",
+        "Role-based access: super_admin · dispatcher · support · finance",
+        "OTP-gated mobile auth for customer login"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Fleet & Vehicles",
+      "items": [
+        "2-Wheeler (20 kg) · 3-Wheeler (500 kg) · Tata Ace (1 t) · Bolero (1.7 t)",
+        "Loading helper toggle (+₹250)",
+        "Packers & Movers — BHK-based dynamic pricing",
+        "Real-time 3 s driver location interpolation"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "External Services",
+      "items": [
+        "CartoDB Voyager raster tiles for map rendering",
+        "Google Maps deep link for turn-by-turn driver navigation",
+        "Capacitor 6 packages SSG output into Android / iOS binaries",
+        "Unsplash & Placehold.co for demo imagery"
+      ]
+    }
+  ]
+}

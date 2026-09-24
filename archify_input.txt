@@ -1,0 +1,3 @@
+Analyze this repository, then use archify to create a high-level runtime architecture diagram.
+Show 8–12 core components, one primary path, external dependencies, and trust boundaries.
+Put supporting detail in cards instead of adding more edges.

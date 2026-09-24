@@ -6,7 +6,27 @@ SwifLoad is an on-demand intra-city freight and goods-transport marketplace solu
 
 ## 🏗️ Architecture & Modules
 
-### 1. 📱 Customer / Shipper App
+### 1. 🌐 SwifLoad Web Platform (Porter.in Style)
+- **Porter-Style Hero Booking & Fare Widget**:
+  - Interactive multi-tab booking widget for **City Trucks** (Tata Ace, 3-Wheeler, Bolero), **2-Wheeler Express Courier**, **Packers & Movers**, and **Live Tracking**.
+  - Bangalore landmark autocomplete (Koramangala, Indiranagar, HSR, Whitefield, Peenya, MG Road).
+  - Dynamic route distance and urban traffic travel duration calculation with live fare breakdowns (Base + Distance + GST + Loading Helper).
+  - Direct dispatch creation synchronized across all applications and simulators in real time.
+- **Packers & Movers Relocation Suite**:
+  - Interactive home size calculator (1 BHK, 2 BHK, 3 BHK, Villa) with add-on options (bed/wardrobe carpentry dismantling and 3-layer bubble wrap packaging).
+- **Interactive Fleet Comparison Matrix**:
+  - Side-by-side vehicle comparison with payload capacity, cargo bed dimensions, starting rates, and 1-click booking selection.
+- **SwifLoad Enterprise & B2B Logistics**:
+  - Interactive Fleet ROI Calculator comparing captive fleet costs vs on-demand dispatching (~35% cost reduction).
+  - Centralized invoicing, SLA guarantees, REST APIs & Webhook integrations.
+- **Driver-Partner ("Drive with Us") Portal**:
+  - Transparent earnings potential calculator (up to ₹48,000/mo) and interactive partner registration wizard.
+- **Live Consignment Tracking Drawer**:
+  - Interactive Leaflet GPS map tracking, dual OTP handshakes (Pickup OTP & Delivery OTP), and driver calling bridge.
+- **Prohibited Items Policy & Trust Metrics**:
+  - Strict compliance with Indian transport regulations and safety mandates.
+
+### 2. 📱 Customer / Shipper App
 - **Phone Login & Profile**: Mobile-number authentication simulation, saved business/home addresses, and profile overview.
 - **Dynamic Map & Route Selection**: Interactive Bangalore map with landmark lookup (Koramangala, Indiranagar, HSR Layout, Whitefield, MG Road, Peenya), pin placement, route distance calculation (with city road factor), and ETA estimation.
 - **Fleet Category Selection**:
@@ -98,12 +118,18 @@ npm run cap:ios
 ---
 
 ## 📂 Codebase Structure
-- [`src/types/logistics.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/types/logistics.ts): TypeScript domain models for trips, drivers, vehicles, and zones.
-- [`src/lib/data.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/data.ts): Bangalore landmarks, initial driver fleet, active test trips, and zone configurations.
-- [`src/lib/pricing.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/pricing.ts): Distance calculation, road tortuosity factor, and dynamic fare engine.
-- [`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx): Synchronized state store with live GPS simulation and localStorage persistence.
+- [`src/components/Website/WebPlatform.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/WebPlatform.tsx): Porter-style web portal container connecting all sections, fare widgets, and modals.
+- [`src/components/Website/HeroBookingWidget.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/HeroBookingWidget.tsx): Interactive tabbed booking widget for City Trucks, 2-Wheelers, Packers & Movers, and live tracking.
+- [`src/components/Website/LiveTrackingModal.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/LiveTrackingModal.tsx): Interactive Leaflet GPS tracking drawer with live driver telemetry and OTP handshakes.
+- [`src/components/Website/PackersMoversSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/PackersMoversSection.tsx): Complete home shifting quotation calculator with bubble wrap and carpentry add-ons.
+- [`src/components/Website/EnterpriseSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/EnterpriseSection.tsx): Enterprise B2B logistics hub with interactive captive fleet vs on-demand ROI calculator.
+- [`src/components/Website/DriverPartnerSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/DriverPartnerSection.tsx): Driver recruitment portal with earnings projections and instant KYC registration.
+- [`src/components/Website/FleetComparison.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/FleetComparison.tsx): Side-by-side vehicle specs matrix (payload, cargo dimensions, base and km rates).
 - [`src/components/Customer/CustomerApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerApp.tsx): Customer mobile interface.
 - [`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx): Driver partner mobile interface.
 - [`src/components/Admin/AdminPortal.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Admin/AdminPortal.tsx): Operations admin web portal.
-- [`src/components/Map/LeafletMap.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Map/LeafletMap.tsx): Interactive map component with custom vehicle & route markers.
+- [`src/components/Map/LeafletMap.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Map/LeafletMap.tsx): Interactive Leaflet map with custom vehicle & route markers.
+- [`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx): Synchronized state store with live GPS simulation and localStorage persistence.
+- [`src/lib/data.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/data.ts): Bangalore landmarks, initial driver fleet, active test trips, and zone configurations.
+- [`src/lib/pricing.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/pricing.ts): Distance calculation, road tortuosity factor, and dynamic fare engine.
 - [`capacitor.config.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/capacitor.config.ts): Native mobile wrapper configuration.
