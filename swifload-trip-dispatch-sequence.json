@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "SwifLoad Trip Dispatch & OTP Handshake Sequence",
+    "output": "swifload-trip-dispatch-sequence.html",
+    "viewBox": [960, 920],
+    "column_fit": "spread",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "fare-quote",
+        "label": "Fare calculation & booking",
+        "focus": ["customer", "app", "ctx", "pricing"],
+        "note": "Shipper specifies cargo points; pricing engine computes Haversine distance and returns upfront quote."
+      },
+      {
+        "id": "driver-dispatch",
+        "label": "Driver radar & assignment",
+        "focus": ["app", "ctx", "storage", "driver"],
+        "note": "Context transitions trip to SEARCHING, persists to localStorage, and broadcasts to nearby available drivers."
+      },
+      {
+        "id": "otp-handshake",
+        "label": "OTP verification & delivery",
+        "focus": ["customer", "driver", "ctx", "storage"],
+        "note": "Physical handover requires verbal 4-digit OTP exchange to advance trip to IN_TRANSIT and settle payout."
+      }
+    ]
+  },
+  "participants": [
+    { "id": "customer", "type": "external", "label": "Shipper", "sublabel": "Mobile / Web Client" },
+    { "id": "app", "type": "frontend", "label": "CustomerApp", "sublabel": "React UI Component" },
+    { "id": "ctx", "type": "backend", "label": "LogisticsContext", "sublabel": "State Machine Core" },
+    { "id": "pricing", "type": "backend", "label": "PricingEngine", "sublabel": "Fare & Surge Logic" },
+    { "id": "driver", "type": "frontend", "label": "DriverApp", "sublabel": "Driver Portal UI" },
+    { "id": "storage", "type": "database", "label": "localStorage", "sublabel": "Client Persistence" }
+  ],
+  "segments": [
+    { "from": 140, "to": 320, "label": "Fare Estimation & Quote" },
+    { "from": 335, "to": 550, "label": "Driver Match & Acceptance" },
+    { "from": 565, "to": 810, "label": "OTP Handshake & Delivery" }
+  ],
+  "messages": [
+    { "from": "customer", "to": "app", "y": 170, "label": "Select pickup & drop points", "variant": "emphasis" },
+    { "from": "app", "to": "ctx", "y": 210, "label": "calculateFare(pickup, drop, tier)", "variant": "default" },
+    { "from": "ctx", "to": "pricing", "y": 250, "label": "Haversine × 1.32 + surge", "variant": "default" },
+    { "from": "pricing", "to": "app", "y": 290, "label": "Estimated Fare ₹480 + 5% GST", "variant": "return" },
+    { "from": "customer", "to": "app", "y": 360, "label": "Confirm Booking & Payment", "variant": "emphasis" },
+    { "from": "app", "to": "ctx", "y": 400, "label": "createBooking(payload)", "variant": "emphasis" },
+    { "from": "ctx", "to": "storage", "y": 440, "label": "persist trip (SEARCHING)", "variant": "dashed" },
+    { "from": "ctx", "to": "driver", "y": 480, "label": "Broadcast nearby trip radar", "variant": "emphasis" },
+    { "from": "driver", "to": "ctx", "y": 520, "label": "advanceTripStatus (DRIVER_ASSIGNED)", "variant": "emphasis" },
+    { "from": "driver", "to": "ctx", "y": 590, "label": "advanceTripStatus (AT_PICKUP)", "variant": "default" },
+    { "from": "customer", "to": "driver", "y": 630, "label": "Share 4-digit OTP verbally", "variant": "security" },
+    { "from": "driver", "to": "ctx", "y": 670, "label": "advanceTripStatus(otpProvided)", "variant": "security" },
+    { "from": "ctx", "to": "storage", "y": 710, "label": "validate OTP & update IN_TRANSIT", "variant": "emphasis" },
+    { "from": "driver", "to": "ctx", "y": 750, "label": "advanceTripStatus (DELIVERED, podPhoto)", "variant": "emphasis" },
+    { "from": "ctx", "to": "storage", "y": 790, "label": "settle wallet + write receipt", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "customer", "from": 165, "to": 365, "type": "external" },
+    { "participant": "app", "from": 205, "to": 405, "type": "frontend" },
+    { "participant": "ctx", "from": 245, "to": 295, "type": "backend" },
+    { "participant": "pricing", "from": 245, "to": 295, "type": "backend" },
+    { "participant": "ctx", "from": 395, "to": 525, "type": "backend" },
+    { "participant": "driver", "from": 475, "to": 525, "type": "frontend" },
+    { "participant": "driver", "from": 585, "to": 755, "type": "frontend" },
+    { "participant": "ctx", "from": 585, "to": 795, "type": "backend" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Deterministic Fare Locking",
+      "items": [
+        "Distance computed via Haversine formula multiplied by 1.32 road tortuosity",
+        "Vehicle tier rates, waiting charges, and logistics GST computed upfront",
+        "Customer locks in price guarantee before committing booking"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Proximity Dispatch & Assignment",
+      "items": [
+        "Simulated radar searches drivers in active service zone",
+        "Driver receives dispatch ping with net earning preview",
+        "Acceptance switches trip status from SEARCHING to DRIVER_ASSIGNED"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Two-Factor Handshake & Settlement",
+      "items": [
+        "Customer receives secure 4-digit pickup OTP upon booking creation",
+        "Driver must validate matching OTP to unlock IN_TRANSIT state",
+        "Digital POD photo upload triggers instant wallet credit and customer receipt"
+      ]
+    }
+  ]
+}

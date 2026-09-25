@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "SwifLoad Trip State Machine Lifecycle",
+    "output": "swifload-trip-state-lifecycle.html",
+    "viewBox": [980, 680],
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "happy-path-rail",
+        "label": "Order-to-delivery rail",
+        "focus": ["searching", "assigned", "at_pickup", "in_transit", "delivered"],
+        "note": "Follow the trip entity across its primary forward state machine from booking to delivery."
+      },
+      {
+        "id": "security-gate",
+        "label": "OTP handshake & cancellation",
+        "focus": ["at_pickup", "otp_mismatch", "cancelled"],
+        "note": "Failed OTP verification stops cargo transit and terminates the trip with cancellation fee calculation."
+      },
+      {
+        "id": "settlement-outcomes",
+        "label": "Transit recovery & settlement",
+        "focus": ["in_transit", "sos_reroute", "reassigned", "delivered", "audit_hold", "settled"],
+        "note": "Separate mid-transit breakdown replacement from final ledger audit and wallet settlement."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "Trip Lifecycle Rail" },
+    { "id": "waiting", "label": "Security & Audit Gates" },
+    { "id": "recovery", "label": "Transit SOS Controller" },
+    { "id": "terminal", "label": "Terminal Exits" }
+  ],
+  "states": [
+    { "id": "searching", "type": "start", "label": "SEARCHING", "sublabel": "radar broadcast", "lane": "main", "col": 0, "step": "01", "tag": "pending" },
+    { "id": "assigned", "type": "active", "label": "ASSIGNED", "sublabel": "en route to pickup", "lane": "main", "col": 1, "step": "02", "tag": "matched" },
+    { "id": "at_pickup", "type": "decision", "label": "AT_PICKUP", "sublabel": "verify 4-digit OTP", "lane": "main", "col": 2, "step": "03", "tag": "gate" },
+    { "id": "in_transit", "type": "active", "label": "IN_TRANSIT", "sublabel": "live GPS tracking", "lane": "main", "col": 3, "step": "04", "tag": "moving" },
+    { "id": "delivered", "type": "success", "label": "DELIVERED", "sublabel": "POD photo uploaded", "lane": "main", "col": 4, "step": "05", "tag": "success" },
+    { "id": "otp_mismatch", "type": "waiting", "label": "OTP Mismatch", "sublabel": "3 failed attempts", "lane": "waiting", "col": 0, "tag": "pause" },
+    { "id": "sos_reroute", "type": "active", "label": "Transit SOS", "sublabel": "breakdown / delay", "lane": "recovery", "col": 1, "tag": "emergency" },
+    { "id": "audit_hold", "type": "waiting", "label": "Finance Audit", "sublabel": "damage verification", "lane": "waiting", "col": 2, "tag": "review" },
+    { "id": "cancelled", "type": "failure", "label": "CANCELLED", "sublabel": "fee assessed", "lane": "terminal", "col": 0, "tag": "terminal" },
+    { "id": "reassigned", "type": "failure", "label": "REASSIGNED", "sublabel": "backup dispatched", "lane": "terminal", "col": 1, "tag": "terminal" },
+    { "id": "settled", "type": "success", "label": "SETTLED", "sublabel": "wallet & GST split", "lane": "terminal", "col": 2, "tag": "terminal" }
+  ],
+  "transitions": [
+    { "from": "at_pickup", "to": "otp_mismatch", "variant": "security", "route": "straight", "fromSide": "bottom", "toSide": "top" },
+    { "from": "otp_mismatch", "to": "cancelled", "variant": "security", "route": "straight", "fromSide": "bottom", "toSide": "top" },
+    { "from": "in_transit", "to": "sos_reroute", "variant": "security", "route": "straight", "fromSide": "bottom", "toSide": "top" },
+    { "from": "sos_reroute", "to": "reassigned", "variant": "security", "route": "straight", "fromSide": "bottom", "toSide": "top" },
+    { "from": "delivered", "to": "audit_hold", "variant": "dashed", "route": "straight", "fromSide": "bottom", "toSide": "top" },
+    { "from": "audit_hold", "to": "settled", "variant": "emphasis", "route": "straight", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Five-Phase Main Lifecycle",
+      "items": [
+        "Trips start in SEARCHING state as proximity radar matches active drivers",
+        "DRIVER_ASSIGNED and AT_PICKUP track driver progress to pickup location",
+        "DELIVERED is unlocked only following mandatory digital Proof of Delivery"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Gate & Exception Handling",
+      "items": [
+        "OTP validation at pickup prevents fraudulent cargo handovers",
+        "Transit SOS accommodates vehicle breakdown with immediate replacement dispatch",
+        "Post-delivery finance audit verifies damage claims before ledger closure"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Deterministic Terminal States",
+      "items": [
+        "Cancelled trips assess automated tier-based cancellation fees",
+        "Reassigned trips preserve customer booking under a new partner vehicle",
+        "Settled state marks final 82% wallet deposit and customer GST invoice generation"
+      ]
+    }
+  ]
+}
