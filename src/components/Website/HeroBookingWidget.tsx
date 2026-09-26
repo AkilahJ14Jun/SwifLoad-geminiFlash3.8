@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import { VehicleCategory, GoodsCategory, LocationPoint, PaymentMethod } from '@/types/logistics';
-import { calculateDistanceKm, calculateFare, estimateDurationMins } from '@/lib/pricing';
+import { calculateDistanceKm, calculateCustomerQuotedSlabFare, estimateDurationMins } from '@/lib/pricing';
 
 interface HeroBookingWidgetProps {
   onBookingSuccess: (tripId: string) => void;
@@ -35,6 +35,8 @@ export default function HeroBookingWidget({
 }: HeroBookingWidgetProps) {
   const {
     landmarks,
+    drivers,
+    customerSlabConfigs,
     vehicleConfigs,
     serviceZones,
     createBooking,
@@ -46,11 +48,11 @@ export default function HeroBookingWidget({
   const [activeTab, setActiveTab] = useState<'trucks' | '2wheeler' | 'packers' | 'track'>('trucks');
 
   // Selected City
-  const [selectedCity, setSelectedCity] = useState('Bengaluru');
+  const [selectedCity, setSelectedCity] = useState('Coimbatore');
 
-  // Locations (Default Koramangala -> Indiranagar)
-  const [pickupIndex, setPickupIndex] = useState<number>(2); // Koramangala
-  const [dropIndex, setDropIndex] = useState<number>(1); // Indiranagar
+  // Locations (Default Peelamedu -> Gandhipuram)
+  const [pickupIndex, setPickupIndex] = useState<number>(2); // Peelamedu & Tidel Park
+  const [dropIndex, setDropIndex] = useState<number>(0); // Gandhipuram
   const [customPickupText, setCustomPickupText] = useState('');
   const [customDropText, setCustomDropText] = useState('');
 
@@ -58,10 +60,10 @@ export default function HeroBookingWidget({
   const [selectedVehicleCategory, setSelectedVehicleCategory] = useState<VehicleCategory>('tata_ace');
 
   // Shipment config
-  const [goodsCategory, setGoodsCategory] = useState<GoodsCategory>('Furniture & Home Decor');
+  const [goodsCategory, setGoodsCategory] = useState<GoodsCategory>('Industrial Equipment');
   const [hasHelper, setHasHelper] = useState<boolean>(true);
-  const [recipientName, setRecipientName] = useState('Rajesh Kumar');
-  const [recipientPhone, setRecipientPhone] = useState('+91 98450 12345');
+  const [recipientName, setRecipientName] = useState('Venkatesh Babu');
+  const [recipientPhone, setRecipientPhone] = useState('+91 98422 88712');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI_GPAY');
   const [trackingSearchInput, setTrackingSearchInput] = useState('');
 
@@ -93,19 +95,34 @@ export default function HeroBookingWidget({
     return estimateDurationMins(distanceKm);
   }, [distanceKm]);
 
-  // Live fare breakdown
+  // Live slab-based fare breakdown quoted on farthest driver in range
   const activeVehicleType = activeTab === '2wheeler' ? '2wheeler' : selectedVehicleCategory;
   const fareBreakdown = useMemo(() => {
-    return calculateFare(
-      activeVehicleType,
+    return calculateCustomerQuotedSlabFare(
       distanceKm,
-      activeTab === 'trucks' || activeTab === 'packers' ? hasHelper : false,
-      vehicleConfigs,
-      serviceZones,
+      currentCustomer?.customerType || 'regular',
       pickupPoint,
-      dropPoint
+      dropPoint,
+      drivers,
+      customerSlabConfigs,
+      activeTab === 'trucks' || activeTab === 'packers' ? hasHelper : false,
+      activeVehicleType,
+      vehicleConfigs,
+      serviceZones
     );
-  }, [activeVehicleType, distanceKm, hasHelper, activeTab, vehicleConfigs, serviceZones, pickupPoint, dropPoint]);
+  }, [
+    activeVehicleType,
+    distanceKm,
+    hasHelper,
+    activeTab,
+    vehicleConfigs,
+    serviceZones,
+    pickupPoint,
+    dropPoint,
+    drivers,
+    customerSlabConfigs,
+    currentCustomer?.customerType,
+  ]);
 
   // Packers & movers calculated fare
   const packersCalculatedFare = useMemo(() => {
@@ -148,6 +165,7 @@ export default function HeroBookingWidget({
         approxWeightKg: approxWeight,
         hasHelperRequired: activeTab === 'trucks' || activeTab === 'packers' ? hasHelper : false,
         paymentMethod,
+        customerType: currentCustomer.customerType || 'regular',
         customerName: currentCustomer.name,
         customerPhone: currentCustomer.phone,
         notes:
@@ -156,7 +174,9 @@ export default function HeroBookingWidget({
             : 'Standard on-demand city dispatch',
       });
 
-      onBookingSuccess(newTripId);
+      if (newTripId) {
+        onBookingSuccess(newTripId);
+      }
     } catch (err: any) {
       showToast(err.message || 'Error placing booking');
     }
@@ -312,7 +332,7 @@ export default function HeroBookingWidget({
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span>Pick-up Landmark (Bengaluru)</span>
+                <span>Pick-up Landmark (Coimbatore)</span>
               </label>
               <select
                 value={pickupIndex}
@@ -334,7 +354,7 @@ export default function HeroBookingWidget({
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                <span>Drop Landmark (Bengaluru)</span>
+                <span>Drop Landmark (Coimbatore)</span>
               </label>
               <select
                 value={dropIndex}
@@ -362,7 +382,7 @@ export default function HeroBookingWidget({
               </span>
             </div>
             <span className="text-[11px] text-blue-700 font-mono hidden sm:inline">
-              Bengaluru Tortuosity Factor 1.32x
+              Coimbatore Routing Factor 1.25x
             </span>
           </div>
 
@@ -452,14 +472,17 @@ export default function HeroBookingWidget({
                       <p className="text-[10px] text-slate-500 line-clamp-1 mb-2">5 x 4 x 4 ft • Retail crates & boxes</p>
                       <div className="text-xs font-black text-blue-700">
                         ₹
-                        {calculateFare(
-                          '3wheeler',
+                        {calculateCustomerQuotedSlabFare(
                           distanceKm,
-                          hasHelper,
-                          vehicleConfigs,
-                          serviceZones,
+                          currentCustomer?.customerType || 'regular',
                           pickupPoint,
-                          dropPoint
+                          dropPoint,
+                          drivers,
+                          customerSlabConfigs,
+                          hasHelper,
+                          '3wheeler',
+                          vehicleConfigs,
+                          serviceZones
                         ).totalFare}
                       </div>
                     </div>
@@ -485,14 +508,17 @@ export default function HeroBookingWidget({
                       <p className="text-[10px] text-slate-500 line-clamp-1 mb-2">7 x 4.5 x 5 ft • Furniture & freight</p>
                       <div className="text-xs font-black text-blue-700">
                         ₹
-                        {calculateFare(
-                          'tata_ace',
+                        {calculateCustomerQuotedSlabFare(
                           distanceKm,
-                          hasHelper,
-                          vehicleConfigs,
-                          serviceZones,
+                          currentCustomer?.customerType || 'regular',
                           pickupPoint,
-                          dropPoint
+                          dropPoint,
+                          drivers,
+                          customerSlabConfigs,
+                          hasHelper,
+                          'tata_ace',
+                          vehicleConfigs,
+                          serviceZones
                         ).totalFare}
                       </div>
                     </div>
@@ -515,14 +541,17 @@ export default function HeroBookingWidget({
                       <p className="text-[10px] text-slate-500 line-clamp-1 mb-2">8.5 x 5 ft • Heavy machinery & loads</p>
                       <div className="text-xs font-black text-blue-700">
                         ₹
-                        {calculateFare(
-                          'pickup_8ft',
+                        {calculateCustomerQuotedSlabFare(
                           distanceKm,
-                          hasHelper,
-                          vehicleConfigs,
-                          serviceZones,
+                          currentCustomer?.customerType || 'regular',
                           pickupPoint,
-                          dropPoint
+                          dropPoint,
+                          drivers,
+                          customerSlabConfigs,
+                          hasHelper,
+                          'pickup_8ft',
+                          vehicleConfigs,
+                          serviceZones
                         ).totalFare}
                       </div>
                     </div>
@@ -596,6 +625,15 @@ export default function HeroBookingWidget({
 
           {/* Fare Summary & CTA Bar */}
           <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-wrap items-center justify-between gap-4">
+            {/* Transparent Slab Rate Notice Banner */}
+            <div className="w-full pb-2.5 border-b border-slate-800 text-[11px] text-amber-300 flex items-start space-x-2">
+              <Info className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-bold">Transparent Fare Policy: </span>
+                {fareBreakdown.pricingNotice}
+              </div>
+            </div>
+
             <div>
               <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
                 Total Guaranteed Fare (incl. GST)
@@ -615,6 +653,7 @@ export default function HeroBookingWidget({
                 onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                 className="bg-slate-800 border border-slate-700 text-white text-xs font-medium px-3 py-3 rounded-xl focus:outline-none"
               >
+                <option value="WALLET">SwifLoad Express Wallet (₹{currentCustomer?.wallet?.balance || 0})</option>
                 <option value="UPI_GPAY">UPI (GPay / PhonePe)</option>
                 <option value="NETBANKING_IMPS">Netbanking IMPS</option>
                 <option value="CASH_ON_DELIVERY">Cash on Delivery</option>

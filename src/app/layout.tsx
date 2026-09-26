@@ -3,8 +3,8 @@ import './globals.css';
 import { LogisticsProvider } from '@/context/LogisticsContext';
 
 export const metadata: Metadata = {
-  title: 'SwifLoad - On-Demand City Logistics Platform',
-  description: 'Enterprise & consumer goods transport mobile solution for Bengaluru with Customer, Driver-Partner, and Operations Admin portals.',
+  title: 'SwifLoad - On-Demand City Logistics Platform (Coimbatore, Tamil Nadu)',
+  description: 'Enterprise & consumer goods transport mobile solution for Coimbatore, Tamil Nadu with Customer, Driver-Partner, and Operations Admin portals.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

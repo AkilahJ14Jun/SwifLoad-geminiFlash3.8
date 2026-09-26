@@ -38,7 +38,9 @@ export type TripStatus =
   | 'DELIVERED'
   | 'CANCELLED';
 
-export type PaymentMethod = 'UPI_GPAY' | 'UPI_PHONEPE' | 'NETBANKING_IMPS' | 'CASH_ON_DELIVERY';
+export type CustomerType = 'new' | 'regular' | 'multi_pickup' | 'corporate';
+
+export type PaymentMethod = 'UPI_GPAY' | 'UPI_PHONEPE' | 'NETBANKING_IMPS' | 'CASH_ON_DELIVERY' | 'WALLET';
 
 export interface LocationPoint {
   address: string;
@@ -62,6 +64,74 @@ export interface ShipmentDetails {
   proofOfDeliveryPhoto?: string;
 }
 
+export interface SlabBreakdownItem {
+  slabLabel: string;
+  fromKm: number;
+  toKm: number;
+  kmInSlab: number;
+  rate: number;
+  rateType: 'flat' | 'per_km';
+  cost: number;
+}
+
+export interface DistanceSlab {
+  id: string;
+  fromKm: number;
+  toKm: number;
+  rate: number;
+  rateType: 'flat' | 'per_km';
+  label: string;
+}
+
+export interface CustomerTypeSlabConfig {
+  customerType: CustomerType;
+  customerTypeName: string;
+  description: string;
+  slabs: DistanceSlab[];
+}
+
+export interface ReferralProgramConfig {
+  driverToDriverBonus: number;
+  driverToCustomerBonus: number;
+  customerToCustomerReferrerBonus: number;
+  customerToCustomerRefereeBonus: number;
+}
+
+export interface ReferralRecord {
+  id: string;
+  type: 'DRIVER_TO_DRIVER' | 'DRIVER_TO_CUSTOMER' | 'CUSTOMER_TO_CUSTOMER';
+  referrerId: string;
+  referrerName: string;
+  referrerRole: 'driver' | 'customer';
+  refereeId: string;
+  refereeName: string;
+  refereePhone?: string;
+  refereeRole: 'driver' | 'customer';
+  bonusAmount: number;
+  status: 'PENDING' | 'CREDITED';
+  createdAt: string;
+  creditedAt?: string;
+  notes?: string;
+}
+
+export interface WalletTransaction {
+  id: string;
+  timestamp: string;
+  type: 'CREDIT' | 'DEBIT';
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  referenceId?: string;
+  category:
+    | 'TRIP_EARNING'
+    | 'TRIP_PAYMENT'
+    | 'REFERRAL_BONUS'
+    | 'TOPUP'
+    | 'PAYOUT'
+    | 'COMMISSION_DEDUCTION'
+    | 'ADMIN_ADJUSTMENT';
+}
+
 export interface FareBreakdown {
   baseFare: number;
   distanceFare: number;
@@ -72,6 +142,10 @@ export interface FareBreakdown {
   totalFare: number;
   platformCommission: number;
   driverEarnings: number;
+  slabBreakdown?: SlabBreakdownItem[];
+  pricingNotice?: string;
+  farthestDriverDistanceKm?: number;
+  totalSlabDistanceKm?: number;
 }
 
 export interface Trip {
@@ -82,6 +156,7 @@ export interface Trip {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  customerType?: CustomerType;
   vehicleCategory: VehicleCategory;
   pickup: LocationPoint;
   drop: LocationPoint;
@@ -98,6 +173,13 @@ export interface Trip {
   driverVehicleNumber?: string;
   driverRating?: number;
   driverLocation?: { lat: number; lng: number };
+  driverToPickupDistanceKm?: number;
+  totalSlabDistanceKm?: number;
+  currentDispatchGroupId?: string;
+  currentDispatchGroupName?: string;
+  dispatchGroupSequence?: string[];
+  currentDispatchGroupIndex?: number;
+  dispatchCountdownSecs?: number;
   cancellationReason?: string;
   cancellationCharge?: number;
   customerRating?: number;
@@ -108,6 +190,16 @@ export interface Trip {
     event: string;
     actor: string;
   }[];
+}
+
+export interface DriverGroup {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  locationRange: string;
+  center: { lat: number; lng: number };
+  radiusKm: number;
 }
 
 export interface DriverKycDoc {
@@ -123,6 +215,9 @@ export interface DriverPartner {
   phone: string;
   email: string;
   avatar: string;
+  groupId: string;
+  groupName: string;
+  locationRange: string;
   vehicleCategory: VehicleCategory;
   vehicleModel: string;
   vehicleNumber: string;
@@ -140,10 +235,13 @@ export interface DriverPartner {
     ifscCode: string;
     upiId: string;
   };
+  referralCode: string;
   wallet: {
-    balance: number;
+    balance: number; // Negative balance permitted up to -negativeBalanceLimit
+    negativeBalanceLimit: number; // Pre-determined limit fixed for each driver
     todayEarnings: number;
     pendingPayout: number;
+    transactions: WalletTransaction[];
   };
 }
 
@@ -164,8 +262,15 @@ export interface CustomerUser {
   phone: string;
   email: string;
   companyName?: string;
+  customerType: CustomerType;
+  referralCode: string;
+  referredBy?: string;
   isLoggedIn: boolean;
   savedAddresses?: LocationPoint[];
+  wallet: {
+    balance: number; // Negative balance NOT allowed for customer
+    transactions: WalletTransaction[];
+  };
 }
 
 export interface RegisterDriverPayload {
@@ -183,5 +288,6 @@ export interface RegisterDriverPayload {
   accountNumber: string;
   ifscCode: string;
   upiId: string;
+  referredByCode?: string;
 }
 

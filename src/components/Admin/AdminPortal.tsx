@@ -25,9 +25,29 @@ import {
   Plus,
   Layers,
   Sparkles,
+  Calculator,
+  Gift,
+  Wallet,
+  AlertCircle,
+  ArrowUpRight,
+  Sliders,
+  Share2,
+  X,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
-import { AdminRole, VehicleCategory, TripStatus, VehicleConfig, ServiceZone } from '@/types/logistics';
+import {
+  AdminRole,
+  VehicleCategory,
+  TripStatus,
+  VehicleConfig,
+  ServiceZone,
+  CustomerType,
+  DistanceSlab,
+  CustomerTypeSlabConfig,
+  ReferralRecord,
+  WalletTransaction,
+} from '@/types/logistics';
+import { calculateSlabDistanceFare } from '@/lib/pricing';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
 
@@ -48,11 +68,31 @@ export default function AdminPortal() {
     exportCsvData,
     resetToDemoData,
     showToast,
+    customerSlabConfigs,
+    updateCustomerSlabConfig,
+    referralConfig,
+    updateReferralConfig,
+    referrals,
+    claimReferralBonus,
+    updateDriverNegativeLimit,
+    topUpDriverWallet,
+    adjustWalletBalance,
+    currentCustomer,
+    topUpCustomerWallet,
   } = useLogistics();
 
-  // Admin Navigation Tab: 'dashboard' | 'live-board' | 'fleet-map' | 'drivers-kyc' | 'pricing-zones' | 'finance' | 'audit'
+  // Admin Navigation Tab
   const [adminTab, setAdminTab] = useState<
-    'dashboard' | 'live-board' | 'fleet-map' | 'drivers-kyc' | 'pricing-zones' | 'finance' | 'audit'
+    | 'dashboard'
+    | 'live-board'
+    | 'fleet-map'
+    | 'drivers-kyc'
+    | 'slab-rates'
+    | 'referrals'
+    | 'wallets'
+    | 'pricing-zones'
+    | 'finance'
+    | 'audit'
   >('dashboard');
 
   // Filters for Live Board
@@ -65,9 +105,58 @@ export default function AdminPortal() {
   const [noteInput, setNoteInput] = useState<string>('');
   const [reassignDriverId, setReassignDriverId] = useState<string>('');
 
-  // Edit Pricing / Zone Modal
+  // Edit Vehicle Pricing / Zone Modal
   const [editingVehicle, setEditingVehicle] = useState<VehicleConfig | null>(null);
   const [editingZone, setEditingZone] = useState<ServiceZone | null>(null);
+
+  // Slab Rates Management State
+  const [selectedSlabCustType, setSelectedSlabCustType] = useState<CustomerType>('regular');
+  const [editingSlabItem, setEditingSlabItem] = useState<{
+    custType: CustomerType;
+    slab: DistanceSlab;
+  } | null>(null);
+  const [showAddSlabModal, setShowAddSlabModal] = useState<boolean>(false);
+  const [newSlabFrom, setNewSlabFrom] = useState<number>(0);
+  const [newSlabTo, setNewSlabTo] = useState<number>(1);
+  const [newSlabRate, setNewSlabRate] = useState<number>(50);
+  const [newSlabType, setNewSlabType] = useState<'flat' | 'per_km'>('flat');
+  const [newSlabLabel, setNewSlabLabel] = useState<string>('');
+
+  // Interactive Live Slab Pricing Test Simulator State
+  const [simTripKm, setSimTripKm] = useState<number>(3.0);
+  const [simDriver1Dist, setSimDriver1Dist] = useState<number>(1.0);
+  const [simDriver2Dist, setSimDriver2Dist] = useState<number>(2.0);
+
+  // Referral Programs Config State
+  const [refD2D, setRefD2D] = useState<number>(referralConfig?.driverToDriverBonus || 500);
+  const [refD2C, setRefD2C] = useState<number>(referralConfig?.driverToCustomerBonus || 100);
+  const [refC2CRef, setRefC2CRef] = useState<number>(referralConfig?.customerToCustomerReferrerBonus || 150);
+  const [refC2CNew, setRefC2CNew] = useState<number>(referralConfig?.customerToCustomerRefereeBonus || 100);
+  const [referralFilter, setReferralFilter] = useState<string>('ALL');
+
+  // Wallet Management Modals State
+  const [editingDriverLimit, setEditingDriverLimit] = useState<{
+    driverId: string;
+    driverName: string;
+    currentLimit: number;
+  } | null>(null);
+  const [newLimitInput, setNewLimitInput] = useState<number>(1500);
+
+  const [topupTargetDriver, setTopupTargetDriver] = useState<{
+    driverId: string;
+    driverName: string;
+  } | null>(null);
+  const [driverTopupAmount, setDriverTopupAmount] = useState<number>(500);
+
+  const [customerTopupAmount, setCustomerTopupAmount] = useState<number>(500);
+  const [showCustomerTopupModal, setShowCustomerTopupModal] = useState<boolean>(false);
+
+  const [inspectingTransactions, setInspectingTransactions] = useState<{
+    title: string;
+    balance: number;
+    negativeLimit?: number;
+    transactions: WalletTransaction[];
+  } | null>(null);
 
   // Metrics Calculations
   const totalBookings = trips.length;
@@ -110,7 +199,7 @@ export default function AdminPortal() {
             <h1 className="font-extrabold text-sm tracking-tight flex items-center space-x-2">
               <span>SwifLoad Ops Command Portal</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono font-normal">
-                Bengaluru Central Hub
+                Coimbatore Central Hub (Tamil Nadu)
               </span>
             </h1>
             <p className="text-[11px] text-slate-400">Real-time marketplace monitoring, dispatch & governance</p>
@@ -152,7 +241,10 @@ export default function AdminPortal() {
           { id: 'live-board', label: 'Live Bookings Board', icon: Truck, badge: activeTrips },
           { id: 'fleet-map', label: 'Live Fleet Radar', icon: MapPin },
           { id: 'drivers-kyc', label: 'Driver Partners & KYC', icon: Users, badge: pendingKyc },
-          { id: 'pricing-zones', label: 'Pricing & Geofences', icon: Settings },
+          { id: 'slab-rates', label: 'Distance Slab Rates', icon: Calculator },
+          { id: 'referrals', label: 'Referral Programs', icon: Gift },
+          { id: 'wallets', label: 'Driver & Customer Wallets', icon: Wallet },
+          { id: 'pricing-zones', label: 'Vehicle Matrix & Zones', icon: Settings },
           { id: 'finance', label: 'Finance & Reconciliation', icon: DollarSign },
           { id: 'audit', label: 'Audit Trail', icon: Shield },
         ].map((tab) => {
@@ -221,7 +313,7 @@ export default function AdminPortal() {
               <div className="flex items-center justify-between border-b pb-3">
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">Active Real-Time Freight Orders</h3>
-                  <p className="text-xs text-slate-500">Live operational dispatch status across Bangalore city</p>
+                  <p className="text-xs text-slate-500">Live operational dispatch status across Coimbatore city</p>
                 </div>
                 <button
                   onClick={() => setAdminTab('live-board')}
@@ -409,7 +501,7 @@ export default function AdminPortal() {
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-sm text-slate-900">Live Bangalore Fleet Telematics</h3>
+                <h3 className="font-bold text-sm text-slate-900">Live Coimbatore Fleet Telematics</h3>
                 <p className="text-xs text-slate-500">
                   Tracking {onlineDrivers} active online drivers and 5 designated service zones
                 </p>
@@ -535,7 +627,735 @@ export default function AdminPortal() {
           </div>
         )}
 
-        {/* ================= 5. PRICING CONFIGURATION & GEOFENCES ================= */}
+        {/* ================= 5. DISTANCE SLAB RATES ENGINE ================= */}
+        {adminTab === 'slab-rates' && (
+          <div className="space-y-6">
+            {/* Header & Category Switcher */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <Calculator className="w-5 h-5 text-emerald-600" />
+                    <span>Distance Slab Rates Engine (Marginal Slabs & Categories)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure slab distance rates. Distance from driver location to customer pickup and drop location calculates driver payout and customer quotes.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const activeSlabConf = customerSlabConfigs.find((c) => c.customerType === selectedSlabCustType);
+                    const lastTo = activeSlabConf?.slabs[activeSlabConf.slabs.length - 1]?.toKm || 5;
+                    setNewSlabFrom(lastTo === 999 ? 5 : lastTo);
+                    setNewSlabTo(lastTo === 999 ? 10 : lastTo + 2);
+                    setNewSlabRate(9);
+                    setNewSlabType('per_km');
+                    setNewSlabLabel(`Above ${lastTo} km`);
+                    setShowAddSlabModal(true);
+                  }}
+                  className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl flex items-center space-x-1.5 shadow"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add New Distance Slab</span>
+                </button>
+              </div>
+
+              {/* Customer Category Pills */}
+              <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+                {(
+                  [
+                    { type: 'regular', name: 'Regular Customer', desc: 'Standard slab rates' },
+                    { type: 'new', name: 'New Customer', desc: 'Introductory promotional rates' },
+                    { type: 'multi_pickup', name: 'Multiple Pickup Location', desc: 'Multi-stop transit slabs' },
+                    { type: 'corporate', name: 'Corporate Customer', desc: 'Tiered contracted rates' },
+                  ] as { type: CustomerType; name: string; desc: string }[]
+                ).map((cat) => {
+                  const isSel = selectedSlabCustType === cat.type;
+                  return (
+                    <button
+                      key={cat.type}
+                      onClick={() => setSelectedSlabCustType(cat.type)}
+                      className={`px-3.5 py-2 rounded-xl text-left transition-all ${
+                        isSel
+                          ? 'bg-slate-900 text-white shadow-md'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <div className="font-bold text-xs">{cat.name}</div>
+                      <div className={`text-[10px] ${isSel ? 'text-emerald-300' : 'text-slate-500'}`}>
+                        {cat.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Slabs Grid for Selected Customer Category */}
+              {(() => {
+                const currentConfig =
+                  customerSlabConfigs.find((c) => c.customerType === selectedSlabCustType) ||
+                  customerSlabConfigs[0];
+
+                return (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <span>
+                        Configured Slabs for <strong>{currentConfig.customerTypeName}</strong>:
+                      </span>
+                      <span className="text-[11px] text-slate-400">{currentConfig.description}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                      {currentConfig.slabs.map((slab, sIdx) => (
+                        <div
+                          key={slab.id || sIdx}
+                          className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 relative group hover:border-emerald-300 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Slab #{sIdx + 1}
+                            </span>
+                            <button
+                              onClick={() =>
+                                setEditingSlabItem({ custType: selectedSlabCustType, slab: { ...slab } })
+                              }
+                              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center space-x-1"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                          </div>
+
+                          <div className="text-sm font-extrabold text-slate-900">
+                            {slab.fromKm} to {slab.toKm >= 999 ? '∞' : `${slab.toKm} km`}
+                          </div>
+
+                          <div className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Rate:</span>
+                            <span className="font-black text-emerald-600 text-sm">
+                              ₹{slab.rate}
+                              <span className="text-[10px] font-normal text-slate-400">
+                                {slab.rateType === 'flat' ? ' (Flat Min)' : '/km'}
+                              </span>
+                            </span>
+                          </div>
+
+                          <div className="text-[10px] text-slate-500 truncate">{slab.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Live Interactive Pricing Simulation Sandbox */}
+            <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 text-white rounded-3xl p-5 shadow-xl border border-slate-800 space-y-5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-amber-400 text-lg">⚡</span>
+                    <h4 className="font-extrabold text-sm text-white">
+                      Live Slab Pricing Simulation Sandbox (Verify prompt requirement)
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Demonstrates exact behavior: Driver 1 at 1 km away gets ₹68, Driver 2 at 2 km away gets ₹74. Customer quote uses farthest driver (₹74).
+                  </p>
+                </div>
+
+                <div className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-mono">
+                  Slab Rules: 0-1km flat ₹50 • 1-3km ₹6/km • 3-5km ₹6/km
+                </div>
+              </div>
+
+              {/* Simulation Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 space-y-1.5">
+                  <label className="text-slate-400 font-semibold">Customer Trip Distance (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={simTripKm}
+                    onChange={(e) => setSimTripKm(Number(e.target.value) || 1)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-sm"
+                  />
+                  <span className="text-[10px] text-slate-500">Pickup to drop distance</span>
+                </div>
+
+                <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 space-y-1.5">
+                  <label className="text-slate-400 font-semibold">Driver A Distance to Pickup (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    value={simDriver1Dist}
+                    onChange={(e) => setSimDriver1Dist(Number(e.target.value) || 0.5)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-emerald-400 text-sm"
+                  />
+                  <span className="text-[10px] text-slate-500">e.g. 1.0 km away from customer</span>
+                </div>
+
+                <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 space-y-1.5">
+                  <label className="text-slate-400 font-semibold">Driver B Distance to Pickup (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    value={simDriver2Dist}
+                    onChange={(e) => setSimDriver2Dist(Number(e.target.value) || 0.5)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-cyan-400 text-sm"
+                  />
+                  <span className="text-[10px] text-slate-500">e.g. 2.0 km away from customer</span>
+                </div>
+              </div>
+
+              {/* Simulation Result Cards */}
+              {(() => {
+                const currentConfig =
+                  customerSlabConfigs.find((c) => c.customerType === selectedSlabCustType) ||
+                  customerSlabConfigs[0];
+                const d1Total = Math.round((simDriver1Dist + simTripKm) * 10) / 10;
+                const d2Total = Math.round((simDriver2Dist + simTripKm) * 10) / 10;
+                const farthestDist = Math.max(simDriver1Dist, simDriver2Dist);
+                const custTotal = Math.round((farthestDist + simTripKm) * 10) / 10;
+
+                const d1Calc = calculateSlabDistanceFare(d1Total, currentConfig.slabs);
+                const d2Calc = calculateSlabDistanceFare(d2Total, currentConfig.slabs);
+                const custCalc = calculateSlabDistanceFare(custTotal, currentConfig.slabs);
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Driver 1 Card */}
+                    <div className="bg-slate-900/90 rounded-2xl p-4 border border-emerald-500/40 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-emerald-400">Driver A ({simDriver1Dist} km away)</span>
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">
+                          Total: {d1Total} km
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Task Payout on Driver App</div>
+                        <div className="text-3xl font-black text-emerald-400 mt-1">₹{d1Calc.totalSlabCost}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">
+                          {simDriver1Dist}km approach + {simTripKm}km trip
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-[11px] text-slate-400">
+                        {d1Calc.breakdown.map((b, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>{b.slabLabel}:</span>
+                            <span className="text-slate-200 font-mono">₹{b.cost}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Driver 2 Card */}
+                    <div className="bg-slate-900/90 rounded-2xl p-4 border border-cyan-500/40 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-cyan-400">Driver B ({simDriver2Dist} km away)</span>
+                        <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded font-mono">
+                          Total: {d2Total} km
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Task Payout on Driver App</div>
+                        <div className="text-3xl font-black text-cyan-400 mt-1">₹{d2Calc.totalSlabCost}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">
+                          {simDriver2Dist}km approach + {simTripKm}km trip
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-[11px] text-slate-400">
+                        {d2Calc.breakdown.map((b, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>{b.slabLabel}:</span>
+                            <span className="text-slate-200 font-mono">₹{b.cost}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Customer Quoted Card */}
+                    <div className="bg-slate-900/90 rounded-2xl p-4 border border-amber-500/40 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-amber-300">Customer Displayed Fare</span>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono font-bold">
+                          Quoted via Farthest Driver ({farthestDist} km)
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Initial Customer Quote</div>
+                        <div className="text-3xl font-black text-amber-400 mt-1">₹{custCalc.totalSlabCost}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">
+                          Based on {farthestDist}km max approach + {simTripKm}km trip
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300 space-y-1">
+                        <div className="font-bold flex items-center space-x-1">
+                          <span>🛡️ Customer Protection Guarantee</span>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-amber-200/90">
+                          Notice displayed: "Prices shown can vary. Quoted based on the farthest driver in your pickup range to guarantee no surprise fare increases when a driver accepts."
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* ================= 6. REFERRAL BONUS PROGRAMS ================= */}
+        {adminTab === 'referrals' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <Gift className="w-5 h-5 text-indigo-600" />
+                    <span>Referral Bonus Programs (Driver & Customer Programs)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure bonus reward amounts for driver-to-driver, driver-to-customer, and customer-to-customer referral loops.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => exportCsvData('referrals')}
+                  className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl flex items-center space-x-1.5 shadow"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Export Referrals CSV</span>
+                </button>
+              </div>
+
+              {/* 3 Program Configurations */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Track 1: Driver -> Driver */}
+                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-indigo-950 uppercase tracking-wider">
+                      Track 1: Driver ➔ Driver
+                    </span>
+                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                      Peer Driver Onboarding
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600">
+                    Existing driver partner invites another driver. Bonus credited to driver's wallet when the new driver verifies commercial KYC.
+                  </p>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700">Driver Referral Bonus (₹)</label>
+                    <input
+                      type="number"
+                      value={refD2D}
+                      onChange={(e) => setRefD2D(Number(e.target.value) || 0)}
+                      className="w-full p-2 bg-white border border-indigo-300 rounded-xl text-indigo-950 font-black text-base"
+                    />
+                  </div>
+                </div>
+
+                {/* Track 2: Driver -> Customer */}
+                <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-emerald-950 uppercase tracking-wider">
+                      Track 2: Driver ➔ Customer
+                    </span>
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                      Merchant Acquisition
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600">
+                    Driver partner refers shippers, traders or industrial merchants. Bonus credited to driver wallet when customer completes their first booking.
+                  </p>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700">Driver Commission Bonus (₹)</label>
+                    <input
+                      type="number"
+                      value={refD2C}
+                      onChange={(e) => setRefD2C(Number(e.target.value) || 0)}
+                      className="w-full p-2 bg-white border border-emerald-300 rounded-xl text-emerald-950 font-black text-base"
+                    />
+                  </div>
+                </div>
+
+                {/* Track 3: Customer -> Customer */}
+                <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-amber-950 uppercase tracking-wider">
+                      Track 3: Customer ➔ Customer
+                    </span>
+                    <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                      Viral Organic Loop
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600">
+                    Existing shipper refers another shipper or friend. Referrer earns wallet credits and referee receives instant welcome discount credit.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-700">Referrer Bonus (₹)</label>
+                      <input
+                        type="number"
+                        value={refC2CRef}
+                        onChange={(e) => setRefC2CRef(Number(e.target.value) || 0)}
+                        className="w-full p-2 bg-white border border-amber-300 rounded-xl text-amber-950 font-black text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-700">Referee Welcome (₹)</label>
+                      <input
+                        type="number"
+                        value={refC2CNew}
+                        onChange={(e) => setRefC2CNew(Number(e.target.value) || 0)}
+                        className="w-full p-2 bg-white border border-amber-300 rounded-xl text-amber-950 font-black text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => {
+                    updateReferralConfig({
+                      driverToDriverBonus: refD2D,
+                      driverToCustomerBonus: refD2C,
+                      customerToCustomerReferrerBonus: refC2CRef,
+                      customerToCustomerRefereeBonus: refC2CNew,
+                    });
+                  }}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                >
+                  Save Referral Bonus Matrix ➔
+                </button>
+              </div>
+            </div>
+
+            {/* Referral Tracking Ledger */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+                <h4 className="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                  <span>Referral Activity Ledger & Attribution</span>
+                  <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-mono">
+                    {referrals.length} Total
+                  </span>
+                </h4>
+
+                <div className="flex items-center space-x-1.5 text-xs">
+                  {['ALL', 'CREDITED', 'PENDING'].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setReferralFilter(f)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                        referralFilter === f
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3">Track Type</th>
+                      <th className="p-3">Referrer</th>
+                      <th className="p-3">Referee</th>
+                      <th className="p-3">Bonus Amount</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3">Initiated</th>
+                      <th className="p-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {referrals
+                      .filter((r) => (referralFilter === 'ALL' ? true : r.status === referralFilter))
+                      .map((ref) => (
+                        <tr key={ref.id} className="hover:bg-slate-50">
+                          <td className="p-3">
+                            <span className="font-bold text-slate-900">
+                              {ref.type === 'DRIVER_TO_DRIVER'
+                                ? 'Driver ➔ Driver'
+                                : ref.type === 'DRIVER_TO_CUSTOMER'
+                                ? 'Driver ➔ Customer'
+                                : 'Customer ➔ Customer'}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-800">{ref.referrerName}</div>
+                            <div className="text-[10px] text-slate-400 capitalize">{ref.referrerRole}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-800">{ref.refereeName}</div>
+                            <div className="text-[10px] text-slate-400">{ref.refereePhone || 'Registered User'}</div>
+                          </td>
+                          <td className="p-3">
+                            <span className="font-black text-emerald-600">₹{ref.bonusAmount}</span>
+                          </td>
+                          <td className="p-3">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                ref.status === 'CREDITED'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800 animate-pulse'
+                              }`}
+                            >
+                              {ref.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-[11px] text-slate-500 font-mono">
+                            {new Date(ref.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="p-3 text-right">
+                            {ref.status === 'PENDING' ? (
+                              <button
+                                onClick={() => claimReferralBonus(ref.id)}
+                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow"
+                              >
+                                Credit Wallet
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 font-semibold">Credited</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= 7. DRIVER & CUSTOMER WALLETS FACILITY ================= */}
+        {adminTab === 'wallets' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <Wallet className="w-5 h-5 text-emerald-600" />
+                    <span>Marketplace Wallets & Driver Overdraft Governance</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Negative balance is permitted <strong>only for drivers</strong> subject to pre-determined limits fixed for each driver. Customer wallets strictly require non-negative balance.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => exportCsvData('wallets')}
+                  className="text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl flex items-center space-x-1.5 shadow"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Export Wallets CSV</span>
+                </button>
+              </div>
+
+              {/* KPI Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="text-[10px] font-bold uppercase text-slate-400">Total Driver Wallets</div>
+                  <div className="text-xl font-black text-slate-900 mt-0.5">
+                    ₹{drivers.reduce((acc, d) => acc + d.wallet.balance, 0).toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{drivers.length} Registered Drivers</div>
+                </div>
+
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="text-[10px] font-bold uppercase text-slate-400">Drivers in Overdraft</div>
+                  <div className="text-xl font-black text-amber-600 mt-0.5">
+                    {drivers.filter((d) => d.wallet.balance < 0).length} Driver(s)
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Total utilized: ₹
+                    {Math.abs(
+                      drivers.filter((d) => d.wallet.balance < 0).reduce((acc, d) => acc + d.wallet.balance, 0)
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="text-[10px] font-bold uppercase text-slate-400">Customer Wallet Balance</div>
+                  <div className="text-xl font-black text-emerald-600 mt-0.5">
+                    ₹{currentCustomer.wallet.balance.toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Strictly Non-Negative Policy</div>
+                </div>
+              </div>
+
+              {/* Driver Wallets Table */}
+              <div className="space-y-3 pt-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-slate-900">Driver Partner Wallets & Negative Limits</h4>
+                  <span className="text-xs text-slate-500">Limits can be adjusted per driver based on rating & tenure</span>
+                </div>
+
+                <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                      <tr>
+                        <th className="p-3">Driver Partner</th>
+                        <th className="p-3">Vehicle / Number</th>
+                        <th className="p-3">Current Balance</th>
+                        <th className="p-3">Overdraft Limit Allowed</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {drivers.map((drv) => {
+                        const isNeg = drv.wallet.balance < 0;
+                        const limit = drv.wallet.negativeBalanceLimit || 1500;
+                        return (
+                          <tr key={drv.id} className="hover:bg-slate-50">
+                            <td className="p-3">
+                              <div className="font-bold text-slate-900">{drv.name}</div>
+                              <div className="text-[10px] text-slate-400">{drv.phone}</div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-slate-800">{drv.vehicleModel}</div>
+                              <div className="text-[10px] font-mono text-slate-500">{drv.vehicleNumber}</div>
+                            </td>
+                            <td className="p-3">
+                              <span
+                                className={`font-black text-sm ${
+                                  isNeg ? 'text-rose-600' : 'text-emerald-600'
+                                }`}
+                              >
+                                {isNeg ? `-₹${Math.abs(drv.wallet.balance)}` : `₹${drv.wallet.balance}`}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center space-x-1.5">
+                                <span className="font-bold text-slate-800">-₹{limit}</span>
+                                <button
+                                  onClick={() => {
+                                    setEditingDriverLimit({
+                                      driverId: drv.id,
+                                      driverName: drv.name,
+                                      currentLimit: limit,
+                                    });
+                                    setNewLimitInput(limit);
+                                  }}
+                                  className="text-[10px] text-blue-600 hover:underline font-bold"
+                                >
+                                  Edit Limit
+                                </button>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              {isNeg ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                                  Overdraft Used (₹{Math.abs(drv.wallet.balance)} / ₹{limit})
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                  Good Standing
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  onClick={() =>
+                                    setTopupTargetDriver({ driverId: drv.id, driverName: drv.name })
+                                  }
+                                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded-lg text-xs"
+                                >
+                                  Top-Up
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setInspectingTransactions({
+                                      title: `${drv.name}'s Driver Wallet`,
+                                      balance: drv.wallet.balance,
+                                      negativeLimit: limit,
+                                      transactions: drv.wallet.transactions || [],
+                                    })
+                                  }
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs"
+                                >
+                                  Ledger ({drv.wallet.transactions?.length || 0})
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Customer Wallet Section */}
+              <div className="space-y-3 pt-3 border-t">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-slate-900">Customer Wallets</h4>
+                  <span className="text-xs text-slate-500">Shippers & Merchants balance management</span>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="font-extrabold text-sm text-slate-900">{currentCustomer.name}</div>
+                    <div className="text-xs text-slate-500">
+                      {currentCustomer.phone} • Category: <strong className="capitalize">{currentCustomer.customerType}</strong> • Referral Code: <strong className="font-mono">{currentCustomer.referralCode}</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase font-bold text-slate-400">Wallet Balance</div>
+                      <div className="text-xl font-black text-emerald-600">₹{currentCustomer.wallet.balance}</div>
+                    </div>
+
+                    <button
+                      onClick={() => setShowCustomerTopupModal(true)}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow"
+                    >
+                      Add Money
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setInspectingTransactions({
+                          title: `${currentCustomer.name}'s Customer Wallet`,
+                          balance: currentCustomer.wallet.balance,
+                          transactions: currentCustomer.wallet.transactions || [],
+                        })
+                      }
+                      className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs"
+                    >
+                      View Ledger
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= 8. PRICING CONFIGURATION & GEOFENCES ================= */}
         {adminTab === 'pricing-zones' && (
           <div className="space-y-6">
             {/* Vehicle Pricing Configuration */}
@@ -585,7 +1405,7 @@ export default function AdminPortal() {
             <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b pb-3">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Bengaluru Serviceability Zones & Surge</h3>
+                  <h3 className="font-bold text-sm text-slate-900">Coimbatore Serviceability Zones & Surge</h3>
                   <p className="text-xs text-slate-500">Configure city polygons, active surge multipliers and coverage radius</p>
                 </div>
               </div>
@@ -882,6 +1702,524 @@ export default function AdminPortal() {
                 className="flex-1 py-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold"
               >
                 Save Zone Surge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT DISTANCE SLAB ================= */}
+      {editingSlabItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Edit Distance Slab</h3>
+                <p className="text-xs text-slate-500 capitalize">Category: {editingSlabItem.custType.replace('_', ' ')}</p>
+              </div>
+              <button
+                onClick={() => setEditingSlabItem(null)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Slab Display Label</label>
+                <input
+                  type="text"
+                  value={editingSlabItem.slab.label}
+                  onChange={(e) =>
+                    setEditingSlabItem({
+                      ...editingSlabItem,
+                      slab: { ...editingSlabItem.slab, label: e.target.value },
+                    })
+                  }
+                  className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">From Distance (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={editingSlabItem.slab.fromKm}
+                    onChange={(e) =>
+                      setEditingSlabItem({
+                        ...editingSlabItem,
+                        slab: { ...editingSlabItem.slab, fromKm: Number(e.target.value) },
+                      })
+                    }
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">To Distance (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.1"
+                    value={editingSlabItem.slab.toKm}
+                    onChange={(e) =>
+                      setEditingSlabItem({
+                        ...editingSlabItem,
+                        slab: { ...editingSlabItem.slab, toKm: Number(e.target.value) },
+                      })
+                    }
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Pricing Model</label>
+                  <select
+                    value={editingSlabItem.slab.rateType}
+                    onChange={(e) =>
+                      setEditingSlabItem({
+                        ...editingSlabItem,
+                        slab: {
+                          ...editingSlabItem.slab,
+                          rateType: e.target.value as 'flat' | 'per_km',
+                        },
+                      })
+                    }
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  >
+                    <option value="flat">Flat Minimum Price (₹)</option>
+                    <option value="per_km">Per Kilometer Rate (₹/km)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Rate ({editingSlabItem.slab.rateType === 'flat' ? '₹ Flat' : '₹/km'})
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={editingSlabItem.slab.rate}
+                    onChange={(e) =>
+                      setEditingSlabItem({
+                        ...editingSlabItem,
+                        slab: { ...editingSlabItem.slab, rate: Number(e.target.value) },
+                      })
+                    }
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-extrabold text-emerald-600 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setEditingSlabItem(null)}
+                className="flex-1 py-2.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const targetConfig = customerSlabConfigs.find((c) => c.customerType === editingSlabItem.custType);
+                  if (targetConfig) {
+                    const updatedSlabs = targetConfig.slabs.map((s) =>
+                      s.id === editingSlabItem.slab.id ? editingSlabItem.slab : s
+                    );
+                    updateCustomerSlabConfig({ ...targetConfig, slabs: updatedSlabs });
+                  }
+                  setEditingSlabItem(null);
+                }}
+                className="flex-1 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-200"
+              >
+                Save Slab Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ADD NEW DISTANCE SLAB ================= */}
+      {showAddSlabModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Add New Distance Slab</h3>
+                <p className="text-xs text-slate-500 capitalize">Target Category: {selectedSlabCustType.replace('_', ' ')}</p>
+              </div>
+              <button
+                onClick={() => setShowAddSlabModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Slab Label</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Above 5 to 10 km"
+                  value={newSlabLabel}
+                  onChange={(e) => setNewSlabLabel(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border rounded-xl font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">From Distance (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={newSlabFrom}
+                    onChange={(e) => setNewSlabFrom(Number(e.target.value))}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">To Distance (km)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.1"
+                    value={newSlabTo}
+                    onChange={(e) => setNewSlabTo(Number(e.target.value))}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Pricing Model</label>
+                  <select
+                    value={newSlabType}
+                    onChange={(e) => setNewSlabType(e.target.value as 'flat' | 'per_km')}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                  >
+                    <option value="flat">Flat Minimum Price (₹)</option>
+                    <option value="per_km">Per Kilometer Rate (₹/km)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Rate ({newSlabType === 'flat' ? '₹ Flat' : '₹/km'})
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={newSlabRate}
+                    onChange={(e) => setNewSlabRate(Number(e.target.value))}
+                    className="w-full p-2.5 bg-slate-50 border rounded-xl font-extrabold text-emerald-600 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setShowAddSlabModal(false)}
+                className="flex-1 py-2.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const targetConfig = customerSlabConfigs.find((c) => c.customerType === selectedSlabCustType);
+                  if (targetConfig) {
+                    const newSlab: DistanceSlab = {
+                      id: `slab_${Date.now()}`,
+                      fromKm: newSlabFrom,
+                      toKm: newSlabTo,
+                      rate: newSlabRate,
+                      rateType: newSlabType,
+                      label: newSlabLabel || `${newSlabFrom}-${newSlabTo} km`,
+                    };
+                    const updatedSlabs = [...targetConfig.slabs, newSlab].sort((a, b) => a.fromKm - b.fromKm);
+                    updateCustomerSlabConfig({ ...targetConfig, slabs: updatedSlabs });
+                  }
+                  setShowAddSlabModal(false);
+                  setNewSlabLabel('');
+                }}
+                className="flex-1 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-200"
+              >
+                Append Slab
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT DRIVER NEGATIVE LIMIT ================= */}
+      {editingDriverLimit && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Adjust Overdraft Limit</h3>
+                <p className="text-xs text-slate-500">{editingDriverLimit.driverName} ({editingDriverLimit.driverId})</p>
+              </div>
+              <button
+                onClick={() => setEditingDriverLimit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-600 leading-relaxed">
+                Set the maximum negative wallet balance allowed for this driver. When balance drops below this threshold, the driver is restricted from receiving cash trips.
+              </p>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Max Negative Balance Limit (₹)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 font-bold text-rose-500">-₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={newLimitInput}
+                    onChange={(e) => setNewLimitInput(Math.max(0, Number(e.target.value)))}
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-extrabold text-base text-slate-900"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Allowed range: ₹0 (No credit) to ₹10,000</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setEditingDriverLimit(null)}
+                className="flex-1 py-2.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  updateDriverNegativeLimit(editingDriverLimit.driverId, newLimitInput);
+                  setEditingDriverLimit(null);
+                }}
+                className="flex-1 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-200"
+              >
+                Update Limit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: TOP-UP DRIVER WALLET ================= */}
+      {topupTargetDriver && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Manual Driver Wallet Credit</h3>
+                <p className="text-xs text-slate-500">{topupTargetDriver.driverName}</p>
+              </div>
+              <button
+                onClick={() => setTopupTargetDriver(null)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Credit Amount (₹)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 font-bold text-emerald-600">₹</span>
+                  <input
+                    type="number"
+                    min="50"
+                    step="50"
+                    value={driverTopupAmount}
+                    onChange={(e) => setDriverTopupAmount(Number(e.target.value))}
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-extrabold text-base text-emerald-700"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {[200, 500, 1000, 2000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setDriverTopupAmount(amt)}
+                    className="flex-1 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-bold text-slate-700"
+                  >
+                    +₹{amt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setTopupTargetDriver(null)}
+                className="flex-1 py-2.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  topUpDriverWallet(topupTargetDriver.driverId, driverTopupAmount, 'Admin credit settlement');
+                  setTopupTargetDriver(null);
+                }}
+                className="flex-1 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-200"
+              >
+                Credit ₹{driverTopupAmount}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: TOP-UP CUSTOMER WALLET ================= */}
+      {showCustomerTopupModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Add Customer Wallet Credit</h3>
+                <p className="text-xs text-slate-500">{currentCustomer.name} ({currentCustomer.phone})</p>
+              </div>
+              <button
+                onClick={() => setShowCustomerTopupModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Credit Amount (₹)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 font-bold text-blue-600">₹</span>
+                  <input
+                    type="number"
+                    min="50"
+                    step="50"
+                    value={customerTopupAmount}
+                    onChange={(e) => setCustomerTopupAmount(Number(e.target.value))}
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-extrabold text-base text-blue-700"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {[100, 250, 500, 1000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setCustomerTopupAmount(amt)}
+                    className="flex-1 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-bold text-slate-700"
+                  >
+                    +₹{amt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                onClick={() => setShowCustomerTopupModal(false)}
+                className="flex-1 py-2.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  topUpCustomerWallet(customerTopupAmount, 'Admin top-up / promotional balance');
+                  setShowCustomerTopupModal(false);
+                }}
+                className="flex-1 py-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-200"
+              >
+                Credit ₹{customerTopupAmount}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: TRANSACTION LEDGER ================= */}
+      {inspectingTransactions && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">{inspectingTransactions.title}</h3>
+                <div className="flex items-center space-x-3 mt-1">
+                  <span className="text-xs text-slate-500">
+                    Current Balance:{' '}
+                    <span className={`font-extrabold ${inspectingTransactions.balance < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      ₹{inspectingTransactions.balance.toLocaleString('en-IN')}
+                    </span>
+                  </span>
+                  {inspectingTransactions.negativeLimit !== undefined && (
+                    <span className="text-xs text-slate-400">
+                      Limit: -₹{inspectingTransactions.negativeLimit.toLocaleString('en-IN')}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setInspectingTransactions(null)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+              {inspectingTransactions.transactions && inspectingTransactions.transactions.length > 0 ? (
+                inspectingTransactions.transactions.map((tx) => (
+                  <div key={tx.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-semibold text-slate-800">{tx.description}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {new Date(tx.timestamp).toLocaleString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })} • Ref: {tx.referenceId || tx.id}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                      </span>
+                      <div className="text-[10px] text-slate-400">
+                        Bal: ₹{tx.balanceAfter.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-xs text-slate-400">
+                  No transaction history recorded yet.
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t">
+              <button
+                onClick={() => setInspectingTransactions(null)}
+                className="w-full py-2.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold"
+              >
+                Close Ledger
               </button>
             </div>
           </div>

@@ -106,7 +106,7 @@ export default function WebPlatform({ onOpenSimulator }: WebPlatformProps) {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              From a small document courier to 1000kg commercial freight and full-house shifting. On-demand trucks and two-wheelers across Bengaluru in minutes.
+              From a small document courier to 1000kg commercial freight and full-house shifting. On-demand trucks and two-wheelers across Coimbatore in minutes.
             </p>
 
             {/* Quick Trust Badges */}

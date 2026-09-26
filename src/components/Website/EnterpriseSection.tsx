@@ -83,7 +83,7 @@ export default function EnterpriseSection() {
             Streamline City Deliveries with On-Demand Bulk Fleet & APIs
           </h2>
           <p className="text-sm text-slate-400 leading-relaxed">
-            Eliminate fixed fleet overheads. Scale delivery capacity on demand across Bengaluru with priority driver dispatches, multi-stop routing, and automated webhook order injection.
+            Eliminate fixed fleet overheads. Scale delivery capacity on demand across Coimbatore with priority driver dispatches, multi-stop routing, and automated webhook order injection.
           </p>
         </div>
 
@@ -122,7 +122,7 @@ export default function EnterpriseSection() {
               <div>
                 <h4 className="text-sm font-bold text-white">Dedicated Key Account Manager & SLA Guarantee</h4>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Guaranteed 99.4% pickup SLA with sub-12 minute vehicle assignment across all Bengaluru industrial and retail zones.
+                  Guaranteed 99.4% pickup SLA with sub-12 minute vehicle assignment across all Coimbatore industrial and textile belts.
                 </p>
               </div>
             </div>

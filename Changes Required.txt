@@ -1,4 +1,14 @@
 Go through output of graphify to understand this solution.
 
-In customer app they should be able to see the live movement of the driver moving towards their location in the maps, similar to Uber app.
-In driver app the following logic should be implemented for pickup tasks. All drivers would divided into several groups catering to a particular location range each day. The group which is nearest to the customer would receive a popup which would mention the pickup  and drop location, the charge for that pickup task. Once a driver accepts a task then details about the driver name and contact number would be available for the customer. If no one in a particular group picks up that task , then it would show up in the next group who are in the adjacent location, when compared to the previous group. The task will keep showing up till it is accepted in each group one after the other. All such unaccepted tasks will show up as available orders for one group at one point in time, till it moves to another group.
+There are several aspects which have to be configurable and should be included in Admin Portal. The features are as below:
+The rate per kilometer is applied in slab distance rates. 
+Example: 0 to 1 km flat minimum price. Above 1 km to 3 km another price, From 3 kn to 5 km another price. Based on the distance from driver location to customer pick up and drop locations , the charges should be calculated and that would be showing in the pop up for each driver. For example: For the driver who is 1 km away from the customer pickup location and another one is 2 kms away from the customer pickup location , the rates showing up for the task on their app should be Rs.68 and 74 respectively which is based on slab rates fixed. The customer should get to see the rates based on the driver who is the most distance in the closest range for the customer. This is to ensure that the customer does not feel uncomfortable if a lesser price is shown initially and later charged more because a different driver accepted the task. There should also be a message displayed for the customer informing that the prices shown can vary. The distance slabs and the rate for each should be configurable. The slabs and rates can vary based on new customer, regular customer, multiple pickup location customer or corporate customer.
+
+There are referral bonus programs also for driver referring another driver , driver referrring another customer or a customer referring another customer. 
+
+There has to a wallet facility also implemented for both driver and customers. Negative balance also allowed only for driver subject to pre-determined limit fixed for each driver. 
+
+
+
+
+

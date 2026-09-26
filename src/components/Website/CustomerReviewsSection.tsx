@@ -7,30 +7,30 @@ export default function CustomerReviewsSection() {
   const reviews = [
     {
       name: 'Ravi Teja',
-      designation: 'Store Manager, Royal Hardware Peenya',
+      designation: 'Store Manager, Royal Hardware & Foundry Supplies',
       content:
-        'We ship 15-20 consignments of industrial pipes and fittings daily. SwifLoad’s 8ft pickup trucks arrive in less than 15 minutes, and their GST invoices make reconciliation seamless.',
+        'We ship 15-20 consignments of industrial pump components and fittings daily. SwifLoad’s 8ft pickup trucks arrive in less than 15 minutes in Kurichi SIDCO, and their GST invoices make reconciliation seamless.',
       rating: 5,
       vehicle: '8ft Large Pickup',
-      city: 'Peenya, Bengaluru',
+      city: 'Kurichi SIDCO, Coimbatore',
     },
     {
       name: 'Sneha Venkatesh',
       designation: 'Founder, Botanica Bloom D2C',
       content:
-        'The 2-wheeler express delivery is an absolute lifesaver for our flower & luxury gift hampers. Live OTP handover ensures zero parcel misplacement and our customers love the live tracking link!',
+        'The 2-wheeler express delivery is an absolute lifesaver for our flower & luxury gift hampers across Coimbatore. Live OTP handover ensures zero parcel misplacement and our customers love the live tracking link!',
       rating: 5,
       vehicle: '2-Wheeler Express',
-      city: 'Indiranagar, Bengaluru',
+      city: 'RS Puram, Coimbatore',
     },
     {
       name: 'Dr. Alok Sen & Family',
-      designation: 'Moved from Koramangala to Whitefield',
+      designation: 'Moved from Gandhipuram to Peelamedu',
       content:
         'We booked the 2 BHK Packers & Movers service. The crew arrived with high-grade bubble wrap and dismantled our modular wooden wardrobes without a scratch. Extremely professional team!',
       rating: 5,
       vehicle: 'Packers & Movers',
-      city: 'Whitefield, Bengaluru',
+      city: 'Peelamedu, Coimbatore',
     },
   ];
 

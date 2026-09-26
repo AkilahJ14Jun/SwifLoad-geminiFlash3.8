@@ -9,18 +9,21 @@ interface WebFooterProps {
 
 export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
   const cities = [
+    'Coimbatore',
+    'Tiruppur',
+    'Chennai',
+    'Madurai',
+    'Salem',
     'Bangalore',
     'Mumbai',
     'Delhi NCR',
     'Hyderabad',
-    'Chennai',
     'Pune',
     'Kolkata',
     'Ahmedabad',
     'Surat',
     'Jaipur',
     'Lucknow',
-    'Coimbatore',
     'Indore',
     'Nagpur',
     'Chandigarh',
@@ -54,7 +57,7 @@ export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
             <div className="space-y-2 text-xs">
               <div className="flex items-center space-x-2 text-slate-300">
                 <Phone className="w-3.5 h-3.5 text-blue-400" />
-                <span>24/7 Customer Care: <strong>080 4410 4410</strong></span>
+                <span>24/7 Customer Care: <strong>0422 4410 4410</strong></span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
                 <Mail className="w-3.5 h-3.5 text-blue-400" />
@@ -62,7 +65,7 @@ export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
                 <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                <span>Central Hub: MG Road Metro Station Complex, Shivaji Nagar, Bengaluru 560001</span>
+                <span>Central Hub: Avinashi Road, Near Tidel Park & Peelamedu, Coimbatore 641014, Tamil Nadu</span>
               </div>
             </div>
           </div>

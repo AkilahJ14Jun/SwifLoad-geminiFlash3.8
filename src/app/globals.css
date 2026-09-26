@@ -37,3 +37,10 @@ body {
   background: transparent !important;
   border: none !important;
 }
+
+/* Uber-like smooth gliding animation for driver markers */
+.leaflet-driver-marker {
+  background: transparent !important;
+  border: none !important;
+  transition: transform 1.3s cubic-bezier(0.2, 0.8, 0.4, 1) !important;
+}

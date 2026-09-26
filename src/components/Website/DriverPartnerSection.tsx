@@ -195,7 +195,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
               <form onSubmit={handleRegister} className="space-y-4 text-xs">
                 <div>
                   <h3 className="text-base font-black text-white">Attach Your Vehicle Now</h3>
-                  <p className="text-xs text-slate-400">Start accepting orders in Bengaluru within 15 minutes</p>
+                  <p className="text-xs text-slate-400">Start accepting orders in Coimbatore within 15 minutes</p>
                 </div>
 
                 <div>
@@ -205,7 +205,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
                     required
                     value={partnerName}
                     onChange={(e) => setPartnerName(e.target.value)}
-                    placeholder="e.g. Anand Murthy"
+                    placeholder="e.g. Murugan K"
                     className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -217,7 +217,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
                     required
                     value={partnerPhone}
                     onChange={(e) => setPartnerPhone(e.target.value)}
-                    placeholder="+91 98450 00000"
+                    placeholder="+91 98422 00000"
                     className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -244,7 +244,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
                       required
                       value={vehicleNumber}
                       onChange={(e) => setVehicleNumber(e.target.value)}
-                      placeholder="KA-05-MN-4421"
+                      placeholder="TN-38-AX-4821"
                       className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 uppercase font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -255,7 +255,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
                       type="text"
                       value={drivingLicense}
                       onChange={(e) => setDrivingLicense(e.target.value)}
-                      placeholder="KA-01-2019..."
+                      placeholder="TN-38-2019..."
                       className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 uppercase font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

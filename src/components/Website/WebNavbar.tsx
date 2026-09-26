@@ -33,22 +33,22 @@ export default function WebNavbar({
   onSelectServiceTab,
 }: WebNavbarProps) {
   const { currentCustomer } = useLogistics();
-  const [selectedCity, setSelectedCity] = useState('Bengaluru');
+  const [selectedCity, setSelectedCity] = useState('Coimbatore');
   const [isCityOpen, setIsCityOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isSimDropdownOpen, setIsSimDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const cities = [
+    'Coimbatore',
     'Bengaluru',
+    'Chennai',
+    'Tiruppur',
+    'Madurai',
+    'Salem',
+    'Hyderabad',
     'Mumbai',
     'Delhi NCR',
-    'Hyderabad',
-    'Chennai',
-    'Pune',
-    'Kolkata',
-    'Ahmedabad',
-    'Jaipur',
   ];
 
   const scrollToSection = (id: string) => {
@@ -132,7 +132,7 @@ export default function WebNavbar({
                     }`}
                   >
                     <span>{city}</span>
-                    {city === 'Bengaluru' && (
+                    {city === 'Coimbatore' && (
                       <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
                         ACTIVE
                       </span>

@@ -49,7 +49,7 @@ export default function PackersMoversSection({ onBookMove }: PackersMoversSectio
             </div>
 
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-              Relocate Hassle-Free Across Bengaluru & Beyond
+              Relocate Hassle-Free Across Coimbatore & Beyond
             </h2>
 
             <p className="text-sm text-slate-600 leading-relaxed">
@@ -104,7 +104,7 @@ export default function PackersMoversSection({ onBookMove }: PackersMoversSectio
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-black text-slate-900">Instant Shifting Estimator</h3>
-                <p className="text-xs text-slate-500">Transparent rates for Bengaluru city shifting</p>
+                <p className="text-xs text-slate-500">Transparent rates for Coimbatore city shifting</p>
               </div>
               <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
                 Guaranteed Slot

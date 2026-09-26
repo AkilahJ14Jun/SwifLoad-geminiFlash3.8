@@ -1,0 +1,11 @@
+# Cursor AI Rules for SwifLoad Codebase
+
+## MANDATORY END-OF-SESSION REQUIREMENT
+Before completing any session or ending your response:
+1. Update `SESSION_CHANGELOG.md` with a bullet-point summary of all changes made during the session.
+2. Include the date, objectives, files modified, and feature breakdown.
+3. Verify that `npm run build` passes with 0 errors.
+
+## Codebase Context
+- Primary tech: Next.js 14 (App router), TypeScript, Tailwind CSS, Leaflet.
+- Default City: Coimbatore, Tamil Nadu.

@@ -25,10 +25,19 @@ import {
   HelpCircle,
   RotateCcw,
   Sparkles,
+  Wallet,
+  Gift,
+  Share2,
+  Copy,
+  Plus,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Users,
+  Check,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
-import { VehicleCategory, GoodsCategory, PaymentMethod, LocationPoint } from '@/types/logistics';
-import { calculateDistanceKm, calculateFare, estimateDurationMins } from '@/lib/pricing';
+import { VehicleCategory, GoodsCategory, PaymentMethod, LocationPoint, CustomerType } from '@/types/logistics';
+import { calculateDistanceKm, calculateCustomerQuotedSlabFare, estimateDurationMins } from '@/lib/pricing';
 
 // Dynamic import of Leaflet map to prevent SSR window reference error
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
@@ -36,6 +45,7 @@ const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: f
 export default function CustomerApp() {
   const {
     trips,
+    drivers,
     activeTripId,
     setActiveTripId,
     vehicleConfigs,
@@ -49,10 +59,23 @@ export default function CustomerApp() {
     registerCustomer,
     loginCustomer,
     logoutCustomer,
+    customerSlabConfigs,
+    referralConfig,
+    referrals,
+    applyCustomerReferralCode,
+    topUpCustomerWallet,
+    updateCustomerType,
   } = useLogistics();
 
-  // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'profile' | 'support'
-  const [activeTab, setActiveTab] = useState<'book' | 'tracking' | 'history' | 'profile' | 'support'>('book');
+  // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'wallet' | 'referrals' | 'profile' | 'support'
+  const [activeTab, setActiveTab] = useState<'book' | 'tracking' | 'history' | 'wallet' | 'referrals' | 'profile' | 'support'>('book');
+
+  // Referral and Wallet UI States
+  const [referralInputCode, setReferralInputCode] = useState<string>('');
+  const [referralCopied, setReferralCopied] = useState<boolean>(false);
+  const [showWalletTopupModal, setShowWalletTopupModal] = useState<boolean>(false);
+  const [walletTopupAmount, setWalletTopupAmount] = useState<number>(500);
+  const [showSlabBreakdownDetails, setShowSlabBreakdownDetails] = useState<boolean>(false);
 
   // Customer Auth / Registration Modal State
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -65,20 +88,20 @@ export default function CustomerApp() {
   const [otpSent, setOtpSent] = useState<boolean>(false);
 
   // Booking Flow States
-  const [pickupPoint, setPickupPoint] = useState<LocationPoint>(landmarks[2]); // Koramangala
-  const [dropPoint, setDropPoint] = useState<LocationPoint>(landmarks[1]); // Indiranagar
+  const [pickupPoint, setPickupPoint] = useState<LocationPoint>(landmarks[2] || landmarks[0]); // Peelamedu
+  const [dropPoint, setDropPoint] = useState<LocationPoint>(landmarks[0] || landmarks[1]); // Gandhipuram
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('tata_ace');
-  const [goodsCategory, setGoodsCategory] = useState<GoodsCategory>('Furniture & Home Decor');
-  const [weightKg, setWeightKg] = useState<number>(120);
+  const [goodsCategory, setGoodsCategory] = useState<GoodsCategory>('Industrial Equipment');
+  const [weightKg, setWeightKg] = useState<number>(180);
   const [hasHelper, setHasHelper] = useState<boolean>(true);
-  const [notes, setNotes] = useState<string>('Fragile cargo, please handle with care');
+  const [notes, setNotes] = useState<string>('Machined engineering components, handle carefully');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI_GPAY');
   const [isScheduled, setIsScheduled] = useState<boolean>(false);
   const [scheduleTime, setScheduleTime] = useState<string>('Tomorrow, 10:00 AM');
-  const [senderName, setSenderName] = useState<string>(currentCustomer?.name || 'Priya Sharma');
-  const [senderPhone, setSenderPhone] = useState<string>(currentCustomer?.phone || '+91 98801 99234');
-  const [receiverName, setReceiverName] = useState<string>('Vikram Mehta');
-  const [receiverPhone, setReceiverPhone] = useState<string>('+91 98450 88712');
+  const [senderName, setSenderName] = useState<string>(currentCustomer?.name || 'Kavitha Sundaram');
+  const [senderPhone, setSenderPhone] = useState<string>(currentCustomer?.phone || '+91 98422 19283');
+  const [receiverName, setReceiverName] = useState<string>('Venkatesh Babu');
+  const [receiverPhone, setReceiverPhone] = useState<string>('+91 98422 88712');
   const [showShipmentModal, setShowShipmentModal] = useState<boolean>(false);
 
   // Cancellation Modal
@@ -96,17 +119,23 @@ export default function CustomerApp() {
   // Invoice Modal
   const [viewInvoiceTripId, setViewInvoiceTripId] = useState<string | null>(null);
 
-  // Distance and fare calculation
+  // Distance and slab pricing calculation
   const distanceKm = calculateDistanceKm(pickupPoint, dropPoint);
   const durationMins = estimateDurationMins(distanceKm);
-  const fareBreakdown = calculateFare(
-    selectedVehicle,
+  const custType: CustomerType = currentCustomer?.customerType || 'regular';
+
+  // Quoted based on farthest driver in closest range to prevent surprise fare jumps
+  const fareBreakdown = calculateCustomerQuotedSlabFare(
     distanceKm,
-    hasHelper,
-    vehicleConfigs,
-    serviceZones,
+    custType,
     pickupPoint,
-    dropPoint
+    dropPoint,
+    drivers,
+    customerSlabConfigs,
+    hasHelper,
+    selectedVehicle,
+    vehicleConfigs,
+    serviceZones
   );
 
   // Active Trip
@@ -130,11 +159,14 @@ export default function CustomerApp() {
       hasHelperRequired: hasHelper,
       notes,
       paymentMethod,
+      customerType: custType,
       scheduledTime: isScheduled ? scheduleTime : 'Instant Now',
       customerName: senderName,
       customerPhone: senderPhone,
     });
-    setActiveTab('tracking');
+    if (newTripId) {
+      setActiveTab('tracking');
+    }
   };
 
   const getVehicleIcon = (iconName: string) => {
@@ -159,16 +191,35 @@ export default function CustomerApp() {
             ⚡
           </div>
           <div>
-            <h1 className="font-bold text-base tracking-tight leading-tight">SwifLoad Bengaluru</h1>
+            <h1 className="font-bold text-base tracking-tight leading-tight">SwifLoad Coimbatore</h1>
             <p className="text-[11px] text-emerald-100 flex items-center space-x-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-              <span>Intra-City On-Demand Express Freight</span>
+              <span>Intra-City On-Demand Express Freight • Tamil Nadu</span>
             </p>
           </div>
         </div>
 
-        {/* Profile / Register / Support Shortcut */}
+        {/* Profile / Wallet / Referrals / Support Shortcut */}
         <div className="flex items-center space-x-2">
+          {/* Quick Wallet Balance Badge */}
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className="px-2.5 py-1 text-xs bg-white/15 hover:bg-white/25 text-white font-bold rounded-lg flex items-center space-x-1.5 transition-all border border-white/20"
+            title="Customer Wallet Balance"
+          >
+            <Wallet className="w-3.5 h-3.5 text-emerald-300" />
+            <span>₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('referrals')}
+            className="px-2.5 py-1 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold rounded-lg flex items-center space-x-1 border border-emerald-400/30 transition-all"
+            title="Refer & Earn Rewards"
+          >
+            <Gift className="w-3.5 h-3.5 text-emerald-300" />
+            <span className="hidden sm:inline">Refer & Earn</span>
+          </button>
+
           <button
             onClick={() => {
               setAuthMode('register');
@@ -177,7 +228,7 @@ export default function CustomerApp() {
             className="px-2.5 py-1 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg flex items-center space-x-1 transition-all shadow"
             title="Register new customer profile"
           >
-            <span>+ New Customer</span>
+            <span>+ Customer</span>
           </button>
 
           <button
@@ -195,6 +246,76 @@ export default function CustomerApp() {
         {/* ================= TAB 1: BOOKING VIEW ================= */}
         {activeTab === 'book' && (
           <div className="space-y-4 max-w-xl mx-auto">
+            {/* Customer Tier / Category Selector */}
+            <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-0.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Customer Category / Pricing Tier
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 self-start sm:self-auto">
+                  Active Tier: {custType === 'new' ? 'NEW USER' : custType === 'regular' ? 'REGULAR' : custType === 'multi_pickup' ? 'MULTI-PICKUP' : 'CORPORATE B2B'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { type: 'regular', top: 'Regular', bottom: '', icon: '👤', title: 'Regular Customer' },
+                  { type: 'new', top: 'New', bottom: 'User', icon: '✨', title: 'New User / Welcome Slabs' },
+                  { type: 'multi_pickup', top: 'Multi', bottom: 'Pickup', icon: '📍', title: 'Multi-Pickup Location' },
+                  { type: 'corporate', top: 'Corporate', bottom: 'B2B', icon: '🏢', title: 'Corporate B2B Customer' },
+                ].map((tier) => {
+                  const isSelected = custType === tier.type;
+                  return (
+                    <button
+                      key={tier.type}
+                      type="button"
+                      title={tier.title}
+                      onClick={() => updateCustomerType(tier.type as CustomerType)}
+                      className={`group p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-between h-full min-h-[82px] ${
+                        isSelected
+                          ? 'border-emerald-600 bg-emerald-50/90 shadow-sm ring-1 ring-emerald-500'
+                          : 'border-slate-200 bg-slate-50 hover:bg-white text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      {/* Top portion displayed on top of the icon */}
+                      <span
+                        className={`text-xs font-bold leading-tight block ${
+                          isSelected ? 'text-emerald-950 font-black' : 'text-slate-900'
+                        }`}
+                      >
+                        {tier.top}
+                      </span>
+
+                      {/* Respective Icon in the center */}
+                      <span
+                        className={`w-7 h-7 my-1 rounded-lg flex items-center justify-center text-sm shrink-0 transition-colors ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700 shadow-2xs group-hover:border-slate-300'
+                        }`}
+                      >
+                        {tier.icon}
+                      </span>
+
+                      {/* Bottom portion displayed below the icon when lengthy */}
+                      {tier.bottom ? (
+                        <span
+                          className={`text-[10px] font-bold leading-tight block ${
+                            isSelected ? 'text-emerald-800 font-extrabold' : 'text-slate-600'
+                          }`}
+                        >
+                          {tier.bottom}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] leading-tight block invisible select-none" aria-hidden="true">
+                          &nbsp;
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Map Preview */}
             <div className="relative">
               <LeafletMap
@@ -273,23 +394,26 @@ export default function CustomerApp() {
               </div>
             </div>
 
-            {/* Vehicle Category Selector */}
+            {/* Vehicle Selection with Slab Rates */}
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Vehicle Category</span>
-                <span className="text-[11px] text-emerald-600 font-medium">Transparent upfront rates</span>
+                <span className="text-[11px] text-emerald-600 font-medium">Distance slab pricing active</span>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 {vehicleConfigs.map((veh) => {
                   const isSel = selectedVehicle === veh.id;
-                  const estimate = calculateFare(
-                    veh.id,
+                  const estimate = calculateCustomerQuotedSlabFare(
                     distanceKm,
-                    hasHelper,
-                    vehicleConfigs,
-                    serviceZones,
+                    custType,
                     pickupPoint,
-                    dropPoint
+                    dropPoint,
+                    drivers,
+                    customerSlabConfigs,
+                    hasHelper,
+                    veh.id,
+                    vehicleConfigs,
+                    serviceZones
                   );
                   return (
                     <button
@@ -377,41 +501,114 @@ export default function CustomerApp() {
               </div>
             </div>
 
-            {/* Payment Mode Selector */}
+            {/* Payment Mode Selector with Wallet Option */}
             <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Payment Option</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Payment Option</span>
+                <span className="text-[10px] text-slate-500 font-medium">Customer Wallet Balance: ₹{currentCustomer?.wallet?.balance || 0}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { id: 'UPI_GPAY', name: 'GPay / UPI', icon: '⚡' },
-                  { id: 'NETBANKING_IMPS', name: 'IMPS Bank', icon: '🏛' },
-                  { id: 'CASH_ON_DELIVERY', name: 'Cash on Drop', icon: '💵' },
+                  {
+                    id: 'WALLET',
+                    name: 'SwifLoad Wallet',
+                    icon: '👛',
+                    sub: `Bal: ₹${currentCustomer?.wallet?.balance || 0}`,
+                  },
+                  { id: 'UPI_GPAY', name: 'GPay / UPI', icon: '⚡', sub: 'Instant UPI' },
+                  { id: 'NETBANKING_IMPS', name: 'IMPS Bank', icon: '🏛', sub: 'Direct transfer' },
+                  { id: 'CASH_ON_DELIVERY', name: 'Cash on Drop', icon: '💵', sub: 'Pay driver cash' },
                 ].map((pm) => (
                   <button
                     key={pm.id}
                     onClick={() => setPaymentMethod(pm.id as PaymentMethod)}
-                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
                       paymentMethod === pm.id
-                        ? 'border-emerald-600 bg-emerald-50/60 font-bold text-emerald-800 ring-1 ring-emerald-500'
+                        ? 'border-emerald-600 bg-emerald-50/70 font-bold text-emerald-900 ring-1 ring-emerald-500'
                         : 'border-slate-200 bg-slate-50 text-slate-700 font-medium'
                     }`}
                   >
                     <div className="text-base">{pm.icon}</div>
-                    <div className="text-[11px] mt-0.5">{pm.name}</div>
+                    <div className="text-xs font-bold mt-0.5">{pm.name}</div>
+                    <div className="text-[9px] text-slate-500 truncate">{pm.sub}</div>
                   </button>
                 ))}
               </div>
+
+              {/* Insufficient Wallet Warning */}
+              {paymentMethod === 'WALLET' && (currentCustomer?.wallet?.balance || 0) < fareBreakdown.totalFare && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs">
+                  <div className="text-rose-700">
+                    <span className="font-bold">Insufficient Wallet Balance: </span>
+                    You have ₹{currentCustomer?.wallet?.balance || 0}, required is ₹{fareBreakdown.totalFare}.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWalletTopupAmount(Math.max(100, fareBreakdown.totalFare - (currentCustomer?.wallet?.balance || 0)));
+                      setShowWalletTopupModal(true);
+                    }}
+                    className="ml-2 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shrink-0 text-[11px]"
+                  >
+                    Top Up
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Fare Breakdown & Book Action */}
+            {/* Fare Breakdown & Book Action with Distance Slabs Math */}
             <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
+              {/* Distance Slab Notice Banner */}
+              <div className="p-3 rounded-xl bg-slate-800/90 border border-amber-500/40 text-xs text-amber-200 leading-relaxed flex items-start space-x-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-amber-300">Transparent Distance Pricing Notice: </span>
+                  {fareBreakdown.pricingNotice}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs">
-                <span className="text-slate-400">Base Fare ({fareBreakdown.baseFare} incl base km)</span>
+                <span className="text-slate-400">Base Fare (0 to 1 km flat minimum price)</span>
                 <span>₹{fareBreakdown.baseFare}</span>
               </div>
               <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs">
-                <span className="text-slate-400">Distance Charges ({distanceKm} km)</span>
+                <div>
+                  <span className="text-slate-400">Distance Slab Charges</span>
+                  <div className="text-[10px] text-slate-500">
+                    {distanceKm} km trip + {fareBreakdown.farthestDriverDistanceKm} km range buffer = {fareBreakdown.totalSlabDistanceKm} km total
+                  </div>
+                </div>
                 <span>₹{fareBreakdown.distanceFare}</span>
               </div>
+
+              {/* Toggle to inspect exact slab math */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowSlabBreakdownDetails(!showSlabBreakdownDetails)}
+                  className="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center space-x-1"
+                >
+                  <Info className="w-3 h-3" />
+                  <span>{showSlabBreakdownDetails ? 'Hide Distance Slab Details' : 'View Configured Slab Math Breakdown'}</span>
+                </button>
+                {showSlabBreakdownDetails && (
+                  <div className="mt-2 space-y-1 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 text-[10px]">
+                    <div className="font-bold text-slate-400 border-b border-slate-700 pb-1 mb-1">
+                      Tier: {custType.replace(/_/g, ' ').toUpperCase()} Distance Slabs Applied:
+                    </div>
+                    {fareBreakdown.slabBreakdown?.map((slab, i) => (
+                      <div key={i} className="flex justify-between text-slate-300">
+                        <span>
+                          {slab.slabLabel}: {slab.kmInSlab} km @ ₹{slab.rate}
+                          {slab.rateType === 'per_km' ? '/km' : ' flat min'}
+                        </span>
+                        <span className="font-mono font-bold text-emerald-400">₹{slab.cost}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {hasHelper && (
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs">
                   <span className="text-slate-400">Loading / Unloading Helper</span>
@@ -433,7 +630,7 @@ export default function CustomerApp() {
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div>
-                  <div className="text-[11px] text-slate-400">Total Fare (Guaranteed)</div>
+                  <div className="text-[11px] text-slate-400">Total Fare (Quoted & Guaranteed)</div>
                   <div className="text-2xl font-black text-emerald-400">₹{fareBreakdown.totalFare}</div>
                 </div>
                 <button
@@ -457,27 +654,96 @@ export default function CustomerApp() {
                 pickup={{ lat: currentTrip.pickup.lat, lng: currentTrip.pickup.lng, label: 'Pickup' }}
                 drop={{ lat: currentTrip.drop.lat, lng: currentTrip.drop.lng, label: 'Drop' }}
                 driver={
-                  currentTrip.driverLocation
+                  currentTrip.driverLocation && currentTrip.status !== 'SEARCHING'
                     ? {
                         lat: currentTrip.driverLocation.lat,
                         lng: currentTrip.driverLocation.lng,
-                        label: `${currentTrip.driverName || 'Driver'}`,
+                        label: `${currentTrip.driverName || 'Driver'} (Live)`,
                       }
                     : null
                 }
-                className="h-60 w-full rounded-2xl shadow-sm border border-slate-200"
+                targetDestination={currentTrip.status === 'IN_TRANSIT' ? 'drop' : 'pickup'}
+                className="h-64 w-full rounded-2xl shadow-sm border border-slate-200"
               />
 
               {/* Status Pill on Map */}
               <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-semibold shadow-md flex items-center space-x-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className={`w-2 h-2 rounded-full ${currentTrip.status === 'SEARCHING' ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 animate-pulse'}`} />
                 <span>{currentTrip.status.replace('_', ' ')}</span>
               </div>
 
               <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-slate-800 shadow-md">
                 {currentTrip.bookingCode}
               </div>
+
+              {/* Live ETA banner if driver assigned and on the way */}
+              {currentTrip.driverLocation && currentTrip.status !== 'SEARCHING' && currentTrip.status !== 'DELIVERED' && (
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-slate-950/90 backdrop-blur-md border border-emerald-500/40 text-white px-3 py-2 rounded-xl text-xs flex items-center justify-between shadow-xl">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-amber-400 animate-bounce text-sm">🚚</span>
+                    <div>
+                      <span className="font-bold text-emerald-400">Live GPS Tracking: </span>
+                      <span className="text-slate-200">
+                        {currentTrip.status === 'ARRIVING_PICKUP'
+                          ? `Driver en route to pickup (~${Math.max(1, Math.round(((calculateDistanceKm(currentTrip.driverLocation, currentTrip.pickup)) / 25) * 60))} min • ${calculateDistanceKm(currentTrip.driverLocation, currentTrip.pickup)} km)`
+                          : currentTrip.status === 'AT_PICKUP'
+                          ? 'Driver has arrived at pickup point'
+                          : `Cargo en route to drop (~${Math.max(1, Math.round(((calculateDistanceKm(currentTrip.driverLocation, currentTrip.drop)) / 30) * 60))} min)`}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono font-bold px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
+                    Live Uber-Sync
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Cascading Group Dispatch Status (Shown while SEARCHING before acceptance) */}
+            {currentTrip.status === 'SEARCHING' ? (
+              <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-slate-900/40 border border-amber-500/30 rounded-2xl p-4.5 space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-sm animate-spin">
+                      ⏳
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        Cascading Group Dispatch Active
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Nearest driver group offered first; cascades if unaccepted
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-mono font-extrabold text-amber-600 bg-amber-100 dark:bg-amber-950/80 px-2.5 py-1 rounded-full border border-amber-300 dark:border-amber-700">
+                      {currentTrip.dispatchCountdownSecs ?? 15}s Left
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-amber-200/60 dark:border-amber-900/60 text-xs space-y-1.5">
+                  <div className="flex justify-between items-center text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold">Current Offered Fleet Group:</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                      {currentTrip.currentDispatchGroupName || 'Nearest Cluster'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-500 text-[11px]">
+                    <span>Dispatch Cascade Stage:</span>
+                    <span>
+                      Zone {(currentTrip.currentDispatchGroupIndex ?? 0) + 1} of {(currentTrip.dispatchGroupSequence?.length ?? 5)} (Escalates to adjacent zone)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 text-[11px] text-slate-500 bg-slate-100 dark:bg-slate-900/40 p-2 rounded-lg">
+                  <span className="text-xs">🔒</span>
+                  <span>Driver partner identity and phone number will be revealed as soon as accepted.</span>
+                </div>
+              </div>
+            ) : null}
 
             {/* OTP Security Verification Badge */}
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
@@ -497,8 +763,8 @@ export default function CustomerApp() {
               </div>
             </div>
 
-            {/* Driver Partner Details Card */}
-            {currentTrip.driverName ? (
+            {/* Driver Partner Details Card (Revealed only after acceptance) */}
+            {currentTrip.driverName && currentTrip.status !== 'SEARCHING' ? (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -520,7 +786,7 @@ export default function CustomerApp() {
                     </div>
                   </div>
 
-                  {/* Privacy Masked Call & WhatsApp */}
+                  {/* Privacy Masked Call & WhatsApp (Unlocked after acceptance) */}
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setShowCallModal(true)}
@@ -546,15 +812,7 @@ export default function CustomerApp() {
                   <span className="font-bold text-slate-800">Fare: ₹{currentTrip.fare.totalFare}</span>
                 </div>
               </div>
-            ) : (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center animate-bounce">
-                  🔍
-                </div>
-                <h4 className="text-sm font-bold text-amber-900">Assigning Nearest Verified Driver</h4>
-                <p className="text-xs text-amber-700">Broadcasting your request to available drivers in this zone...</p>
-              </div>
-            )}
+            ) : null}
 
             {/* Trip Status Milestones Timeline */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
@@ -829,7 +1087,7 @@ export default function CustomerApp() {
               </div>
               <div className="flex items-center justify-between text-slate-600">
                 <span>App Build</span>
-                <span className="font-mono text-[11px]">v1.0.0-MVP (Bengaluru)</span>
+                <span className="font-mono text-[11px]">v1.0.0-MVP (Coimbatore, Tamil Nadu)</span>
               </div>
             </div>
           </div>
@@ -841,7 +1099,7 @@ export default function CustomerApp() {
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
               <h3 className="font-bold text-sm text-slate-800">Customer Care & Dispute Resolution</h3>
               <p className="text-xs text-slate-600">
-                Facing an issue with your trip, driver delay, or damaged goods? Our Bangalore operations team is live 24/7.
+                Facing an issue with your trip, driver delay, or damaged goods? Our Coimbatore operations team is live 24/7.
               </p>
 
               <div className="grid grid-cols-2 gap-2 pt-2">
@@ -869,7 +1127,7 @@ export default function CustomerApp() {
               <details className="p-2 bg-slate-50 rounded-lg">
                 <summary className="font-semibold cursor-pointer text-slate-800">How is the fare calculated?</summary>
                 <p className="mt-1 text-slate-600 text-[11px]">
-                  Fares are calculated based on base distance, per-km rates, vehicle category (2W, 3W, Tata Ace, 8ft Pickup), loading helper option, and active zone surge.
+                  Fares are calculated based on distance slab rates configured for your tier (0-1 km flat minimum price, 1-3 km and 3-5 km incremental rates), quoted on the farthest available driver in range.
                 </p>
               </details>
               <details className="p-2 bg-slate-50 rounded-lg">
@@ -887,10 +1145,295 @@ export default function CustomerApp() {
             </div>
           </div>
         )}
+
+        {/* ================= TAB 6: SWIFLOAD CUSTOMER WALLET ================= */}
+        {activeTab === 'wallet' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            {/* Wallet Balance Hero Card */}
+            <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white p-5 rounded-3xl shadow-xl space-y-4 border border-emerald-900/40 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10" />
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-400 font-medium">Customer Express Wallet</span>
+                    <div className="text-[10px] text-emerald-400 flex items-center space-x-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span>Zero Negative Balance Policy</span>
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] bg-white/10 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold uppercase tracking-wider">
+                  {custType.replace(/_/g, ' ')}
+                </span>
+              </div>
+
+              <div className="relative z-10 pt-1">
+                <div className="text-xs text-slate-400">Available Balance</div>
+                <div className="text-3xl md:text-4xl font-black text-white tracking-tight flex items-baseline space-x-1">
+                  <span className="text-emerald-400">₹</span>
+                  <span>{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                  Enjoy instantaneous one-tap booking deductions without payment gateway delays.
+                </p>
+              </div>
+
+              {/* Quick Top-Up Presets */}
+              <div className="relative z-10 pt-2 border-t border-slate-800/80 space-y-2">
+                <div className="text-[11px] font-bold text-slate-300">Quick Add Money:</div>
+                <div className="flex gap-2">
+                  {[200, 500, 1000, 2000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => topUpCustomerWallet(amt)}
+                      className="flex-1 py-1.5 bg-white/10 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold text-slate-200 transition-colors border border-white/5"
+                    >
+                      +₹{amt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Top Up Card */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3 text-xs">
+              <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">Add Custom Amount</h4>
+              <div className="flex items-center space-x-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-2.5 font-bold text-slate-400 text-sm">₹</span>
+                  <input
+                    type="number"
+                    min="50"
+                    step="50"
+                    value={walletTopupAmount}
+                    onChange={(e) => setWalletTopupAmount(Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+                    placeholder="Enter amount"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    topUpCustomerWallet(walletTopupAmount);
+                    showToast(`Added ₹${walletTopupAmount} to your wallet!`);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm text-xs flex items-center space-x-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Money</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Note: In accordance with SwifLoad rules, customer wallets cannot hold negative balances. Overdraft is exclusively reserved for approved delivery partners.
+              </p>
+            </div>
+
+            {/* Wallet Transaction Ledger */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3 text-xs">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">Wallet Activity Ledger</h4>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {currentCustomer?.wallet?.transactions?.length || 0} Transactions
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {currentCustomer?.wallet?.transactions && currentCustomer.wallet.transactions.length > 0 ? (
+                  currentCustomer.wallet.transactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between"
+                    >
+                      <div className="flex items-start space-x-2.5">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center mt-0.5 ${
+                            tx.type === 'CREDIT'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-rose-100 text-rose-700'
+                          }`}
+                        >
+                          {tx.type === 'CREDIT' ? (
+                            <ArrowDownLeft className="w-3.5 h-3.5" />
+                          ) : (
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800 leading-tight">{tx.description}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {new Date(tx.timestamp).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`font-black text-xs ${
+                            tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-slate-900'
+                          }`}
+                        >
+                          {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
+                        </span>
+                        <div className="text-[9px] text-slate-400">Bal: ₹{tx.balanceAfter}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-400 text-xs">
+                    No transactions yet. Recharge your wallet to start!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 7: REFER & EARN ================= */}
+        {activeTab === 'referrals' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            {/* Refer & Earn Hero */}
+            <div className="bg-gradient-to-br from-emerald-800 via-teal-800 to-slate-900 text-white p-5 rounded-3xl shadow-xl space-y-4 relative overflow-hidden">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-sm">
+                  🎁
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">SwifLoad Refer & Earn</h3>
+                  <p className="text-[11px] text-emerald-200">Earn wallet credits for every friend & business you invite</p>
+                </div>
+              </div>
+
+              {/* Unique Code Card */}
+              <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 space-y-2">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-200">Your Shareable Referral Code</div>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xl font-black text-white tracking-widest">
+                    {currentCustomer?.referralCode || 'SWIF-USER-88'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentCustomer?.referralCode || 'SWIF-USER-88');
+                      setReferralCopied(true);
+                      showToast('Referral code copied to clipboard!');
+                      setTimeout(() => setReferralCopied(false), 2500);
+                    }}
+                    className="px-3 py-1.5 bg-white text-slate-900 hover:bg-emerald-400 font-bold rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow"
+                  >
+                    {referralCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{referralCopied ? 'Copied!' : 'Copy Code'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Bonus Breakdown Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                  <div className="text-[10px] text-emerald-200">Referee Gets</div>
+                  <div className="text-lg font-black text-emerald-300 mt-0.5">
+                    ₹{referralConfig?.customerToCustomerRefereeBonus || 100}
+                  </div>
+                  <div className="text-[10px] text-slate-300">Welcome wallet credit on signup</div>
+                </div>
+                <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                  <div className="text-[10px] text-emerald-200">You Receive</div>
+                  <div className="text-lg font-black text-emerald-300 mt-0.5">
+                    ₹{referralConfig?.customerToCustomerReferrerBonus || 150}
+                  </div>
+                  <div className="text-[10px] text-slate-300">After their 1st trip completes</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Apply Referral Code Card */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3 text-xs">
+              <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">
+                Have a Referral Code from a Friend or Driver?
+              </h4>
+              <p className="text-slate-600 text-[11px]">
+                Apply a referral code to immediately credit ₹{referralConfig?.customerToCustomerRefereeBonus || 100} to your SwifLoad Wallet.
+              </p>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  placeholder="e.g. SWIF-DRV01-44 or SWIF-KAV-12"
+                  value={referralInputCode}
+                  onChange={(e) => setReferralInputCode(e.target.value.toUpperCase())}
+                  className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!referralInputCode.trim()) {
+                      showToast('Please enter a referral code.');
+                      return;
+                    }
+                    const res = applyCustomerReferralCode(referralInputCode.trim());
+                    if (res.success) {
+                      setReferralInputCode('');
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+                >
+                  Apply Code
+                </button>
+              </div>
+              {currentCustomer?.referredBy && (
+                <div className="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                  ✓ Successfully linked with referral code: <strong>{currentCustomer.referredBy}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Referral Ledger List */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3 text-xs">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[10px]">Your Referral Invites</h4>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {referrals.filter((r) => r.referrerId === currentCustomer?.id || r.refereePhone === currentCustomer?.phone).length} records
+                </span>
+              </div>
+              <div className="space-y-2">
+                {referrals.filter((r) => r.referrerId === currentCustomer?.id || r.refereePhone === currentCustomer?.phone).length > 0 ? (
+                  referrals
+                    .filter((r) => r.referrerId === currentCustomer?.id || r.refereePhone === currentCustomer?.phone)
+                    .map((ref) => (
+                      <div key={ref.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-slate-800">{ref.refereeName} ({ref.refereePhone})</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">{ref.notes}</div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-extrabold text-emerald-600 text-xs">+₹{ref.bonusAmount}</span>
+                          <div>
+                            <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded">
+                              {ref.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center py-6 text-slate-400 text-xs">
+                    No friends referred yet. Share your code to earn bonuses!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 flex items-center justify-between z-30 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-between z-30 shadow-lg">
         <button
           onClick={() => setActiveTab('book')}
           className={`flex flex-col items-center space-y-0.5 ${activeTab === 'book' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
@@ -904,10 +1447,26 @@ export default function CustomerApp() {
           className={`flex flex-col items-center space-y-0.5 relative ${activeTab === 'tracking' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
         >
           <Navigation className="w-5 h-5" />
-          <span className="text-[10px]">Active Trip</span>
+          <span className="text-[10px]">Active</span>
           {currentTrip.status !== 'DELIVERED' && currentTrip.status !== 'CANCELLED' && (
             <span className="absolute top-0 right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('wallet')}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'wallet' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+        >
+          <Wallet className="w-5 h-5" />
+          <span className="text-[10px]">Wallet</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('referrals')}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'referrals' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+        >
+          <Gift className="w-5 h-5" />
+          <span className="text-[10px]">Refer</span>
         </button>
 
         <button
@@ -1117,8 +1676,8 @@ export default function CustomerApp() {
                       <div>Date: {invTrip.createdAt.slice(0, 10)}</div>
                     </div>
                     <div className="text-right">
-                      <div>GSTIN: <strong>29AAACS8192K1Z5</strong></div>
-                      <div>Bengaluru, Karnataka</div>
+                      <div>GSTIN: <strong>33AAACS8192K1Z5</strong></div>
+                      <div>Coimbatore, Tamil Nadu</div>
                     </div>
                   </div>
 
@@ -1187,7 +1746,7 @@ export default function CustomerApp() {
                 </h3>
                 <p className="text-xs text-slate-500">
                   {authMode === 'register'
-                    ? 'Create your shipper profile for Bangalore freight services'
+                    ? 'Create your shipper profile for Coimbatore freight services'
                     : 'Sign in with your mobile number and OTP'}
                 </p>
               </div>
@@ -1354,6 +1913,86 @@ export default function CustomerApp() {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: CUSTOMER WALLET TOP-UP ================= */}
+      {showWalletTopupModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl text-slate-900">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Recharge Express Wallet</h3>
+                  <p className="text-[11px] text-slate-500">Current Balance: ₹{currentCustomer?.wallet?.balance || 0}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWalletTopupModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Enter Top-Up Amount (₹)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 font-bold text-emerald-600">₹</span>
+                  <input
+                    type="number"
+                    min="50"
+                    step="50"
+                    value={walletTopupAmount}
+                    onChange={(e) => setWalletTopupAmount(Number(e.target.value))}
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-lg text-emerald-700"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1.5">
+                {[100, 250, 500, 1000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => setWalletTopupAmount(amt)}
+                    className="py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700"
+                  >
+                    +₹{amt}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-[11px] text-emerald-800 leading-snug">
+                ⚡ Instant wallet credit via simulated UPI / Card test gateway. Customer wallets strictly do not allow negative balance.
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowWalletTopupModal(false)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  topUpCustomerWallet(walletTopupAmount);
+                  setShowWalletTopupModal(false);
+                  showToast(`Successfully added ₹${walletTopupAmount} to SwifLoad Wallet!`);
+                }}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-200"
+              >
+                Add ₹{walletTopupAmount}
+              </button>
+            </div>
           </div>
         </div>
       )}

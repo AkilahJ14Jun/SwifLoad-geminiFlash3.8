@@ -82,7 +82,7 @@ export default function FleetComparison({ onSelectVehicle }: FleetComparisonProp
             The Right Vehicle for Every Consignment
           </h2>
           <p className="text-sm text-slate-600">
-            From quick document deliveries to heavy industrial transport, choose from our verified, GPS-enabled fleet across Bengaluru.
+            From quick document deliveries to heavy industrial transport, choose from our verified, GPS-enabled fleet across Coimbatore.
           </p>
         </div>
 
