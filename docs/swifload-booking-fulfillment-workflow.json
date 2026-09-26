@@ -11,7 +11,7 @@
         "id": "intake-and-pricing",
         "label": "Quote & booking dispatch",
         "focus": ["select_cargo", "pricing_surge", "broadcast_dispatch", "driver_accept"],
-        "note": "Shipper specifies cargo and route; pricing engine computes distance with tortuosity factor and dispatches to nearby drivers."
+        "note": "Shipper specifies cargo and route; pricing engine computes distance slab rate and initiates cascading dispatch to driver clusters."
       },
       {
         "id": "pickup-and-transit",
@@ -21,9 +21,9 @@
       },
       {
         "id": "settlement-and-review",
-        "label": "Settlement & rating",
+        "label": "Settlement & review",
         "focus": ["pod_delivery", "settle_payout", "rating_feedback"],
-        "note": "Proof of delivery unlocks automated earnings split (82% driver / 18% platform) and shipper receipt."
+        "note": "Proof of delivery unlocks automated earnings split (82% driver / 18% platform) and updates marketplace wallets."
       }
     ]
   },
@@ -39,8 +39,8 @@
     { "id": "execution_phase", "label": "Transit & Settlement", "fromCol": 4, "toCol": 5, "variant": "dashed" }
   ],
   "groups": [
-    { "id": "quote_group", "label": "Upfront fare calculation", "lane": "platform", "fromCol": 0, "toCol": 1 },
-    { "id": "dispatch_group", "label": "Driver matching & verification", "lane": "platform", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "quote_group", "label": "Upfront slab calculation", "lane": "platform", "fromCol": 0, "toCol": 1 },
+    { "id": "dispatch_group", "label": "Cascading dispatch & OTP", "lane": "platform", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
     { "id": "settlement_group", "label": "Financial reconciliation", "lane": "platform", "fromCol": 4, "toCol": 5, "variant": "dashed" }
   ],
   "mainPath": [
@@ -55,22 +55,22 @@
     "rating_feedback"
   ],
   "nodes": [
-    { "id": "select_cargo", "lane": "shipper", "col": 0, "type": "external", "label": "Specify Cargo", "sublabel": "vehicle tier & route", "width": 140 },
-    { "id": "pricing_surge", "lane": "platform", "col": 1, "type": "backend", "label": "Fare & Surge Engine", "sublabel": "Haversine × 1.32 + GST", "tag": "deterministic", "width": 140 },
-    { "id": "broadcast_dispatch", "lane": "platform", "col": 2, "type": "messagebus", "label": "Driver Broadcast", "sublabel": "proximity radar match", "tag": "zone radius", "width": 140 },
+    { "id": "select_cargo", "lane": "shipper", "col": 0, "type": "external", "label": "Specify Cargo", "sublabel": "category & route", "width": 140 },
+    { "id": "pricing_surge", "lane": "platform", "col": 1, "type": "backend", "label": "Slab Pricing Engine", "sublabel": "tiered slabs + GST", "tag": "deterministic", "width": 140 },
+    { "id": "broadcast_dispatch", "lane": "platform", "col": 2, "type": "messagebus", "label": "Cascading Dispatch", "sublabel": "cluster group countdown", "tag": "15s cascade", "width": 140 },
     { "id": "no_driver_retry", "lane": "exception", "col": 3, "type": "security", "label": "Dispatch Timeout", "sublabel": "manual re-dispatch / cancel", "tag": "fallback", "width": 140 },
-    { "id": "driver_accept", "lane": "driver", "col": 2, "type": "frontend", "label": "Accept Trip", "sublabel": "review net earnings", "width": 140 },
+    { "id": "driver_accept", "lane": "driver", "col": 2, "type": "frontend", "label": "Accept Trip", "sublabel": "pickup + trip payout", "width": 140 },
     { "id": "arrived_pickup", "lane": "driver", "col": 3, "type": "security", "label": "Pickup Handshake", "sublabel": "verify 4-digit OTP", "tag": "security gate", "width": 140 },
-    { "id": "in_transit", "lane": "driver", "col": 4, "type": "backend", "label": "Live Transit", "sublabel": "telemetry & route GPS", "width": 140 },
+    { "id": "in_transit", "lane": "driver", "col": 4, "type": "backend", "label": "Live Transit", "sublabel": "continuous vehicle glide", "width": 140 },
     { "id": "pod_delivery", "lane": "driver", "col": 5, "type": "security", "label": "Delivery & POD", "sublabel": "photo proof & close", "tag": "audit trail", "width": 140 },
-    { "id": "settle_payout", "lane": "platform", "col": 5, "type": "database", "label": "Wallet Settlement", "sublabel": "82% driver / 18% comm", "width": 140 },
-    { "id": "rating_feedback", "lane": "shipper", "col": 5, "type": "frontend", "label": "Shipper Receipt", "sublabel": "rating & tip invoice", "width": 140 }
+    { "id": "settle_payout", "lane": "platform", "col": 5, "type": "database", "label": "Wallet Settlement", "sublabel": "82% net / overdraft check", "width": 140 },
+    { "id": "rating_feedback", "lane": "shipper", "col": 5, "type": "frontend", "label": "Shipper Receipt", "sublabel": "rating & tax invoice", "width": 140 }
   ],
   "edges": [
     { "id": "e-cargo-pricing", "from": "select_cargo", "to": "pricing_surge", "label": "request fare", "variant": "emphasis" },
     { "id": "e-pricing-dispatch", "from": "pricing_surge", "to": "broadcast_dispatch", "label": "create trip", "variant": "emphasis" },
-    { "id": "e-dispatch-accept", "from": "broadcast_dispatch", "to": "driver_accept", "label": "radar ping", "variant": "emphasis" },
-    { "id": "e-dispatch-timeout", "from": "broadcast_dispatch", "to": "no_driver_retry", "label": "no driver 60s", "variant": "security", "role": "error" },
+    { "id": "e-dispatch-accept", "from": "broadcast_dispatch", "to": "driver_accept", "label": "cascade ping", "variant": "emphasis" },
+    { "id": "e-dispatch-timeout", "from": "broadcast_dispatch", "to": "no_driver_retry", "label": "cascade timeout", "variant": "security", "role": "error" },
     { "id": "e-accept-pickup", "from": "driver_accept", "to": "arrived_pickup", "label": "reach pickup", "variant": "default" },
     { "id": "e-pickup-transit", "from": "arrived_pickup", "to": "in_transit", "label": "OTP match", "variant": "emphasis" },
     { "id": "e-transit-pod", "from": "in_transit", "to": "pod_delivery", "label": "arrive drop", "variant": "default" },
@@ -80,29 +80,29 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Booking & Pricing Guardrails",
+      "title": "Distance Slab & Transparent Pricing",
       "items": [
-        "Upfront pricing locks in fare before driver commitment",
-        "Haversine distance scaled by 1.32 urban tortuosity factor",
+        "0–1 km base flat rate (₹50) + tiered distance slabs across 4 customer tiers",
+        "Customer quote locked to farthest driver in range to avoid surprise price jumps",
         "Dynamic surge multiplier applied during high-demand peak hours"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Two-Party Security Handshake",
+      "title": "Cascading Dispatch & Security Handshake",
       "items": [
-        "Trip advances from AT_PICKUP to IN_TRANSIT strictly via OTP validation",
-        "Driver cannot start billing until shipper physically hands over goods",
-        "Digital POD photo upload establishes non-repudiation audit trail"
+        "Drivers clustered by location; nearest group gets 15–20s countdown offer",
+        "Driver identity shielded until acceptance; unaccepted trips cascade to adjacent group",
+        "Trip advances from AT_PICKUP to IN_TRANSIT strictly via OTP validation"
       ]
     },
     {
       "dot": "amber",
-      "title": "Financial Settlement Contract",
+      "title": "Financial Settlement & Overdraft",
       "items": [
-        "18% platform commission and 5% logistics GST auto-calculated",
-        "Driver wallet credited with 82% net earnings immediately upon delivery",
-        "Customer receives GST tax invoice with route and timing breakdown"
+        "18% platform commission and 5% logistics GST auto-calculated on completion",
+        "Driver wallet credited with 82% net earnings subject to overdraft limit check",
+        "Customer wallets enforce strict zero-negative balance policy before booking"
       ]
     }
   ]

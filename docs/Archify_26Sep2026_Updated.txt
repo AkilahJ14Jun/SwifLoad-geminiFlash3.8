@@ -1,0 +1,33 @@
+All 5 diagrams have been updated, re-validated against strict showcase composition criteria (9/9 checks, 0 errors, 0 warnings), and delivered locally as standalone interactive HTML artifacts to reflect the September 26, 2026 application state:
+──────
+### 1. Architecture Diagram
+
+• Specification: docs/swifload-architecture.json
+• Delivered HTML: docs/swifload-architecture.html
+• Scope: 11 core runtime components across Next.js 14, Capacitor 6 shell, Leaflet/CartoDB map engine, localStorage cache, and pricing engine with client and admin security boundaries. Updated with Distance Slab Rates, 4 customer tiers, driver approach distance charging, cascading group dispatch, driver overdraft governance, and 3-track referral programs.
+
+### 2. Workflow Diagram
+
+• Specification: docs/swifload-booking-fulfillment-workflow.json
+• Delivered HTML: docs/swifload-booking-fulfillment-workflow.html
+• Scope: Multi-lane business process (Shipper, Platform Core, Driver-Partner, Exceptions) updated with distance slab pricing calculation, cascading dispatch to driver location clusters with 15–20s countdown, driver approach payout, OTP handshake, live transit glide, POD photo upload, and wallet settlement (82% driver with overdraft limit check / 18% platform).
+
+### 3. Sequence Diagram
+
+• Specification: docs/swifload-trip-dispatch-sequence.json
+• Delivered HTML: docs/swifload-trip-dispatch-sequence.html
+• Scope: Chronological message sequence between Shipper, CustomerApp, LogisticsContext, PricingEngine, DriverApp, and localStorage across upfront farthest-driver slab quote locking, cascading dispatch offer ping, driver acceptance, 4-digit pickup OTP verification, and 82% net wallet credit with overdraft compliance.
+
+### 4. Data Flow Diagram
+
+• Specification: docs/swifload-telemetry-state-dataflow.json
+• Delivered HTML: docs/swifload-telemetry-state-dataflow.html
+• Scope: 5-stage data processing pipeline (Producers → Transit & Ingestion → Processing Engines → Storage & Caching → Consumer Portals) tracing 1.3s CSS vehicle glide telematics, dynamic pickup/drop polylines, slab tariff configurations, reducer state synchronization, and Leaflet radar rendering.
+
+### 5. Lifecycle Diagram
+
+• Specification: docs/swifload-trip-state-lifecycle.json
+• Delivered HTML: docs/swifload-trip-state-lifecycle.html
+• Scope: State machine transitions spanning SEARCHING (cascading broadcast) → ASSIGNED (gliding to pickup) → AT_PICKUP (OTP verify) → IN_TRANSIT (continuous GPS glide) → DELIVERED (POD upload), with exception gates (OTP Mismatch, Transit SOS, Finance Audit with overdraft validation) and terminal exits (CANCELLED, REASSIGNED, SETTLED).
+──────
+All diagrams include dark/light theme switching, animated trace flows, guided view chapters, and zero external dependencies.

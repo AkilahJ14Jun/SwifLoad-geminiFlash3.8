@@ -13,19 +13,19 @@
         "id": "telemetry-path",
         "label": "GPS telemetry & map pipeline",
         "focus": ["driver_gps", "telemetry_stream", "geo_engine", "map_cache", "leaflet_map"],
-        "note": "Raw GPS telemetry streams through the Geo Engine, merges with cached CartoDB tiles, and renders on Leaflet radar."
+        "note": "Continuous GPS telemetry streams through the Geo Engine with CSS glide transitions and renders on Leaflet radar."
       },
       {
         "id": "trip-state-path",
         "label": "Trip state & client storage",
         "focus": ["booking_events", "trip_events", "logistics_state", "local_storage", "customer_view"],
-        "note": "Shipper trip actions mutate the central in-memory state machine and synchronize to localStorage for offline resilience."
+        "note": "Shipper trip actions mutate the central in-memory state machine, update slab pricing, and synchronize to localStorage."
       },
       {
         "id": "pricing-finance-path",
         "label": "Pricing & financial ledger",
         "focus": ["admin_ops", "pricing_req", "pricing_engine", "finance_ledger", "admin_dashboard"],
-        "note": "Zone surge tariffs and pricing models feed the ledger for payout reconciliation and admin audits."
+        "note": "Distance slab tariffs, driver overdraft controls, and referral ledgers feed audit reports and wallet reconciliations."
       }
     ]
   },
@@ -37,18 +37,18 @@
     { "label": "Consumer Portals" }
   ],
   "nodes": [
-    { "id": "driver_gps", "type": "frontend", "label": "Driver GPS", "sublabel": "Capacitor Geolocation", "stage": 0, "row": 0, "tag": "interval: 3s" },
+    { "id": "driver_gps", "type": "frontend", "label": "Driver GPS", "sublabel": "Capacitor Geolocation", "stage": 0, "row": 0, "tag": "1.3s glide" },
     { "id": "booking_events", "type": "frontend", "label": "Booking Intake", "sublabel": "Shipper UI payload", "stage": 0, "row": 1, "tag": "on-demand" },
-    { "id": "admin_ops", "type": "security", "label": "Admin Controls", "sublabel": "Zone & KYC params", "stage": 0, "row": 2, "tag": "privileged" },
+    { "id": "admin_ops", "type": "security", "label": "Admin Controls", "sublabel": "Slabs, Overdraft & KYC", "stage": 0, "row": 2, "tag": "privileged" },
     { "id": "telemetry_stream", "type": "messagebus", "label": "telemetry.v1", "sublabel": "GPS & heading bus", "stage": 1, "row": 0, "tag": "real-time" },
     { "id": "trip_events", "type": "messagebus", "label": "trips.v1", "sublabel": "Lifecycle actions", "stage": 1, "row": 1, "tag": "transactional" },
-    { "id": "pricing_req", "type": "messagebus", "label": "tariffs.v1", "sublabel": "Zone surge events", "stage": 1, "row": 2, "tag": "config stream" },
+    { "id": "pricing_req", "type": "messagebus", "label": "tariffs.v1", "sublabel": "Slab & wallet events", "stage": 1, "row": 2, "tag": "config stream" },
     { "id": "geo_engine", "type": "backend", "label": "Geo Engine", "sublabel": "ETA & route projection", "stage": 2, "row": 0, "tag": "stateless" },
     { "id": "logistics_state", "type": "backend", "label": "Logistics State", "sublabel": "Trips & drivers reducer", "stage": 2, "row": 1, "tag": "in-memory" },
-    { "id": "pricing_engine", "type": "backend", "label": "Pricing Engine", "sublabel": "Surge & GST compute", "stage": 2, "row": 2, "tag": "pure function" },
+    { "id": "pricing_engine", "type": "backend", "label": "Pricing Engine", "sublabel": "Slabs & Driver Payout", "stage": 2, "row": 2, "tag": "pure function" },
     { "id": "map_cache", "type": "cloud", "label": "Map Cache", "sublabel": "CartoDB tile layer", "stage": 3, "row": 0, "tag": "edge cached" },
     { "id": "local_storage", "type": "database", "label": "Persistence", "sublabel": "swifload_trips_v1", "stage": 3, "row": 1, "tag": "client store" },
-    { "id": "finance_ledger", "type": "database", "label": "Ledger Store", "sublabel": "Payout & GST records", "stage": 3, "row": 2, "tag": "audit trail" },
+    { "id": "finance_ledger", "type": "database", "label": "Ledger Store", "sublabel": "Wallets & Referrals", "stage": 3, "row": 2, "tag": "audit trail" },
     { "id": "leaflet_map", "type": "frontend", "label": "Leaflet Map", "sublabel": "GPS radar canvas", "stage": 4, "row": 0, "tag": "60fps map" },
     { "id": "customer_view", "type": "frontend", "label": "Customer View", "sublabel": "Live tracking UI", "stage": 4, "row": 1, "tag": "shipper app" },
     { "id": "admin_dashboard", "type": "frontend", "label": "Admin Portal", "sublabel": "Operations wall", "stage": 4, "row": 2, "tag": "ops portal" }
@@ -56,10 +56,10 @@
   "flows": [
     { "from": "driver_gps", "to": "telemetry_stream", "label": "GPS fix", "classification": "raw stream", "variant": "emphasis", "route": "straight" },
     { "from": "booking_events", "to": "trip_events", "label": "trip action", "classification": "validated JSON", "variant": "emphasis", "route": "straight" },
-    { "from": "admin_ops", "to": "pricing_req", "label": "tariff change", "classification": "admin event", "variant": "default", "route": "straight" },
+    { "from": "admin_ops", "to": "pricing_req", "label": "config change", "classification": "admin event", "variant": "default", "route": "straight" },
     { "from": "telemetry_stream", "to": "geo_engine", "label": "filter fixes", "classification": "stream filter", "variant": "emphasis", "route": "straight" },
     { "from": "trip_events", "to": "logistics_state", "label": "mutate state", "classification": "reducer action", "variant": "emphasis", "route": "straight" },
-    { "from": "pricing_req", "to": "pricing_engine", "label": "update surge", "classification": "zone multiplier", "variant": "default", "route": "straight" },
+    { "from": "pricing_req", "to": "pricing_engine", "label": "update slabs", "classification": "slab config", "variant": "default", "route": "straight" },
     { "from": "logistics_state", "to": "geo_engine", "label": "trip points", "classification": "pickup / drop", "variant": "dashed", "route": "vertical-channel" },
     { "from": "logistics_state", "to": "pricing_engine", "label": "calculate fare", "classification": "sync compute", "variant": "dashed", "route": "vertical-channel" },
     { "from": "geo_engine", "to": "map_cache", "label": "project coords", "classification": "interpolated GPS", "variant": "emphasis", "route": "straight" },
@@ -72,11 +72,11 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Stage-Gated Stream Ingestion",
+      "title": "Stage-Gated Stream & Telematics",
       "items": [
-        "Capacitor GPS emits coordinates at 3-second polling intervals",
-        "Telemetry and transactional trip events enter dedicated partitioned channels",
-        "Admin parameter changes propagate without blocking active driver streams"
+        "Capacitor GPS emits coordinates with fluid CSS transitions (1.3s glide)",
+        "Dynamic routing polylines: driver➔pickup (amber) to driver➔drop (emerald)",
+        "Cascading dispatch cluster events stream to eligible driver cohorts"
       ]
     },
     {
@@ -84,7 +84,7 @@
       "title": "Processing & Persistence Boundary",
       "items": [
         "Geo Engine projects interpolated positions and calculates arrival ETAs",
-        "React LogisticsContext acts as atomic in-memory state reducer",
+        "React LogisticsContext manages atomic slab pricing, overdraft limits, and referrals",
         "Browser localStorage guarantees persistence across page reloads and WebView sleep"
       ]
     },
@@ -92,9 +92,9 @@
       "dot": "amber",
       "title": "Consumer Rendering & Reconciliation",
       "items": [
-        "Leaflet radar canvas updates marker coordinates smoothly",
-        "Customer view dynamically reflects OTP verification and driver proximity",
-        "Admin portal observes zone revenue, commissions, and CSV audit trails"
+        "Leaflet radar canvas updates marker coordinates smoothly without tearing",
+        "Customer view displays transparent slab quote and real-time approach path",
+        "Admin portal governs marketplace wallets, overdraft limits, and referral bonuses"
       ]
     }
   ]

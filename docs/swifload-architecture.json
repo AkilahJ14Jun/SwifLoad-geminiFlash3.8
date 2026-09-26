@@ -9,20 +9,20 @@
     "repository": {
       "url": "https://github.com/AkilahJ14Jun/SwifLoad-geminiFlash3.8",
       "provider": "github",
-      "revision": "a96b65b8b32e852b6c06ccaf91ac7a28a0e1d8f3"
+      "revision": "7515f5aeca57876525277c26484052b09dbcad64"
     },
     "views": [
       {
         "id": "booking-path",
         "label": "Primary booking path",
         "focus": ["shipper", "customer-app", "logistics-ctx", "pricing-engine", "driver-app", "leaflet-map"],
-        "note": "Follow the shipper's booking from app through fare calculation, dispatch, OTP handshake, and live tracking."
+        "note": "Follow the shipper's booking from app through slab fare calculation, cascading dispatch, OTP handshake, and live tracking."
       },
       {
         "id": "ops-view",
         "label": "Operations command",
         "focus": ["admin-portal", "logistics-ctx", "local-storage", "leaflet-map"],
-        "note": "Admin monitors live dispatch, KYC, pricing zones, and fleet radar via shared context state."
+        "note": "Admin monitors cascading dispatch, distance slabs, marketplace wallets, referral payouts, and fleet radar."
       }
     ]
   },
@@ -30,10 +30,10 @@
     { "id": "shipper",        "type": "external",  "label": "Shipper / Customer", "sublabel": "Browser · WebView",           "pos": [40,  220], "size": [140, 60] },
     { "id": "google-maps",    "type": "external",  "label": "Google Maps",        "sublabel": "Driver Navigation",           "pos": [40,  460], "size": [140, 60] },
     { "id": "web-platform",   "type": "frontend",  "label": "Web Platform",       "sublabel": "Marketing & Booking Widget",  "pos": [280, 80],  "size": [160, 60], "sources": [{ "path": "src/app/page.tsx" }] },
-    { "id": "customer-app",   "type": "frontend",  "label": "Customer App",       "sublabel": "Book · Track · History",      "pos": [280, 220], "size": [160, 60], "sources": [{ "path": "src/components/Customer/CustomerApp.tsx" }] },
-    { "id": "driver-app",     "type": "frontend",  "label": "Driver App",         "sublabel": "Dispatch · OTP · Wallet",     "pos": [280, 360], "size": [160, 60], "sources": [{ "path": "src/components/Driver/DriverApp.tsx" }] },
-    { "id": "admin-portal",   "type": "frontend",  "label": "Admin Portal",       "sublabel": "Dispatch · KYC · Pricing",    "pos": [280, 540], "size": [160, 60], "sources": [{ "path": "src/components/Admin/AdminPortal.tsx" }] },
-    { "id": "pricing-engine", "type": "backend",   "label": "Pricing Engine",     "sublabel": "Fare · Surge · GST",          "pos": [600, 80],  "size": [160, 60], "sources": [{ "path": "src/lib/pricing.ts" }] },
+    { "id": "customer-app",   "type": "frontend",  "label": "Customer App",       "sublabel": "Book · Track · Wallet · Refer", "pos": [280, 220], "size": [160, 60], "sources": [{ "path": "src/components/Customer/CustomerApp.tsx" }] },
+    { "id": "driver-app",     "type": "frontend",  "label": "Driver App",         "sublabel": "Dispatch · Overdraft · OTP",   "pos": [280, 360], "size": [160, 60], "sources": [{ "path": "src/components/Driver/DriverApp.tsx" }] },
+    { "id": "admin-portal",   "type": "frontend",  "label": "Admin Portal",       "sublabel": "Dispatch · Wallets · Slabs",   "pos": [280, 540], "size": [160, 60], "sources": [{ "path": "src/components/Admin/AdminPortal.tsx" }] },
+    { "id": "pricing-engine", "type": "backend",   "label": "Pricing Engine",     "sublabel": "Slabs · Driver Distance · GST","pos": [600, 80],  "size": [160, 60], "sources": [{ "path": "src/lib/pricing.ts" }] },
     { "id": "logistics-ctx",  "type": "backend",   "label": "Logistics Context",  "sublabel": "State Machine & Simulator",   "pos": [600, 220], "size": [170, 60], "sources": [{ "path": "src/context/LogisticsContext.tsx" }] },
     { "id": "leaflet-map",    "type": "frontend",  "label": "Leaflet Map",        "sublabel": "Live GPS Tracking",           "pos": [600, 400], "size": [160, 60], "sources": [{ "path": "src/components/Map/LeafletMap.tsx" }] },
     { "id": "local-storage",  "type": "database",  "label": "localStorage",       "sublabel": "Trips · Drivers · Zones",     "pos": [920, 220], "size": [140, 60] },
@@ -61,42 +61,42 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Booking & Pricing",
+      "title": "Distance Slabs & Pricing Engine",
       "items": [
-        "Haversine × 1.32 road tortuosity factor for Bengaluru",
-        "Dynamic zone surge detection (1.15×–1.25×)",
-        "₹45–₹480 base fares across 4 vehicle tiers",
-        "5% Logistics GST + 18% platform commission"
+        "0–1 km base flat rate (₹50) + tiered incremental distance slabs (₹6–₹8/km)",
+        "4 customer tiers: New, Regular, Multi-Pickup & Corporate",
+        "Farthest-driver proximity quote prevents surprise price jumps",
+        "5% Logistics GST + 18% platform commission deduction"
       ]
     },
     {
       "dot": "rose",
-      "title": "Security & Trust",
+      "title": "Security & Dispatch Shielding",
       "items": [
-        "Dual OTP handshake — Pickup OTP + Delivery OTP",
-        "Privacy-masked driver calling via virtual bridge",
-        "Role-based access: super_admin · dispatcher · support · finance",
-        "OTP-gated mobile auth for customer login"
+        "Dual OTP handshake — Pickup OTP + Delivery OTP verification",
+        "Cascading group dispatch shields driver contact until acceptance",
+        "Driver overdraft limit prevents dispatch if balance exceeds cushion",
+        "Customer wallets strictly enforce zero-negative balance policy"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Fleet & Vehicles",
+      "title": "Fleet, Telematics & Referrals",
       "items": [
-        "2-Wheeler (20 kg) · 3-Wheeler (500 kg) · Tata Ace (1 t) · Bolero (1.7 t)",
-        "Loading helper toggle (+₹250)",
-        "Packers & Movers — BHK-based dynamic pricing",
-        "Real-time 3 s driver location interpolation"
+        "3-track referral bonus: Driver-Driver (₹500), Driver-User (₹100), User-User (₹150/₹100)",
+        "Driver live movement: fluid CSS glide + dynamic destination polylines",
+        "Driver distance charging: pickup approach + trip distance payout",
+        "2-Wheeler (20 kg) · 3-Wheeler (500 kg) · Tata Ace (1 t) · Bolero (1.7 t)"
       ]
     },
     {
       "dot": "amber",
-      "title": "External Services",
+      "title": "External Services & Hub",
       "items": [
-        "CartoDB Voyager raster tiles for map rendering",
+        "CartoDB Voyager raster tiles for Coimbatore hub & industrial zones",
         "Google Maps deep link for turn-by-turn driver navigation",
-        "Capacitor 6 packages SSG output into Android / iOS binaries",
-        "Unsplash & Placehold.co for demo imagery"
+        "Capacitor 6 packages Next.js SSG output into Android / iOS APKs",
+        "Instant mock UPI & NetBanking wallet top-up integration"
       ]
     }
   ]

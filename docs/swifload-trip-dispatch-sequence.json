@@ -13,13 +13,13 @@
         "id": "fare-quote",
         "label": "Fare calculation & booking",
         "focus": ["customer", "app", "ctx", "pricing"],
-        "note": "Shipper specifies cargo points; pricing engine computes Haversine distance and returns upfront quote."
+        "note": "Shipper specifies cargo points; pricing engine computes distance slab rate and returns upfront quote based on farthest driver in range."
       },
       {
         "id": "driver-dispatch",
-        "label": "Driver radar & assignment",
+        "label": "Cascading dispatch & accept",
         "focus": ["app", "ctx", "storage", "driver"],
-        "note": "Context transitions trip to SEARCHING, persists to localStorage, and broadcasts to nearby available drivers."
+        "note": "Context transitions trip to SEARCHING, clusters drivers, and broadcasts cascading offer with 15-20s countdown."
       },
       {
         "id": "otp-handshake",
@@ -33,31 +33,31 @@
     { "id": "customer", "type": "external", "label": "Shipper", "sublabel": "Mobile / Web Client" },
     { "id": "app", "type": "frontend", "label": "CustomerApp", "sublabel": "React UI Component" },
     { "id": "ctx", "type": "backend", "label": "LogisticsContext", "sublabel": "State Machine Core" },
-    { "id": "pricing", "type": "backend", "label": "PricingEngine", "sublabel": "Fare & Surge Logic" },
+    { "id": "pricing", "type": "backend", "label": "PricingEngine", "sublabel": "Slabs & Driver Payout" },
     { "id": "driver", "type": "frontend", "label": "DriverApp", "sublabel": "Driver Portal UI" },
     { "id": "storage", "type": "database", "label": "localStorage", "sublabel": "Client Persistence" }
   ],
   "segments": [
-    { "from": 140, "to": 320, "label": "Fare Estimation & Quote" },
-    { "from": 335, "to": 550, "label": "Driver Match & Acceptance" },
-    { "from": 565, "to": 810, "label": "OTP Handshake & Delivery" }
+    { "from": 140, "to": 320, "label": "Distance Slab Quote & Pricing" },
+    { "from": 335, "to": 550, "label": "Cascading Dispatch & Acceptance" },
+    { "from": 565, "to": 810, "label": "OTP Handshake & Wallet Settlement" }
   ],
   "messages": [
     { "from": "customer", "to": "app", "y": 170, "label": "Select pickup & drop points", "variant": "emphasis" },
-    { "from": "app", "to": "ctx", "y": 210, "label": "calculateFare(pickup, drop, tier)", "variant": "default" },
-    { "from": "ctx", "to": "pricing", "y": 250, "label": "Haversine × 1.32 + surge", "variant": "default" },
-    { "from": "pricing", "to": "app", "y": 290, "label": "Estimated Fare ₹480 + 5% GST", "variant": "return" },
-    { "from": "customer", "to": "app", "y": 360, "label": "Confirm Booking & Payment", "variant": "emphasis" },
+    { "from": "app", "to": "ctx", "y": 210, "label": "calculateSlabFare(pickup, drop, tier)", "variant": "default" },
+    { "from": "ctx", "to": "pricing", "y": 250, "label": "compute farthest-driver slab quote", "variant": "default" },
+    { "from": "pricing", "to": "app", "y": 290, "label": "Quoted Fare ₹68 + 5% GST (locked)", "variant": "return" },
+    { "from": "customer", "to": "app", "y": 360, "label": "Confirm Booking & Wallet Pay", "variant": "emphasis" },
     { "from": "app", "to": "ctx", "y": 400, "label": "createBooking(payload)", "variant": "emphasis" },
     { "from": "ctx", "to": "storage", "y": 440, "label": "persist trip (SEARCHING)", "variant": "dashed" },
-    { "from": "ctx", "to": "driver", "y": 480, "label": "Broadcast nearby trip radar", "variant": "emphasis" },
+    { "from": "ctx", "to": "driver", "y": 480, "label": "Cascading dispatch (15s cluster ping)", "variant": "emphasis" },
     { "from": "driver", "to": "ctx", "y": 520, "label": "advanceTripStatus (DRIVER_ASSIGNED)", "variant": "emphasis" },
     { "from": "driver", "to": "ctx", "y": 590, "label": "advanceTripStatus (AT_PICKUP)", "variant": "default" },
     { "from": "customer", "to": "driver", "y": 630, "label": "Share 4-digit OTP verbally", "variant": "security" },
     { "from": "driver", "to": "ctx", "y": 670, "label": "advanceTripStatus(otpProvided)", "variant": "security" },
     { "from": "ctx", "to": "storage", "y": 710, "label": "validate OTP & update IN_TRANSIT", "variant": "emphasis" },
     { "from": "driver", "to": "ctx", "y": 750, "label": "advanceTripStatus (DELIVERED, podPhoto)", "variant": "emphasis" },
-    { "from": "ctx", "to": "storage", "y": 790, "label": "settle wallet + write receipt", "variant": "return" }
+    { "from": "ctx", "to": "storage", "y": 790, "label": "credit driver (82%) + overdraft check", "variant": "return" }
   ],
   "activations": [
     { "participant": "customer", "from": 165, "to": 365, "type": "external" },
@@ -72,29 +72,29 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Deterministic Fare Locking",
+      "title": "Distance Slab Pricing & Locking",
       "items": [
-        "Distance computed via Haversine formula multiplied by 1.32 road tortuosity",
-        "Vehicle tier rates, waiting charges, and logistics GST computed upfront",
+        "0–1 km base flat rate (₹50) + tiered distance slabs across 4 customer tiers",
+        "Quote calculated against farthest driver in range with transparent disclaimer",
         "Customer locks in price guarantee before committing booking"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Proximity Dispatch & Assignment",
+      "title": "Cascading Dispatch & Shielding",
       "items": [
-        "Simulated radar searches drivers in active service zone",
-        "Driver receives dispatch ping with net earning preview",
+        "Driver location clusters receive sequential offers with 15–20s countdown",
+        "Driver contact details shielded until trip acceptance",
         "Acceptance switches trip status from SEARCHING to DRIVER_ASSIGNED"
       ]
     },
     {
       "dot": "amber",
-      "title": "Two-Factor Handshake & Settlement",
+      "title": "Two-Factor Handshake & Overdraft",
       "items": [
         "Customer receives secure 4-digit pickup OTP upon booking creation",
         "Driver must validate matching OTP to unlock IN_TRANSIT state",
-        "Digital POD photo upload triggers instant wallet credit and customer receipt"
+        "Digital POD photo triggers 82% wallet deposit subject to overdraft rules"
       ]
     }
   ]

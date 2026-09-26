@@ -1,0 +1,389 @@
+{
+  "communities": {
+    "0": [
+      "src_components_admin_adminportal",
+      "src_components_admin_adminportal_adminportal",
+      "src_context_logisticscontext",
+      "src_context_logisticscontext_initial_customer",
+      "src_context_logisticscontext_logisticscontext",
+      "src_context_logisticscontext_logisticscontexttype",
+      "src_lib_data",
+      "src_lib_data_bangalore_landmarks",
+      "src_lib_data_coimbatore_landmarks",
+      "src_lib_data_default_customer_slabs",
+      "src_lib_data_default_referral_config",
+      "src_lib_data_driver_groups",
+      "src_lib_data_initial_drivers",
+      "src_lib_data_initial_referrals",
+      "src_lib_data_initial_trips",
+      "src_lib_data_service_zones",
+      "src_lib_data_vehicle_configs",
+      "src_lib_pricing",
+      "src_lib_pricing_calculatecancellationfee",
+      "src_lib_pricing_calculatefare",
+      "src_lib_pricing_calculateslabdistancefare",
+      "src_lib_pricing_detectzonesurge",
+      "src_types_logistics",
+      "src_types_logistics_adminrole",
+      "src_types_logistics_customertype",
+      "src_types_logistics_customertypeslabconfig",
+      "src_types_logistics_customeruser",
+      "src_types_logistics_distanceslab",
+      "src_types_logistics_drivergroup",
+      "src_types_logistics_driverkycdoc",
+      "src_types_logistics_driverpartner",
+      "src_types_logistics_farebreakdown",
+      "src_types_logistics_locationpoint",
+      "src_types_logistics_referralprogramconfig",
+      "src_types_logistics_referralrecord",
+      "src_types_logistics_registerdriverpayload",
+      "src_types_logistics_servicezone",
+      "src_types_logistics_shipmentdetails",
+      "src_types_logistics_slabbreakdownitem",
+      "src_types_logistics_trip",
+      "src_types_logistics_userrole",
+      "src_types_logistics_vehicleconfig",
+      "src_types_logistics_wallettransaction"
+    ],
+    "1": [
+      "src_components_website_customerreviewssection",
+      "src_components_website_customerreviewssection_customerreviewssection",
+      "src_components_website_driverpartnersection",
+      "src_components_website_driverpartnersection_driverpartnersection",
+      "src_components_website_driverpartnersection_driverpartnersectionprops",
+      "src_components_website_enterprisesection",
+      "src_components_website_enterprisesection_enterprisesection",
+      "src_components_website_fleetcomparison",
+      "src_components_website_fleetcomparison_fleetcomparison",
+      "src_components_website_fleetcomparison_fleetcomparisonprops",
+      "src_components_website_packersmoverssection",
+      "src_components_website_packersmoverssection_packersmoverssection",
+      "src_components_website_packersmoverssection_packersmoverssectionprops",
+      "src_components_website_prohibitedgoodsmodal",
+      "src_components_website_prohibitedgoodsmodal_prohibitedgoodsmodal",
+      "src_components_website_prohibitedgoodsmodal_prohibitedgoodsmodalprops",
+      "src_components_website_trustandsafetysection",
+      "src_components_website_trustandsafetysection_trustandsafetysection",
+      "src_components_website_trustandsafetysection_trustandsafetysectionprops",
+      "src_components_website_webfaqsection",
+      "src_components_website_webfaqsection_webfaqsection",
+      "src_components_website_webfaqsection_webfaqsectionprops",
+      "src_components_website_webfooter",
+      "src_components_website_webfooter_webfooter",
+      "src_components_website_webfooter_webfooterprops",
+      "src_components_website_webnavbar",
+      "src_components_website_webnavbar_webnavbar",
+      "src_components_website_webnavbar_webnavbarprops",
+      "src_components_website_webplatform",
+      "src_components_website_webplatform_webplatformprops",
+      "src_context_logisticscontext_createtrippayload",
+      "src_types_logistics_vehiclecategory"
+    ],
+    "2": [
+      "ref_dom",
+      "ref_dom_iterable",
+      "ref_esnext",
+      "ref_next_env_d_ts",
+      "ref_next_types_ts",
+      "ref_node_modules",
+      "ref_ts",
+      "ref_tsx",
+      "tsconfig",
+      "tsconfig_compileroptions",
+      "tsconfig_compileroptions_allowjs",
+      "tsconfig_compileroptions_esmoduleinterop",
+      "tsconfig_compileroptions_incremental",
+      "tsconfig_compileroptions_isolatedmodules",
+      "tsconfig_compileroptions_jsx",
+      "tsconfig_compileroptions_lib",
+      "tsconfig_compileroptions_module",
+      "tsconfig_compileroptions_moduleresolution",
+      "tsconfig_compileroptions_noemit",
+      "tsconfig_compileroptions_paths",
+      "tsconfig_compileroptions_plugins",
+      "tsconfig_compileroptions_resolvejsonmodule",
+      "tsconfig_compileroptions_skiplibcheck",
+      "tsconfig_compileroptions_strict",
+      "tsconfig_exclude",
+      "tsconfig_include"
+    ],
+    "3": [
+      "capacitor_android",
+      "capacitor_cli",
+      "capacitor_core",
+      "capacitor_ios",
+      "clsx",
+      "lucide_react",
+      "package_dependencies",
+      "package_dependencies_capacitor_android",
+      "package_dependencies_capacitor_cli",
+      "package_dependencies_capacitor_core",
+      "package_dependencies_capacitor_ios",
+      "package_dependencies_clsx",
+      "package_dependencies_leaflet",
+      "package_dependencies_lucide_react",
+      "package_dependencies_next",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_tailwind_merge",
+      "package_json_leaflet",
+      "package_json_next",
+      "react",
+      "react_dom",
+      "tailwind_merge"
+    ],
+    "4": [
+      "src_app_page",
+      "src_app_page_home",
+      "src_components_customer_customerapp",
+      "src_components_customer_customerapp_customerapp",
+      "src_components_driver_driverapp",
+      "src_components_driver_driverapp_driverapp",
+      "src_components_website_bookingsuccessmodal",
+      "src_components_website_bookingsuccessmodal_bookingsuccessmodal",
+      "src_components_website_bookingsuccessmodal_bookingsuccessmodalprops",
+      "src_components_website_herobookingwidget",
+      "src_components_website_herobookingwidget_herobookingwidget",
+      "src_components_website_herobookingwidget_herobookingwidgetprops",
+      "src_components_website_webplatform_webplatform",
+      "src_context_logisticscontext_logisticsprovider",
+      "src_context_logisticscontext_uselogistics",
+      "src_lib_pricing_calculatecustomerquotedslabfare",
+      "src_lib_pricing_calculatedistancekm",
+      "src_lib_pricing_calculatedrivertaskpayout",
+      "src_lib_pricing_estimatedurationmins",
+      "src_types_logistics_goodscategory",
+      "src_types_logistics_paymentmethod"
+    ],
+    "5": [
+      "autoprefixer",
+      "package_devdependencies",
+      "package_devdependencies_autoprefixer",
+      "package_devdependencies_postcss",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_types_leaflet",
+      "package_devdependencies_types_node",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_typescript",
+      "package_json_tailwindcss",
+      "postcss",
+      "types_leaflet",
+      "types_node",
+      "types_react",
+      "types_react_dom",
+      "typescript"
+    ],
+    "6": [
+      "changes_required_document",
+      "initial_requirements_customer_app",
+      "initial_requirements_document",
+      "initial_requirements_driver_partner_app",
+      "initial_requirements_driver_transparency",
+      "initial_requirements_operations_admin_portal",
+      "initial_requirements_platform_essentials",
+      "initial_requirements_starter_mvp",
+      "readme_capacitor_mobile_packaging",
+      "readme_customer_app",
+      "readme_driver_partner_app",
+      "readme_fare_engine",
+      "readme_operations_admin_portal",
+      "readme_overview",
+      "readme_web_platform"
+    ],
+    "7": [
+      "package",
+      "package_description",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_cap_android",
+      "package_scripts_cap_ios",
+      "package_scripts_cap_sync",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_start",
+      "package_version"
+    ],
+    "8": [
+      "leaflet",
+      "src_components_admin_adminportal_leafletmap",
+      "src_components_customer_customerapp_leafletmap",
+      "src_components_driver_driverapp_leafletmap",
+      "src_components_map_leafletmap",
+      "src_components_map_leafletmap_leafletmap",
+      "src_components_map_leafletmap_leafletmapprops",
+      "src_components_website_livetrackingmodal",
+      "src_components_website_livetrackingmodal_livetrackingmodal",
+      "src_components_website_livetrackingmodal_livetrackingmodalprops",
+      "src_types_logistics_tripstatus"
+    ],
+    "9": [
+      "public_manifest",
+      "public_manifest_background_color",
+      "public_manifest_description",
+      "public_manifest_display",
+      "public_manifest_icons",
+      "public_manifest_name",
+      "public_manifest_short_name",
+      "public_manifest_start_url",
+      "public_manifest_theme_color"
+    ],
+    "10": [
+      "src_app_layout",
+      "src_app_layout_metadata",
+      "src_app_layout_rootlayout",
+      "src_app_layout_viewport"
+    ],
+    "11": [
+      "archify_input_architecture_criteria",
+      "archify_input_prompt"
+    ],
+    "12": [
+      "capacitor_config",
+      "capacitor_config_config"
+    ],
+    "13": [
+      "next_config",
+      "next_config_nextconfig"
+    ],
+    "14": [
+      "postcss_config"
+    ],
+    "15": [
+      "tailwind_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.13399778516057587,
+    "1": 0.08266129032258064,
+    "2": 0.07692307692307693,
+    "3": 0.08695652173913043,
+    "4": 0.22380952380952382,
+    "5": 0.11764705882352941,
+    "6": 0.1523809523809524,
+    "7": 0.15384615384615385,
+    "8": 0.2,
+    "9": 0.2222222222222222,
+    "10": 0.5,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0
+  },
+  "gods": [
+    {
+      "id": "src_context_logisticscontext_uselogistics",
+      "label": "useLogistics()",
+      "degree": 25
+    },
+    {
+      "id": "tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 15
+    },
+    {
+      "id": "src_context_logisticscontext_logisticscontexttype",
+      "label": "LogisticsContextType",
+      "degree": 15
+    },
+    {
+      "id": "src_types_logistics_vehiclecategory",
+      "label": "VehicleCategory",
+      "degree": 12
+    },
+    {
+      "id": "src_lib_pricing_calculatedistancekm",
+      "label": "calculateDistanceKm()",
+      "degree": 10
+    },
+    {
+      "id": "src_lib_pricing_calculatecustomerquotedslabfare",
+      "label": "calculateCustomerQuotedSlabFare()",
+      "degree": 10
+    },
+    {
+      "id": "package_scripts",
+      "label": "scripts",
+      "degree": 8
+    },
+    {
+      "id": "src_types_logistics_locationpoint",
+      "label": "LocationPoint",
+      "degree": 8
+    },
+    {
+      "id": "readme_overview",
+      "label": "SwifLoad Project Overview",
+      "degree": 7
+    },
+    {
+      "id": "src_context_logisticscontext_logisticsprovider",
+      "label": "LogisticsProvider()",
+      "degree": 7
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Shipper Customer Mobile App",
+      "target": "Customer Logistics App Scope",
+      "source_files": [
+        "README.md",
+        "Initial Requirements.txt"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Driver-Partner Mobile App",
+      "target": "Driver-Partner App Scope",
+      "source_files": [
+        "README.md",
+        "Initial Requirements.txt"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Operations Command Center Portal",
+      "target": "Operations Admin Portal Scope",
+      "source_files": [
+        "README.md",
+        "Initial Requirements.txt"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Changes Required Document",
+      "target": "SwifLoad Project Overview",
+      "source_files": [
+        "Changes Required.txt",
+        "README.md"
+      ],
+      "confidence": "AMBIGUOUS",
+      "relation": "conceptually_related_to",
+      "why": "ambiguous connection - not explicitly stated in source; connects across different repos/directories; peripheral node `Changes Required Document` unexpectedly reaches hub `SwifLoad Project Overview`"
+    },
+    {
+      "source": "LiveTrackingModal()",
+      "target": "useLogistics()",
+      "source_files": [
+        "src/components/Website/LiveTrackingModal.tsx",
+        "src/context/LogisticsContext.tsx"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities; peripheral node `LiveTrackingModal()` unexpectedly reaches hub `useLogistics()`"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

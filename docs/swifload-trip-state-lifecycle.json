@@ -36,17 +36,17 @@
     { "id": "terminal", "label": "Terminal Exits" }
   ],
   "states": [
-    { "id": "searching", "type": "start", "label": "SEARCHING", "sublabel": "radar broadcast", "lane": "main", "col": 0, "step": "01", "tag": "pending" },
-    { "id": "assigned", "type": "active", "label": "ASSIGNED", "sublabel": "en route to pickup", "lane": "main", "col": 1, "step": "02", "tag": "matched" },
+    { "id": "searching", "type": "start", "label": "SEARCHING", "sublabel": "cascading broadcast", "lane": "main", "col": 0, "step": "01", "tag": "pending" },
+    { "id": "assigned", "type": "active", "label": "ASSIGNED", "sublabel": "gliding to pickup", "lane": "main", "col": 1, "step": "02", "tag": "matched" },
     { "id": "at_pickup", "type": "decision", "label": "AT_PICKUP", "sublabel": "verify 4-digit OTP", "lane": "main", "col": 2, "step": "03", "tag": "gate" },
-    { "id": "in_transit", "type": "active", "label": "IN_TRANSIT", "sublabel": "live GPS tracking", "lane": "main", "col": 3, "step": "04", "tag": "moving" },
+    { "id": "in_transit", "type": "active", "label": "IN_TRANSIT", "sublabel": "continuous GPS glide", "lane": "main", "col": 3, "step": "04", "tag": "moving" },
     { "id": "delivered", "type": "success", "label": "DELIVERED", "sublabel": "POD photo uploaded", "lane": "main", "col": 4, "step": "05", "tag": "success" },
     { "id": "otp_mismatch", "type": "waiting", "label": "OTP Mismatch", "sublabel": "3 failed attempts", "lane": "waiting", "col": 0, "tag": "pause" },
     { "id": "sos_reroute", "type": "active", "label": "Transit SOS", "sublabel": "breakdown / delay", "lane": "recovery", "col": 1, "tag": "emergency" },
-    { "id": "audit_hold", "type": "waiting", "label": "Finance Audit", "sublabel": "damage verification", "lane": "waiting", "col": 2, "tag": "review" },
+    { "id": "audit_hold", "type": "waiting", "label": "Finance Audit", "sublabel": "overdraft & damage", "lane": "waiting", "col": 2, "tag": "review" },
     { "id": "cancelled", "type": "failure", "label": "CANCELLED", "sublabel": "fee assessed", "lane": "terminal", "col": 0, "tag": "terminal" },
     { "id": "reassigned", "type": "failure", "label": "REASSIGNED", "sublabel": "backup dispatched", "lane": "terminal", "col": 1, "tag": "terminal" },
-    { "id": "settled", "type": "success", "label": "SETTLED", "sublabel": "wallet & GST split", "lane": "terminal", "col": 2, "tag": "terminal" }
+    { "id": "settled", "type": "success", "label": "SETTLED", "sublabel": "wallet & slab split", "lane": "terminal", "col": 2, "tag": "terminal" }
   ],
   "transitions": [
     { "from": "at_pickup", "to": "otp_mismatch", "variant": "security", "route": "straight", "fromSide": "bottom", "toSide": "top" },
@@ -61,8 +61,8 @@
       "dot": "cyan",
       "title": "Five-Phase Main Lifecycle",
       "items": [
-        "Trips start in SEARCHING state as proximity radar matches active drivers",
-        "DRIVER_ASSIGNED and AT_PICKUP track driver progress to pickup location",
+        "Trips start in SEARCHING with cascading dispatch to driver location clusters",
+        "DRIVER_ASSIGNED and AT_PICKUP track driver progress with live polyline routing",
         "DELIVERED is unlocked only following mandatory digital Proof of Delivery"
       ]
     },
@@ -72,7 +72,7 @@
       "items": [
         "OTP validation at pickup prevents fraudulent cargo handovers",
         "Transit SOS accommodates vehicle breakdown with immediate replacement dispatch",
-        "Post-delivery finance audit verifies damage claims before ledger closure"
+        "Driver overdraft threshold halts new dispatch if balance exceeds credit limit"
       ]
     },
     {
