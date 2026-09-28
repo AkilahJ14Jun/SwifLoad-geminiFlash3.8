@@ -196,8 +196,50 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [referralConfig, setReferralConfig] = useState<ReferralProgramConfig>(DEFAULT_REFERRAL_CONFIG);
   const [referrals, setReferrals] = useState<ReferralRecord[]>(INITIAL_REFERRALS);
 
-  // Load from localStorage on client mount
+  // Helpers for server DB synchronization
+  const syncTripToServer = useCallback(async (trip: Trip) => {
+    try {
+      await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trip),
+      });
+    } catch {}
+  }, []);
+
+  const updateTripOnServer = useCallback(async (tripId: string, updates: Partial<Trip>) => {
+    try {
+      await fetch(`/api/trips/${tripId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch {}
+  }, []);
+
+  const updateDriverOnServer = useCallback(async (driverId: string, updates: Partial<DriverPartner>) => {
+    try {
+      await fetch(`/api/drivers/${driverId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch {}
+  }, []);
+
+  const syncWalletToServer = useCallback(async (payload: any) => {
+    try {
+      await fetch('/api/wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch {}
+  }, []);
+
+  // Load from central cloud DB and fallback to localStorage
   useEffect(() => {
+    // 1. Initial fast load from localStorage cache
     try {
       const savedCustomer = localStorage.getItem(LOCAL_STORAGE_KEY_CUSTOMER);
       if (savedCustomer) setCurrentCustomer(JSON.parse(savedCustomer));
@@ -223,8 +265,89 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const savedReferrals = localStorage.getItem(LOCAL_STORAGE_KEY_REFERRALS);
       if (savedReferrals) setReferrals(JSON.parse(savedReferrals));
     } catch {
-      // fallback to initial
+      // fallback
     }
+
+    // 2. Fetch latest shared data from Cloud DB
+    const fetchCloudState = async () => {
+      try {
+        const res = await fetch('/api/state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.trips) setTrips(data.trips);
+          if (data.drivers) setDrivers(data.drivers);
+          if (data.customerSlabConfigs) setCustomerSlabConfigs(data.customerSlabConfigs);
+          if (data.referralConfig) setReferralConfig(data.referralConfig);
+          if (data.referrals) setReferrals(data.referrals);
+          if (data.customer) setCurrentCustomer(data.customer);
+          if (data.vehicleConfigs) setVehicleConfigs(data.vehicleConfigs);
+          if (data.serviceZones) setServiceZones(data.serviceZones);
+        }
+      } catch (err) {
+        // network offline fallback
+      }
+    };
+    fetchCloudState();
+
+    // 3. Connect to Real-Time Server-Sent Events (SSE) Stream
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/events');
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'TRIP_CREATED' && payload.data) {
+            setTrips((prev) => {
+              const exists = prev.some((t) => t.id === payload.data.id);
+              if (exists) return prev.map((t) => (t.id === payload.data.id ? payload.data : t));
+              return [payload.data, ...prev];
+            });
+          } else if (payload.type === 'TRIP_UPDATED' && payload.data) {
+            setTrips((prev) => prev.map((t) => (t.id === payload.data.id ? payload.data : t)));
+          } else if (payload.type === 'DRIVER_UPDATED' && payload.data) {
+            setDrivers((prev) => prev.map((d) => (d.id === payload.data.id ? { ...d, ...payload.data } : d)));
+          } else if (payload.type === 'WALLET_UPDATED' && payload.data) {
+            if (payload.data.entityType === 'customer' && payload.data.wallet) {
+              setCurrentCustomer((prev) => ({ ...prev, wallet: payload.data.wallet }));
+            } else if (payload.data.entityType === 'driver') {
+              setDrivers((prev) =>
+                prev.map((d) =>
+                  d.id === payload.data.id
+                    ? {
+                        ...d,
+                        walletBalance: payload.data.walletBalance,
+                        wallet: payload.data.driver?.wallet || d.wallet,
+                      }
+                    : d
+                )
+              );
+            }
+          } else if (payload.type === 'CONFIG_UPDATED' && payload.data) {
+            if (payload.data.type === 'slabs' && payload.data.slabs) {
+              setCustomerSlabConfigs(payload.data.slabs);
+            }
+          } else if (payload.type === 'STATE_SYNC' || payload.type === 'SYSTEM_RESET') {
+            if (payload.data) {
+              if (payload.data.trips) setTrips(payload.data.trips);
+              if (payload.data.drivers) setDrivers(payload.data.drivers);
+              if (payload.data.customerSlabConfigs) setCustomerSlabConfigs(payload.data.customerSlabConfigs);
+              if (payload.data.referralConfig) setReferralConfig(payload.data.referralConfig);
+              if (payload.data.referrals) setReferrals(payload.data.referrals);
+              if (payload.data.customer) setCurrentCustomer(payload.data.customer);
+            }
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+    } catch {}
+
+    const interval = setInterval(fetchCloudState, 8000);
+
+    return () => {
+      clearInterval(interval);
+      if (eventSource) eventSource.close();
+    };
   }, []);
 
   // Save to localStorage
@@ -561,9 +684,15 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           transactions: [tx, ...(prev.wallet.transactions || [])],
         },
       }));
+      syncWalletToServer({
+        entityType: 'customer',
+        id: currentCustomer.id,
+        amount,
+        description: note || 'UPI / NetBanking Wallet Top-up',
+      });
       showToast(`Added ₹${amount} to your SwifLoad Wallet! New Balance: ₹${newBal}`);
     },
-    [currentCustomer, showToast]
+    [currentCustomer, syncWalletToServer, showToast]
   );
 
   // Top up / recharge driver wallet (to clear negative balance or add funds)
@@ -595,9 +724,15 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return d;
         })
       );
+      syncWalletToServer({
+        entityType: 'driver',
+        id: driverId,
+        amount,
+        description: note || 'Driver Dues Clearance / Wallet Recharge via UPI',
+      });
       showToast(`Driver wallet recharged with ₹${amount}`);
     },
-    [showToast]
+    [syncWalletToServer, showToast]
   );
 
   // Update Driver Negative Balance Limit (Configurable per driver in Admin Portal)
@@ -643,6 +778,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             transactions: [tx, ...(prev.wallet.transactions || [])],
           },
         }));
+        syncWalletToServer({ entityType: 'customer', id, amount, description: note });
         showToast(`Customer wallet adjusted by ₹${amount}. New balance: ₹${newBal}`);
       } else {
         setDrivers((prev) =>
@@ -670,10 +806,11 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             return d;
           })
         );
+        syncWalletToServer({ entityType: 'driver', id, amount, description: note });
         showToast(`Driver wallet adjusted by ₹${amount}`);
       }
     },
-    [currentCustomer, showToast]
+    [currentCustomer, syncWalletToServer, showToast]
   );
 
   // Customer Registration & Auth
@@ -1119,11 +1256,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       setTrips((prev) => [newTrip, ...prev]);
       setActiveTripId(tripId);
+      syncTripToServer(newTrip);
 
       showToast(`Trip ${bookingCode} created! Dispatched to ${nearestGroup.name}`);
       return tripId;
     },
-    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, showToast]
+    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, syncTripToServer, showToast]
   );
 
   // Driver Accepts a pickup task: Task payout is calculated from this driver's specific distance to pickup + trip distance!
@@ -1146,9 +1284,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               customerSlabConfigs
             );
 
-            return {
+            const updatedTrip = {
               ...t,
-              status: 'DRIVER_ASSIGNED',
+              status: 'DRIVER_ASSIGNED' as TripStatus,
               driverId: driver.id,
               driverName: driver.name,
               driverPhone: driver.phone,
@@ -1171,6 +1309,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 },
               ],
             };
+            updateTripOnServer(tripId, updatedTrip);
+            return updatedTrip;
           }
           return t;
         })
@@ -1180,12 +1320,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setDrivers((prev) =>
           prev.map((d) => (d.id === driverId ? { ...d, currentStatus: 'BUSY' } : d))
         );
+        updateDriverOnServer(driverId, { currentStatus: 'BUSY' });
         showToast(`Task accepted by ${driver.name}! Navigating to pickup.`);
         return { success: true, message: 'Trip successfully accepted' };
       }
       return { success: false, message: 'Trip is no longer available in this group' };
     },
-    [drivers, customerSlabConfigs, showToast]
+    [drivers, customerSlabConfigs, updateTripOnServer, updateDriverOnServer, showToast]
   );
 
   // Pass trip to adjacent group manually (if driver passes or tests escalation)
@@ -1239,8 +1380,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setDrivers((dList) =>
                 dList.map((d) => (d.id === t.driverId ? { ...d, currentStatus: 'IDLE' } : d))
               );
+              updateDriverOnServer(t.driverId, { currentStatus: 'IDLE' });
             }
-            return {
+            const updatedTrip = {
               ...t,
               status: 'CANCELLED' as TripStatus,
               cancellationReason: reason,
@@ -1254,13 +1396,15 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 },
               ],
             };
+            updateTripOnServer(tripId, updatedTrip);
+            return updatedTrip;
           }
           return t;
         })
       );
       showToast('Trip cancelled');
     },
-    [showToast]
+    [updateTripOnServer, updateDriverOnServer, showToast]
   );
 
   // Assign or Reassign Driver (from Admin or Dispatch)
@@ -1277,10 +1421,11 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setDrivers((dList) =>
                 dList.map((d) => (d.id === t.driverId ? { ...d, currentStatus: 'IDLE' } : d))
               );
+              updateDriverOnServer(t.driverId, { currentStatus: 'IDLE' });
             }
-            return {
+            const updatedTrip = {
               ...t,
-              status: 'DRIVER_ASSIGNED',
+              status: 'DRIVER_ASSIGNED' as TripStatus,
               driverId: driver.id,
               driverName: driver.name,
               driverPhone: driver.phone,
@@ -1296,6 +1441,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 },
               ],
             };
+            updateTripOnServer(tripId, updatedTrip);
+            return updatedTrip;
           }
           return t;
         })
@@ -1304,10 +1451,11 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setDrivers((prev) =>
         prev.map((d) => (d.id === driverId ? { ...d, currentStatus: 'BUSY' } : d))
       );
+      updateDriverOnServer(driverId, { currentStatus: 'BUSY' });
 
       showToast(`Driver ${driver.name} assigned to trip`);
     },
-    [drivers, showToast]
+    [drivers, updateTripOnServer, updateDriverOnServer, showToast]
   );
 
   // Advance Trip Status in the lifecycle
@@ -1420,9 +1568,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                       });
                     }
 
-                    return {
+                    const updatedDriver = {
                       ...d,
-                      currentStatus: 'IDLE',
+                      currentStatus: 'IDLE' as any,
                       totalTrips: d.totalTrips + 1,
                       wallet: {
                         ...d.wallet,
@@ -1431,6 +1579,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         transactions,
                       },
                     };
+                    updateDriverOnServer(d.id, updatedDriver);
+                    return updatedDriver;
                   }
                   return d;
                 })
@@ -1463,10 +1613,17 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (result.success) {
         showToast(result.message);
+        setTimeout(() => {
+          setTrips((currentTrips) => {
+            const up = currentTrips.find((t) => t.id === tripId);
+            if (up) updateTripOnServer(tripId, up);
+            return currentTrips;
+          });
+        }, 50);
       }
       return result;
     },
-    [showToast]
+    [updateTripOnServer, updateDriverOnServer, showToast]
   );
 
   // Submit Rating & Feedback
@@ -1475,7 +1632,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setTrips((prev) =>
         prev.map((t) => {
           if (t.id === tripId) {
-            return {
+            const updated = {
               ...t,
               customerRating: rating,
               customerFeedback: feedback,
@@ -1488,13 +1645,15 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 },
               ],
             };
+            updateTripOnServer(tripId, updated);
+            return updated;
           }
           return t;
         })
       );
       showToast('Thank you for rating your trip!');
     },
-    [showToast]
+    [updateTripOnServer, showToast]
   );
 
   // Toggle Driver Online / Offline
@@ -1505,17 +1664,19 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           if (d.id === driverId) {
             const nextOnline = !d.isOnline;
             showToast(`Driver is now ${nextOnline ? 'ONLINE' : 'OFFLINE'}`);
-            return {
+            const updated = {
               ...d,
               isOnline: nextOnline,
-              currentStatus: nextOnline ? 'IDLE' : 'OFFLINE',
+              currentStatus: nextOnline ? ('IDLE' as const) : ('OFFLINE' as const),
             };
+            updateDriverOnServer(driverId, updated);
+            return updated;
           }
           return d;
         })
       );
     },
-    [showToast]
+    [updateDriverOnServer, showToast]
   );
 
   // Approve Driver KYC
@@ -1524,29 +1685,38 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setDrivers((prev) =>
         prev.map((d) => {
           if (d.id === driverId) {
-            return {
+            const updated = {
               ...d,
-              kycStatus: 'VERIFIED',
+              kycStatus: 'VERIFIED' as const,
               kycDocuments: d.kycDocuments.map((doc) => ({ ...doc, verified: true })),
             };
+            updateDriverOnServer(driverId, updated);
+            return updated;
           }
           return d;
         })
       );
       showToast('Driver documents approved & account activated!');
     },
-    [showToast]
+    [updateDriverOnServer, showToast]
   );
 
   // Reject Driver KYC
   const rejectDriverKyc = useCallback(
     (driverId: string, reason: string) => {
       setDrivers((prev) =>
-        prev.map((d) => (d.id === driverId ? { ...d, kycStatus: 'REJECTED' } : d))
+        prev.map((d) => {
+          if (d.id === driverId) {
+            const updated = { ...d, kycStatus: 'REJECTED' as const };
+            updateDriverOnServer(driverId, updated);
+            return updated;
+          }
+          return d;
+        })
       );
       showToast(`Driver KYC rejected: ${reason}`);
     },
-    [showToast]
+    [updateDriverOnServer, showToast]
   );
 
   // Request Payout
@@ -1682,6 +1852,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setReferralConfig(DEFAULT_REFERRAL_CONFIG);
     setReferrals(INITIAL_REFERRALS);
     setActiveTripId('trip_cbe_1001');
+
+    fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset' }),
+    }).catch(() => {});
+
     showToast('Reset to default Coimbatore Starter MVP demo data!');
   }, [showToast]);
 

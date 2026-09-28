@@ -18,7 +18,9 @@ import {
   Menu,
   X,
   Sparkles,
+  Download,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useLogistics } from '@/context/LogisticsContext';
 
 interface WebNavbarProps {
@@ -245,6 +247,15 @@ export default function WebNavbar({
 
         {/* Right Side: Simulator Dropdown & Book CTA */}
         <div className="flex items-center space-x-2.5">
+          {/* Mobile Apps Download Button */}
+          <Link
+            href="/downloads"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition-colors"
+          >
+            <Download className="w-3.5 h-3.5 text-white" />
+            <span className="hidden sm:inline">Get Mobile App</span>
+          </Link>
+
           {/* Mobile App Simulator Menu */}
           <div className="relative">
             <button

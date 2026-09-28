@@ -4,6 +4,113 @@ This document tracks all technical updates, architectural additions, and feature
 
 ---
 
+## 📅 Session: 2026-09-27 (Azure Cloud Live Deployment & Native Android APK Distribution)
+
+### Objectives
+1. Deploy SwifLoad to Azure cloud under authenticated account `akilahj@adwayit.com` (Subscription: `Akilah_Azure`, ID: `53f8852d-7390-4daf-8cc4-4e53e1769fb2`).
+2. Centralize database and state across Admin Portal, Customer Web/App, and Driver-Partner Web/App so all updates synchronize immediately across devices.
+3. Build and package native Android APKs for Customer and Driver connected directly to the cloud backend.
+4. Provide direct mobile app downloads (`/downloads`) with downloadable APKs and 1-tap PWA installation.
+5. Verify live cloud operation, API endpoints, SSE real-time broadcast, and production build with `npm run build`.
+
+---
+
+### Key Changes & Bullet Points
+
+#### 1. Azure Cloud Infrastructure Provisioning (`rg-swifload` in `centralindia`)
+- **Azure Container Registry (ACR):** Provisioned `acrswifload` (`acrswifload.azurecr.io`) with admin credentials enabled.
+- **Azure App Service Plan:** Created `plan-swifload` (Linux B1 Basic tier).
+- **Azure Web App:** Deployed `swifload-cbe` (`https://swifload-cbe.azurewebsites.net`).
+- **Containerization:** Built multi-stage production Docker container natively via Azure ACR Cloud Build (`az acr build`), running Next.js 14 standalone mode on Alpine Linux on port 8080 (`WEBSITES_PORT=8080`).
+
+#### 2. Centralized Real-Time Cloud Database & Synchronization
+- Centralized state repository with Server-Sent Events (`/api/events`) and REST API endpoints (`/api/state`, `/api/trips`, `/api/drivers`, `/api/wallets`, `/api/config`).
+- Verified real-time state synchronization: any booking, driver status toggle, or admin tariff adjustment propagates instantaneously to all connected browsers and mobile devices.
+
+#### 3. Native Android Mobile Application Generation (`android/`)
+- Initialized native Android Capacitor application targeting local Android SDK (`G:\Android\Sdk`, Build-Tools 34, Android Platform 34).
+- Configured `capacitor.config.ts` with `server.url = 'https://swifload-cbe.azurewebsites.net'` ensuring mobile devices load live cloud data with zero latency.
+- Executed `npx cap sync android` and compiled debug APK with Gradle 8.2.1 (`.\gradlew.bat assembleDebug`), passing all 82 tasks.
+- Generated and placed production APK binaries in `public/downloads/`:
+  - `SwifLoad-Customer.apk` (3.75 MB)
+  - `SwifLoad-Driver.apk` (3.75 MB)
+
+#### 4. Dedicated Portals & Mobile Distribution Center
+- Live verified endpoints:
+  - 🌐 **Platform Website & Hub:** `https://swifload-cbe.azurewebsites.net`
+  - 📱 **Customer Mobile Booking App:** `https://swifload-cbe.azurewebsites.net/customer`
+  - 🚚 **Driver-Partner Mobile App:** `https://swifload-cbe.azurewebsites.net/driver`
+  - 🖥️ **Operations Admin Console:** `https://swifload-cbe.azurewebsites.net/admin`
+  - 📦 **Mobile Downloads & PWA Installer:** `https://swifload-cbe.azurewebsites.net/downloads`
+- Authored comprehensive step-by-step deployment and operational manual ([`DEPLOYMENT_GUIDE.md`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/DEPLOYMENT_GUIDE.md)) detailing the exact task chronology, prerequisites, Azure commands, and troubleshooting.
+
+---
+
+### Verification Status
+- **Azure Cloud Status:** `HTTP 200 OK` at `https://swifload-cbe.azurewebsites.net`.
+- **API Health Check:** `HTTP 200 OK` at `https://swifload-cbe.azurewebsites.net/api/state` (Active Drivers: 6, Trips: 3).
+- **APK Downloads:** Verified `HTTP 200 OK` (3,747,636 bytes) for both Customer and Driver APKs.
+- **Local Compilation Verification:** `npm run build` executed with 0 TypeScript errors, 0 lint errors, and 8/8 routes compiled successfully.
+
+---
+
+### Objectives
+1. Implement centralized cloud database persistence layer replacing client-side `localStorage` isolation so Customer, Driver, and Admin share the exact same state.
+2. Build real-time Server-Sent Events (SSE) broadcasting system for instantaneous state propagation across all devices without page refresh.
+3. Create dedicated mobile-friendly routes (`/customer`, `/driver`, `/admin`) and a unified Mobile App Distribution Center (`/downloads`).
+4. Implement Progressive Web App (PWA) manifest and Service Worker for instant 1-tap mobile installation.
+5. Initialize native Android platform (`android/`) via Capacitor linked to local Android SDK (`G:\Android\Sdk`).
+6. Install and configure Microsoft Azure CLI (v2.90.0) for cloud provisioning under `akilahj@adwayit.com`.
+7. Verify zero-error production compilation with `npm run build`.
+
+---
+
+### Key Changes & Bullet Points
+
+#### 1. Centralized Shared Database Layer (`src/lib/server/db.ts`)
+- Created `getDatabase()`, `saveDatabase()`, and `resetDatabase()` functions supporting file-based JSON persistence (`/home/data` for Azure App Service, `./data` for local) with fallback seeds.
+- Centralized data models for `trips`, `drivers`, `driverGroups`, `vehicleConfigs`, `serviceZones`, `customerSlabConfigs`, `referralConfig`, `referrals`, and `customer`.
+
+#### 2. Real-Time Server-Sent Events Broadcast Engine (`src/lib/server/events.ts` & `src/app/api/events/route.ts`)
+- Implemented singleton `eventBus` EventEmitter with typed event broadcasting (`TRIP_CREATED`, `TRIP_UPDATED`, `DRIVER_UPDATED`, `WALLET_UPDATED`, `CONFIG_UPDATED`, `STATE_SYNC`, `SYSTEM_RESET`).
+- Created streaming SSE endpoint (`/api/events`) with 20-second keepalive heartbeats preventing Azure proxy timeout.
+
+#### 3. Backend REST API Endpoints
+- `src/app/api/state/route.ts`: State retrieval and full snapshot sync / reset actions.
+- `src/app/api/trips/route.ts` & `src/app/api/trips/[id]/route.ts`: Trip creation and status transitions (dispatch, acceptance, transit, completion, cancellation, ratings).
+- `src/app/api/drivers/route.ts` & `src/app/api/drivers/[id]/route.ts`: Driver registration, online/busy status toggles, and KYC approval/rejection.
+- `src/app/api/wallets/route.ts`: Customer and driver wallet credit/debit management and negative balance limit adjustments.
+- `src/app/api/config/route.ts`: Dynamic updates to slab distance pricing, referral programs, and fleet configurations.
+
+#### 4. Context Real-Time Synchronization (`src/context/LogisticsContext.tsx`)
+- Integrated `fetch('/api/state')` on mount to pull canonical cloud database state.
+- Integrated `new EventSource('/api/events')` listening for real-time changes and reactively updating local React state.
+- Attached server synchronization hooks to `createBooking`, `acceptTripByDriver`, `advanceTripStatus`, `cancelTrip`, `assignDriver`, `toggleDriverOnline`, `approveDriverKyc`, `rejectDriverKyc`, `topUpCustomerWallet`, `topUpDriverWallet`, `adjustWalletBalance`, and `resetToDemoData`.
+
+#### 5. Mobile Routes & Distribution Center
+- `src/app/customer/page.tsx`: Dedicated full-screen mobile view for Customer booking experience.
+- `src/app/driver/page.tsx`: Dedicated full-screen mobile view for Driver-Partner task management.
+- `src/app/admin/page.tsx`: Dedicated Operations Admin management view.
+- `src/app/downloads/page.tsx`: Centralized distribution hub with direct Android APK download links, 1-click PWA home screen installation, direct URL copy, and QR scanning guidance.
+- Updated `src/app/page.tsx` and `src/components/Website/WebNavbar.tsx` with direct "Get Mobile App" navigation buttons.
+
+#### 6. Mobile Packaging & Android Setup
+- Added `public/manifest.json` with app shortcuts and `public/sw.js` for PWA installation.
+- Created `src/components/PwaRegister.tsx` mounted in `src/app/layout.tsx`.
+- Initialized native Android Capacitor platform (`android/`) with `android/local.properties` pointed to `G:\Android\Sdk`.
+
+#### 7. Azure CLI & Cloud Deployment Preparation
+- Installed Microsoft Azure CLI `2.90.0` via winget.
+- Initiated authentication flow for `akilahj@adwayit.com`.
+
+---
+
+### Verification Status
+- **Build Command:** `npm run build`
+- **Result:** Successfully compiled production build (8/8 static/dynamic routes generated, 0 TypeScript errors, 0 lint errors).
+
+---
+
 ## 📅 Session: 2026-09-26 (Graphify & Archify Knowledge & Architectural Sync)
 
 ### Objectives

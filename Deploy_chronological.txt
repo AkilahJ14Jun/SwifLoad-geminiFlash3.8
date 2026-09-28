@@ -1,0 +1,159 @@
+A technical deployment guide has been created in the repository at DEPLOYMENT_GUIDE.md.
+
+  Below is the step-by-step breakdown of each task in the exact chronological order required to complete the
+  deployment from scratch.
+  ──────
+  ## 📋 Chronological Task Sequence for Cloud Deployment
+
+    [Phase 1: Codebase Preparation] ➔ [Phase 2: Azure Provisioning] ➔ [Phase 3: Container Build]
+                                                                              |
+    [Phase 6: Final Container Update] ⬅ [Phase 5: Mobile APK Build] ⬅ [Phase 4: Web App Config]
+  ──────
+  ### Phase 1: Codebase Preparation for Cloud Multi-Client Sync
+
+  Goal: Ensure Customer, Driver, and Admin share the exact same state without local storage isolation.
+
+  1. Enable Next.js Standalone Build:
+      • Configure output: 'standalone' in next.config.mjs so Next.js produces a self-contained server with bundled
+      node_modules.
+  2. Implement Persistent Server Database Layer:
+      • Create db.ts with getDatabase(), saveDatabase(), and resetDatabase() reading/writing to /home/data (Azure App
+      Service persistent volume) or ./data.
+  3. Build Real-Time Server-Sent Events (SSE) Engine:
+      • Create singleton eventBus in events.ts.
+      • Implement streaming endpoint in route.ts with 20-second keepalive heartbeats (: ping\n\n) to prevent Azure
+      proxy timeouts.
+  4. Implement Central REST API Endpoints:
+      • Create /api/state, /api/trips, /api/trips/[id], /api/drivers, /api/drivers/[id], /api/wallets, and /api/config.
+  5. Connect Client Context to Cloud Backend:
+      • In LogisticsContext.tsx, fetch /api/state on mount and subscribe to /api/events via EventSource so state
+      changes reflect immediately across devices.
+  6. Author Production Multi-Stage Dockerfile:
+      • Create Dockerfile with 3 stages (deps ➔ builder ➔ runner based on node:20-alpine) exposing port 8080.
+      • Create .dockerignore to exclude node_modules, .next, android, .git, and zip archives from upload context.
+
+  ──────
+  ### Phase 2: Azure Cloud Infrastructure Provisioning
+
+  Goal: Set up cloud resources under akilahj@adwayit.com in centralindia.
+
+  1. Authenticate Azure CLI:
+    az login
+    az account set --subscription "53f8852d-7390-4daf-8cc4-4e53e1769fb2"
+
+  2. Create Resource Group:
+    az group create --name rg-swifload --location centralindia
+
+  3. Create Azure Container Registry (ACR):
+    az acr create --resource-group rg-swifload --name acrswifload --sku Basic --admin-enabled true --location
+  centralindia
+
+  4. Create Linux App Service Plan:
+    az appservice plan create --name plan-swifload --resource-group rg-swifload --sku B1 --is-linux --location
+  centralindia
+
+  5. Create App Service Web App:
+    az webapp create --name swifload-cbe --resource-group rg-swifload --plan plan-swifload --deployment-container-
+  image-name mcr.microsoft.com/appsvc/staticsite:latest
+
+  ──────
+  ### Phase 3: Docker Container Build via Azure Container Registry
+
+  Goal: Build container on Azure Linux infrastructure to eliminate Windows path and daemon differences.
+
+  1. Run ACR Cloud Build:
+    $env:PYTHONIOENCODING="utf-8"
+    az acr build --registry acrswifload --image swifload:latest .
+
+  2. Verify ACR Build Run:
+    az acr task list-runs --registry acrswifload --output table
+  (Confirm run reports Succeeded).
+  ──────
+  ### Phase 4: Web App Container Configuration & Activation
+
+  Goal: Point the Web App to the built container image and configure ingress networking.
+
+  1. Retrieve ACR Credentials:
+    $creds = az acr credential show --name acrswifload | ConvertFrom-Json
+    $adminUser = $creds.username
+    $adminPass = $creds.passwords[0].value
+
+  2. Configure App Service Container Settings:
+    az webapp config container set `
+      --name swifload-cbe `
+      --resource-group rg-swifload `
+      --container-image-name acrswifload.azurecr.io/swifload:latest `
+      --container-registry-url https://acrswifload.azurecr.io `
+      --container-registry-user $adminUser `
+      --container-registry-password $adminPass
+
+  3. Configure Ingress Port & Runtime Settings:
+    az webapp config appsettings set `
+      --name swifload-cbe `
+      --resource-group rg-swifload `
+      --settings `
+        WEBSITES_PORT=8080 `
+        PORT=8080 `
+        NODE_ENV=production `
+        WEBSITES_ENABLE_APP_SERVICE_STORAGE=false
+
+  4. Restart Web App to Trigger Cold Pull:
+    az webapp restart --name swifload-cbe --resource-group rg-swifload
+
+  ──────
+  ### Phase 5: Native Android Mobile APK Packaging & Distribution
+
+  Goal: Compile standalone Android APKs connected directly to the live cloud URL.
+
+  1. Configure Capacitor Cloud Target:
+      • In capacitor.config.ts, set server.url = 'https://swifload-cbe.azurewebsites.net' and cleartext: true.
+  2. Sync Assets with Capacitor Android Platform:
+    if (-not (Test-Path "out")) { New-Item -ItemType Directory -Path "out" -Force }
+    Set-Content -Path "out/index.html" -Value "<html><body>Loading SwifLoad Cloud...</body></html>" -Force
+    npx cap sync android
+
+  3. Compile Native Android Debug APK via Gradle:
+    $env:JAVA_HOME="C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot"
+    Push-Location "android"
+    .\gradlew.bat assembleDebug
+    Pop-Location
+
+  4. Publish APKs to Web Downloads Directory:
+    Copy-Item "android/app/build/outputs/apk/debug/app-debug.apk" "public/downloads/SwifLoad-Customer.apk" -Force
+    Copy-Item "android/app/build/outputs/apk/debug/app-debug.apk" "public/downloads/SwifLoad-Driver.apk" -Force
+
+  ──────
+  ### Phase 6: Final Container Update with Live APK Binaries
+
+  Goal: Re-bundle the container image so the public download links serve the compiled APK files.
+
+  1. Verify Local TypeScript Build:
+    npm run build
+
+  2. Rebuild Cloud Container in ACR:
+    $env:PYTHONIOENCODING="utf-8"
+    az acr build --registry acrswifload --image swifload:latest .
+
+  3. Restart Web App to Serve Updated Image:
+    az webapp restart --name swifload-cbe --resource-group rg-swifload
+
+  ──────
+  ### Phase 7: End-to-End Acceptance Testing
+
+  1. Endpoint Status Test: Verify HTTP 200 on /, /customer, /driver, /admin, /downloads, and /api/state.
+  2. Real-Time Cross-Client Sync: Book a trip from one browser/mobile device and verify it appears on the Admin radar
+  and Driver available task list instantly without refreshing.
+  3. APK Download Verification: Test HTTP 200 and Content-Length on /downloads/SwifLoad-Customer.apk and
+  /downloads/SwifLoad-Driver.apk.
+  ──────
+  The full operational reference, architectural diagrams, and troubleshooting solutions are available in
+  DEPLOYMENT_GUIDE.md.
+
+  All deployment tasks, background build jobs, and verification steps have completed with 0 errors.
+
+  ### Summary of Completed Assets
+
+  • 📘 Deployment Manual: DEPLOYMENT_GUIDE.md
+  • 📋 Session Changelog: SESSION_CHANGELOG.md
+  • 🌐 Live Cloud Portal: https://swifload-cbe.azurewebsites.net
+  • 📦 Mobile APK & PWA Center: https://swifload-cbe.azurewebsites.net/downloads

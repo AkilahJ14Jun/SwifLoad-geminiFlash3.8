@@ -15,7 +15,9 @@ import {
   Signal,
   CheckCircle,
   ArrowLeft,
+  Download,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useLogistics } from '@/context/LogisticsContext';
 import CustomerApp from '@/components/Customer/CustomerApp';
 import DriverApp from '@/components/Driver/DriverApp';
@@ -40,6 +42,14 @@ export default function Home() {
               <Globe className="w-3.5 h-3.5" />
               <span>Back to SwifLoad Website</span>
             </button>
+
+            <Link
+              href="/downloads"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/30"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Mobile Apps</span>
+            </Link>
 
             <div className="hidden sm:flex items-center space-x-2 border-l border-slate-800 pl-3">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />

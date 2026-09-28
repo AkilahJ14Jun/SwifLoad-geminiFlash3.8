@@ -1,21 +1,40 @@
 {
   "name": "SwifLoad Logistics",
   "short_name": "SwifLoad",
-  "description": "On-demand city logistics mobile application",
+  "description": "On-demand city logistics mobile solution for Coimbatore",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#16a34a",
+  "background_color": "#020617",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Customer Booking",
+      "short_name": "Book Truck",
+      "description": "Book a mini-truck or delivery in Coimbatore",
+      "url": "/customer",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "name": "Driver Partner",
+      "short_name": "Driver App",
+      "description": "Driver dispatch and delivery tasks",
+      "url": "/driver",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Admin Portal",
+      "short_name": "Admin",
+      "description": "Operations and fleet management",
+      "url": "/admin",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
     }
   ]
 }

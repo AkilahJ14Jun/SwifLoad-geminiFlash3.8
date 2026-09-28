@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'SwifLoad',
   webDir: 'out',
   server: {
-    androidScheme: 'https'
+    url: 'https://swifload-cbe.azurewebsites.net',
+    cleartext: true
   },
   plugins: {
     SplashScreen: {

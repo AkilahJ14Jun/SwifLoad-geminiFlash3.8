@@ -21,6 +21,8 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+import PwaRegister from '@/components/PwaRegister';
+
 export default function RootLayout({
   children,
 }: {
@@ -29,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased selection:bg-emerald-500 selection:text-white">
+        <PwaRegister />
         <LogisticsProvider>
           {children}
         </LogisticsProvider>

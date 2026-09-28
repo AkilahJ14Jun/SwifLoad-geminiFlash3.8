@@ -1,0 +1,57 @@
+  🚀 SwifLoad Live Cloud Deployment & Mobile App Release
+
+  The SwifLoad logistics platform has been deployed to Microsoft Azure under akilahj@adwayit.com. The Admin Portal,
+  Customer Web/App, and Driver-Partner Web/App are all bound to the centralized cloud database with real-time
+  bidirectional Server-Sent Events (SSE) synchronization.
+  ──────
+  ### 🌐 Live Cloud Endpoints
+
+   Portal / Feature        │ URL                               │ Description
+  ─────────────────────────┼───────────────────────────────────┼──────────────────────────────────────────────────────
+   Main Website & Hub      │ swifload-cbe.azurewebsites.net[1] │ Landing page, booking calculator, fleet showcase
+   Customer App            │ swifload-cbe.azurewebsites.net[2] │ Mobile booking interface with slab pricing
+   Driver App              │ swifload-cbe.azurewebsites.net[3] │ Driver task dispatch, approach fee, wallet overdraft
+   Admin Console           │ swifload-cbe.azurewebsites.net[4] │ Real-time map radar, slab tariff sandbox, wallets
+   Mobile App Center       │ swifload-cbe.azurewebsites.net[5] │ Direct APK downloads and 1-tap PWA installer
+
+  [1]: swifload-cbe.azurewebsites.net https://swifload-cbe.azurewebsites.net
+  [2]: swifload-cbe.azurewebsites.net https://swifload-cbe.azurewebsites.net/customer
+  [3]: swifload-cbe.azurewebsites.net https://swifload-cbe.azurewebsites.net/driver
+  [4]: swifload-cbe.azurewebsites.net https://swifload-cbe.azurewebsites.net/admin
+  [5]: swifload-cbe.azurewebsites.net https://swifload-cbe.azurewebsites.net/downloads
+  ──────
+  ### 📱 Mobile Download & Installation Options
+
+  Users can install SwifLoad onto Android and iOS devices in two ways:
+
+  #### Option 1: Native Android APK Downloads
+
+  • Customer App APK: https://swifload-cbe.azurewebsites.net/downloads/SwifLoad-Customer.apk https://swifload-cbe.
+  azurewebsites.net/downloads/SwifLoad-Customer.apk (3.75 MB)
+  • Driver App APK: https://swifload-cbe.azurewebsites.net/downloads/SwifLoad-Driver.apk https://swifload-cbe.
+  azurewebsites.net/downloads/SwifLoad-Driver.apk (3.75 MB)
+  • Both packages are pre-configured to connect to the cloud endpoint with native splash screen and GPS telematics.
+
+  #### Option 2: 1-Tap Progressive Web App (PWA)
+
+  • Open https://swifload-cbe.azurewebsites.net/downloads or either /customer or /driver on Chrome (Android) or Safari
+  (iOS).
+  • Tap "Install Customer App" or "Install Driver App" to add full-screen, standalone icons to the home screen.
+  ──────
+  ### 🔄 Centralized Real-Time Sync Verification
+
+  • Central Cloud State: /api/state https://swifload-cbe.azurewebsites.net/api/state maintains the canonical database
+  of active drivers, trips, driver groups, and wallet balances.
+  • Instant Broadcast: /api/events https://swifload-cbe.azurewebsites.net/api/events broadcasts updates (trip creation,
+  driver acceptance, transit milestones, wallet credits) via SSE with 20s keepalive heartbeats.
+  • Cross-Device Test Passed: Creating a booking on one client immediately reflects on the Admin live map and Driver
+  available task list without page reload.
+  ──────
+  ### ☁️ Azure Cloud Infrastructure Details
+
+  • Resource Group: rg-swifload (centralindia)
+  • Subscription: Akilah_Azure (53f8852d-7390-4daf-8cc4-4e53e1769fb2)
+  • App Service: swifload-cbe (plan-swifload, Linux B1)
+  • Container Registry: acrswifload.azurecr.io (Image: swifload:latest)
+  • Verification: npm run build passed locally with 0 errors; production container built and running healthy.
+  SESSION_CHANGELOG.md updated.
