@@ -33,6 +33,7 @@ import {
   Sliders,
   Share2,
   X,
+  UserCheck,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import {
@@ -79,6 +80,7 @@ export default function AdminPortal() {
     adjustWalletBalance,
     currentCustomer,
     topUpCustomerWallet,
+    updateCustomerType,
   } = useLogistics();
 
   // Admin Navigation Tab
@@ -87,6 +89,7 @@ export default function AdminPortal() {
     | 'live-board'
     | 'fleet-map'
     | 'drivers-kyc'
+    | 'customer-categories'
     | 'slab-rates'
     | 'referrals'
     | 'wallets'
@@ -150,6 +153,98 @@ export default function AdminPortal() {
 
   const [customerTopupAmount, setCustomerTopupAmount] = useState<number>(500);
   const [showCustomerTopupModal, setShowCustomerTopupModal] = useState<boolean>(false);
+
+  // Customer Categorization Management (Requirement 8 - Changes Required.txt)
+  const [customerSearchQuery, setCustomerSearchQuery] = useState<string>('');
+  const [customerCategoryFilter, setCustomerCategoryFilter] = useState<string>('ALL');
+  const [managedCustomers, setManagedCustomers] = useState<Array<{
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+    company: string;
+    type: CustomerType;
+    tripsCount: number;
+    totalSpend: number;
+    joinedDate: string;
+  }>>([
+    {
+      id: 'cust_curr',
+      name: currentCustomer?.name || 'Kavitha Sundaram',
+      phone: currentCustomer?.phone || '+91 98422 19283',
+      email: currentCustomer?.email || 'kavitha.sundaram@gmail.com',
+      company: currentCustomer?.companyName || 'Sundaram Precision Engineering CBE',
+      type: currentCustomer?.customerType || 'regular',
+      tripsCount: 14,
+      totalSpend: 8450,
+      joinedDate: '15-Aug-2026',
+    },
+    {
+      id: 'cust_lmw',
+      name: 'R. Soundararajan',
+      phone: '+91 98422 10101',
+      email: 'logistics@lmw.co.in',
+      company: 'Lakshmi Machine Works (LMW) Foundry Division',
+      type: 'corporate',
+      tripsCount: 42,
+      totalSpend: 78500,
+      joinedDate: '01-Jul-2026',
+    },
+    {
+      id: 'cust_texmo',
+      name: 'Murugesan K.',
+      phone: '+91 98422 20202',
+      email: 'dispatch@texmopumps.com',
+      company: 'Texmo Industries & Agricultural Pumps',
+      type: 'corporate',
+      tripsCount: 29,
+      totalSpend: 46200,
+      joinedDate: '12-Jul-2026',
+    },
+    {
+      id: 'cust_murugan',
+      name: 'N. Senthilkumar',
+      phone: '+91 98422 30303',
+      email: 'senthil@murugantextiles.com',
+      company: 'Sri Murugan Textiles & Garments Peelamedu',
+      type: 'multi_pickup',
+      tripsCount: 19,
+      totalSpend: 15800,
+      joinedDate: '05-Aug-2026',
+    },
+    {
+      id: 'cust_kovai',
+      name: 'Balaji Narayanan',
+      phone: '+91 98422 40404',
+      email: 'kovaispares@gmail.com',
+      company: 'Kovai Hardware & Industrial Spares Mart',
+      type: 'regular',
+      tripsCount: 8,
+      totalSpend: 4900,
+      joinedDate: '22-Aug-2026',
+    },
+    {
+      id: 'cust_priyanka',
+      name: 'Priyanka Ramesh',
+      phone: '+91 98422 50505',
+      email: 'priyanka@newhorizonauto.in',
+      company: 'New Horizon Auto Spares Ganapathy',
+      type: 'new',
+      tripsCount: 2,
+      totalSpend: 750,
+      joinedDate: '28-Sep-2026',
+    },
+  ]);
+
+  const handleUpdateCustomerCategory = (customerId: string, newType: CustomerType) => {
+    setManagedCustomers((prev) =>
+      prev.map((c) => (c.id === customerId ? { ...c, type: newType } : c))
+    );
+    if (customerId === 'cust_curr' || customerId === currentCustomer?.id) {
+      updateCustomerType(newType);
+    }
+    showToast(`Categorized customer as ${newType.replace(/_/g, ' ').toUpperCase()}`);
+  };
 
   const [inspectingTransactions, setInspectingTransactions] = useState<{
     title: string;
@@ -241,6 +336,7 @@ export default function AdminPortal() {
           { id: 'live-board', label: 'Live Bookings Board', icon: Truck, badge: activeTrips },
           { id: 'fleet-map', label: 'Live Fleet Radar', icon: MapPin },
           { id: 'drivers-kyc', label: 'Driver Partners & KYC', icon: Users, badge: pendingKyc },
+          { id: 'customer-categories', label: 'Customer Categories', icon: UserCheck },
           { id: 'slab-rates', label: 'Distance Slab Rates', icon: Calculator },
           { id: 'referrals', label: 'Referral Programs', icon: Gift },
           { id: 'wallets', label: 'Driver & Customer Wallets', icon: Wallet },
@@ -623,6 +719,223 @@ export default function AdminPortal() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ================= 4B. CUSTOMER CATEGORIZATION & PRICING TIERS (Requirement 8) ================= */}
+        {adminTab === 'customer-categories' && (
+          <div className="space-y-6">
+            {/* Header & Description */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <UserCheck className="w-5 h-5 text-emerald-600" />
+                    <span>Customer Directory & Categorization Management</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Categorize registered Coimbatore shippers into Regular, New User, Multi-Pickup, or Corporate B2B tiers to automatically apply distance tariffs and dispatch rules.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1.5 rounded-xl border border-emerald-200">
+                    {managedCustomers.length} Managed Shippers
+                  </span>
+                </div>
+              </div>
+
+              {/* 4 Category Descriptions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between font-bold text-blue-900">
+                    <span>1. Regular Customer</span>
+                    <span className="text-base">👤</span>
+                  </div>
+                  <p className="text-[11px] text-blue-800 leading-snug">
+                    Standard intra-city freight rates for retail, trade shops, and everyday commercial cargo.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between font-bold text-emerald-900">
+                    <span>2. New User</span>
+                    <span className="text-base">✨</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-snug">
+                    Welcome discount tier for first-time shippers. Subsidized initial distance slabs.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between font-bold text-amber-900">
+                    <span>3. Multi-Pickup</span>
+                    <span className="text-base">📍</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800 leading-snug">
+                    Consolidated distribution tier for wholesalers with multi-stop pickup & drop hubs.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between font-bold text-purple-900">
+                    <span>4. Corporate B2B</span>
+                    <span className="text-base">🏢</span>
+                  </div>
+                  <p className="text-[11px] text-purple-800 leading-snug">
+                    Industrial manufacturers & foundry accounts. Priority SLA dispatch & monthly invoicing.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search customer name, phone, company..."
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Category Filter Pills */}
+              <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto">
+                <span className="text-slate-400 font-bold mr-1 flex items-center">
+                  <Filter className="w-3 h-3 mr-1" />
+                  <span>Filter:</span>
+                </span>
+                {[
+                  { id: 'ALL', label: 'All Customers' },
+                  { id: 'regular', label: 'Regular' },
+                  { id: 'new', label: 'New User' },
+                  { id: 'multi_pickup', label: 'Multi-Pickup' },
+                  { id: 'corporate', label: 'Corporate B2B' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setCustomerCategoryFilter(f.id)}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${
+                      customerCategoryFilter === f.id
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customers Categorization List Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                    <tr>
+                      <th className="p-3.5">Shipper / Company</th>
+                      <th className="p-3.5">Contact Details</th>
+                      <th className="p-3.5">Activity</th>
+                      <th className="p-3.5">Current Category</th>
+                      <th className="p-3.5 text-center">Change Category (Admin Action)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {managedCustomers
+                      .filter((c) => {
+                        if (customerCategoryFilter !== 'ALL' && c.type !== customerCategoryFilter) return false;
+                        if (customerSearchQuery) {
+                          const q = customerSearchQuery.toLowerCase();
+                          return (
+                            c.name.toLowerCase().includes(q) ||
+                            c.phone.toLowerCase().includes(q) ||
+                            c.company.toLowerCase().includes(q)
+                          );
+                        }
+                        return true;
+                      })
+                      .map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-900 text-xs flex items-center space-x-1.5">
+                              <span>{c.name}</span>
+                              {c.id === 'cust_curr' && (
+                                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-extrabold px-1.5 py-0.2 rounded">
+                                  Active Session
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-normal">{c.company}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">Joined: {c.joinedDate}</div>
+                          </td>
+
+                          <td className="p-3.5 font-mono text-[11px]">
+                            <div className="text-slate-800 font-bold">{c.phone}</div>
+                            <div className="text-slate-400 text-[10px]">{c.email}</div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <div className="font-bold text-slate-800">{c.tripsCount} Bookings</div>
+                            <div className="text-[11px] text-emerald-600 font-bold">₹{c.totalSpend.toLocaleString('en-IN')} spend</div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span
+                              className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                                c.type === 'regular'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : c.type === 'new'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : c.type === 'multi_pickup'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-purple-50 text-purple-700 border-purple-200'
+                              }`}
+                            >
+                              <span>
+                                {c.type === 'regular'
+                                  ? '👤 Regular'
+                                  : c.type === 'new'
+                                  ? '✨ New User'
+                                  : c.type === 'multi_pickup'
+                                  ? '📍 Multi-Pickup'
+                                  : '🏢 Corporate B2B'}
+                              </span>
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-center">
+                            <div className="inline-flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                              {[
+                                { type: 'regular', label: 'Regular' },
+                                { type: 'new', label: 'New' },
+                                { type: 'multi_pickup', label: 'Multi' },
+                                { type: 'corporate', label: 'Corporate' },
+                              ].map((opt) => (
+                                <button
+                                  key={opt.type}
+                                  type="button"
+                                  onClick={() => handleUpdateCustomerCategory(c.id, opt.type as CustomerType)}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                                    c.type === opt.type
+                                      ? 'bg-white text-slate-900 shadow-sm font-black ring-1 ring-slate-300'
+                                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/60'
+                                  }`}
+                                  title={`Switch ${c.name} to ${opt.label} customer`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

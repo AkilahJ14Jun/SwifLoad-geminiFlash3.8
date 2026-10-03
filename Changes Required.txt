@@ -3,15 +3,24 @@ Go through output of graphify to understand this solution.
  
 Need the following features implemented in Customer App :
 
-Wallet value, Total bookings made , bookings cancelled , bookings completed , referrals made to be displayed on home screen of customer app.
-A referral code to be generated for each customer which should be used while making any customer , driver referral
-A space earmarked and blocked for posting ads in the ap and should be visible prominently on the home screen
-Capability to change light and dark mode for visual comfort of user.
-The type of vehicle a customer can choose with charge for each mode to be available on home screen like two wheeler, 3 wheeler, 4 wheeler (Light motor vehicle), 4 wheeler (Heavy Motor vehicle), Vehicle with open trailer and closed body options
-Currently that app support whole house shifting services. Hide it for now. It can be enabled later.
-The app should allow for pre payment , post payment , online payment and payment to be adjusted from wallet balance. If there is a shortage in wallet balance, it should allow the user to recharge it with additional amount required or more
-Once a task is completed the app should allow for rating of the service, provide feedback and allocate reward points to be credited to wallet balance for that customer.
-Customer should also be able to see his transactions history in a different page with link to that page available on booking page
+The app should allow the download to happen only when the customer shares a mobile number on which the app is going to be installed. This has to be confirmed by sending an OTP confirmation to that number. A mail id also is required before download but it is not mandatory. 
+The home screen should show only Wallet value , Total referrals and option to view transactions history.
+The referral code section currently looks a little misaligned with the 'Share' button going beyond the right side box boundary.
+Make it as two lines display in that section so that the text message , the 'Copy' and 'Share' buttons appear on another line within that section. 
+The home screen need not show the maps section. 
+Since there is more space is available now on home screen a wider area can be used for placing ads.
+The home screen should show vehicle category as follows 
+- Two wheeler  with a more button. On clicking this will give option to select between moto bike or scooter type
+- Three wheeler with a more button. On clicking this it will give option to select between open body or closed body vehicles
+- Four wheeler with a more button. On clicking this it will give option to select between open body and closed body vehilces
+- EV vehicles with two , three and foud wheeler icons shown in that section with more button. On clicking that it should allow the user to take to the next screen where the actual booking can happen.
+The actual booking should happens in another page and not in the home page after the vehicle type is selected.
+Only vehicle selection options displayed on home page and further navigation provided. 
+The actual booking and all other activities like maps, 'Shipment & Loading Info , 'Need Loading & Unloading Helper' , pickup and drop location, the payment mode section move to another page which will be the place where the actual booking related details are captured.This would be the actual booking page.
+The customer category feature not required in home page. This feature is required only at the Admin Portal which would have a specific section which will allow the customer to be categorized as Regular, New, Multi-Pickup or Corporate customer.
+
+
+
 
 
 

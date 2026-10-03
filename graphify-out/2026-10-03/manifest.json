@@ -48,10 +48,10 @@
     "semantic_hash": "671a3eb4e0889c138a67521218550247"
   },
   "src/components/Customer/CustomerApp.tsx": {
-    "mtime": 1790845974.0,
-    "seen": 1790998531.57632,
-    "ast_hash": "89460b3ec617420a9bbf382b8024773f",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.4511635,
+    "ast_hash": "69e8be3f7f417ea41ae1a0dea4cdaab5",
+    "semantic_hash": "69e8be3f7f417ea41ae1a0dea4cdaab5"
   },
   "src/components/Driver/DriverApp.tsx": {
     "mtime": 1790523976.0,
@@ -96,10 +96,10 @@
     "semantic_hash": "a322fcb5ed878ad3fb526500a7a224ac"
   },
   "src/components/Website/HeroBookingWidget.tsx": {
-    "mtime": 1790845352.0,
-    "seen": 1790998531.5763528,
-    "ast_hash": "1538d20a28eb8aa84f7815e4eb9ae0bd",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.4511757,
+    "ast_hash": "0a8486c33a10456d7f48ca8192c8143d",
+    "semantic_hash": "0a8486c33a10456d7f48ca8192c8143d"
   },
   "src/components/Website/LiveTrackingModal.tsx": {
     "mtime": 1790523976.0,
@@ -138,40 +138,40 @@
     "semantic_hash": "7ea695cf6098bc089db2fa35f5fb6d68"
   },
   "src/components/Website/WebNavbar.tsx": {
-    "mtime": 1790845418.0,
-    "seen": 1790998531.5763776,
-    "ast_hash": "4257341893491c81feb4b82d60cc8e07",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.4511886,
+    "ast_hash": "02658f9dcf8bff1412bd57e7054f442c",
+    "semantic_hash": "02658f9dcf8bff1412bd57e7054f442c"
   },
   "src/components/Website/WebPlatform.tsx": {
-    "mtime": 1790845380.0,
-    "seen": 1790998531.5763807,
-    "ast_hash": "8b395afc8e4debcb0b582db6153edd84",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.45119,
+    "ast_hash": "2c27437d0e54efdadfa478a771acb978",
+    "semantic_hash": "2c27437d0e54efdadfa478a771acb978"
   },
   "src/context/LogisticsContext.tsx": {
-    "mtime": 1790845306.0,
-    "seen": 1790998531.5763838,
-    "ast_hash": "5a88f698b3aa6648771db33d42747013",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.4511912,
+    "ast_hash": "a7c7dd1665b6b09b5a382588a1142924",
+    "semantic_hash": "a7c7dd1665b6b09b5a382588a1142924"
   },
   "src/lib/data.ts": {
-    "mtime": 1790845152.0,
-    "seen": 1790998531.5763872,
-    "ast_hash": "9cd0a28220e809df09a2248f9a5e08bb",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.4511926,
+    "ast_hash": "d4a13363bb3653c1e620b78fa214b989",
+    "semantic_hash": "d4a13363bb3653c1e620b78fa214b989"
   },
   "src/lib/pricing.ts": {
-    "mtime": 1790845236.0,
-    "seen": 1790998531.5763905,
-    "ast_hash": "dc82de0f905486551f5ecf7afafbafc1",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.451194,
+    "ast_hash": "c2f3e95be547589e0b1a3949fce17dec",
+    "semantic_hash": "c2f3e95be547589e0b1a3949fce17dec"
   },
   "src/types/logistics.ts": {
-    "mtime": 1790845134.0,
-    "seen": 1790998531.5764012,
-    "ast_hash": "fcf201354bfd058b310cdb1791d00977",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.4511979,
+    "ast_hash": "61b755e7f6794b3e9fefb50c52b853a2",
+    "semantic_hash": "61b755e7f6794b3e9fefb50c52b853a2"
   },
   "tailwind.config.js": {
     "mtime": 1790523976.0,
@@ -186,10 +186,10 @@
     "semantic_hash": "3bd7a3770c6b44dbcaab1d2f175db8bd"
   },
   "Changes Required.txt": {
-    "mtime": 1790844628.0,
-    "seen": 1790998531.57643,
-    "ast_hash": "ad6ed05b17f952b83dd3f58850ba1c47",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.451206,
+    "ast_hash": "daf112ea0dd68e25469461e6a9ddc981",
+    "semantic_hash": "daf112ea0dd68e25469461e6a9ddc981"
   },
   "Initial Requirements.txt": {
     "mtime": 1790523976.0,
@@ -366,10 +366,10 @@
     "semantic_hash": "0438d8ce44a15f7b6c0dee67efc773f1"
   },
   "SESSION_CHANGELOG.md": {
-    "mtime": 1790846038.0,
-    "seen": 1790998531.5764484,
-    "ast_hash": "9e6a71d94a22ab893021d67971daefc4",
-    "semantic_hash": ""
+    "mtime": 1790523976.0,
+    "seen": 1790843312.451214,
+    "ast_hash": "f3ae524d28c8e0c9753dfeee37d78aa2",
+    "semantic_hash": "f3ae524d28c8e0c9753dfeee37d78aa2"
   },
   "docs/App Initial cloud release tasks.txt": {
     "mtime": 1790523976.0,
@@ -454,197 +454,5 @@
     "seen": 1790843312.4512343,
     "ast_hash": "5291129e8cc617a9f791c62316085314",
     "semantic_hash": "5291129e8cc617a9f791c62316085314"
-  },
-  "data/swifload-db.json": {
-    "mtime": 1790846128.0,
-    "seen": 1790998531.5762007,
-    "ast_hash": "ca8e54a550afcd8be8cc6b4ce1a2b466",
-    "semantic_hash": ""
-  },
-  "scripts/capture_real_screenshots.py": {
-    "mtime": 1790747947.2457745,
-    "seen": 1790998531.576249,
-    "ast_hash": "21b4f9cea91b1dcd04cbeb216fdbd5f3",
-    "semantic_hash": ""
-  },
-  "scripts/generate_instagram_promo.py": {
-    "mtime": 1790746231.950014,
-    "seen": 1790998531.5762527,
-    "ast_hash": "84daad0b9e92d75406c441f4cb4c53ee",
-    "semantic_hash": ""
-  },
-  "scripts/generate_instagram_promo_v2.py": {
-    "mtime": 1790746918.1089132,
-    "seen": 1790998531.5762558,
-    "ast_hash": "db8b23716dea862b0045b876ec2b457f",
-    "semantic_hash": ""
-  },
-  "scripts/generate_real_screenshot_promo.py": {
-    "mtime": 1790748047.3719752,
-    "seen": 1790998531.576259,
-    "ast_hash": "8b89902330cc20c23d92a17eef22c7fe",
-    "semantic_hash": ""
-  },
-  "AZURE_INFRASTRUCTURE_ARCHITECTURE.md": {
-    "mtime": 1790742281.7820249,
-    "seen": 1790998531.5764196,
-    "ast_hash": "233076c0b3d0efbb44bd4faabce4c0c0",
-    "semantic_hash": ""
-  },
-  "Basic_Recommended_Infrastructure.txt": {
-    "mtime": 1790741597.1704228,
-    "seen": 1790998531.576423,
-    "ast_hash": "c2e94b4d5a8fd1ce06a32743cecd816f",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/1_customer_booking.png": {
-    "mtime": 1790747816.1662483,
-    "seen": 1790998531.5765097,
-    "ast_hash": "e990c752845ef699f1746ca45afb1058",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/3_driver_cockpit.png": {
-    "mtime": 1790747849.9160192,
-    "seen": 1790998531.576513,
-    "ast_hash": "b0473de98016419a9f4fd19fcd1647a5",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/4_driver_handover.png": {
-    "mtime": 1790747851.6557803,
-    "seen": 1790998531.5765162,
-    "ast_hash": "4696b43ff86eb3e825cebdc7d014f29a",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/step1_customer_booking.png": {
-    "mtime": 1790747964.7412648,
-    "seen": 1790998531.5765224,
-    "ast_hash": "e990c752845ef699f1746ca45afb1058",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/step2_driver_dispatch.png": {
-    "mtime": 1790747968.4566069,
-    "seen": 1790998531.5765252,
-    "ast_hash": "6e6a503df968b87dab603315ae602536",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/step3_customer_tracking.png": {
-    "mtime": 1790747975.2056353,
-    "seen": 1790998531.576528,
-    "ast_hash": "456331414b0ff65573f2726b79e7d32e",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/step4_driver_delivery_pod.png": {
-    "mtime": 1790747979.8656533,
-    "seen": 1790998531.5765312,
-    "ast_hash": "20126bffa86ca43d6dc5587c64b07b1d",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_app_screenshots/step5_driver_wallet.png": {
-    "mtime": 1790747982.4009614,
-    "seen": 1790998531.576534,
-    "ast_hash": "0836f4fa1b84c3a7c6a05b171022416c",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_video_keyframes/stage_1.jpg": {
-    "mtime": 1790748151.3123336,
-    "seen": 1790998531.5765371,
-    "ast_hash": "30ca3ef8a389f13060e5e7133fb0cff1",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_video_keyframes/stage_2.jpg": {
-    "mtime": 1790748151.4452386,
-    "seen": 1790998531.57654,
-    "ast_hash": "2dcab4492f0195339c0f8cc5af400dee",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_video_keyframes/stage_3.jpg": {
-    "mtime": 1790748151.6273787,
-    "seen": 1790998531.5765424,
-    "ast_hash": "9b4f1b81b33c50b581eec202abbe394a",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_video_keyframes/stage_4.jpg": {
-    "mtime": 1790748151.7933948,
-    "seen": 1790998531.5765452,
-    "ast_hash": "295377d05ec0a03faee69be52def412c",
-    "semantic_hash": ""
-  },
-  "public/downloads/real_video_keyframes/stage_5.jpg": {
-    "mtime": 1790748151.9269235,
-    "seen": 1790998531.5765486,
-    "ast_hash": "31a7ddd97b97c9496f1e243224314ed0",
-    "semantic_hash": ""
-  },
-  "public/downloads/swifload-promo-poster.jpg": {
-    "mtime": 1790746154.1680632,
-    "seen": 1790998531.5765514,
-    "ast_hash": "027359f2fc055240070ba46acc0c42bb",
-    "semantic_hash": ""
-  },
-  "public/downloads/thumbnails/scene_1.jpg": {
-    "mtime": 1790746273.7150915,
-    "seen": 1790998531.5765548,
-    "ast_hash": "21b20e13f3104bcf9243d2b4c9e04010",
-    "semantic_hash": ""
-  },
-  "public/downloads/thumbnails/scene_2.jpg": {
-    "mtime": 1790746273.7521336,
-    "seen": 1790998531.5765576,
-    "ast_hash": "4290ba7cf4e58fd481ef9f45f6be6696",
-    "semantic_hash": ""
-  },
-  "public/downloads/thumbnails/scene_3.jpg": {
-    "mtime": 1790746273.800204,
-    "seen": 1790998531.5765607,
-    "ast_hash": "3e85ac9558e9dd7d6b20020b9358214b",
-    "semantic_hash": ""
-  },
-  "public/downloads/thumbnails/scene_4.jpg": {
-    "mtime": 1790746273.8510725,
-    "seen": 1790998531.5765643,
-    "ast_hash": "0afa7cda164e78b21d424c64aa0b6ebe",
-    "semantic_hash": ""
-  },
-  "public/downloads/workflow_thumbnails/step_1.jpg": {
-    "mtime": 1790747003.920802,
-    "seen": 1790998531.576567,
-    "ast_hash": "37d8657c7ec4a72d5dce554626f2209d",
-    "semantic_hash": ""
-  },
-  "public/downloads/workflow_thumbnails/step_2.jpg": {
-    "mtime": 1790747004.0526195,
-    "seen": 1790998531.5765698,
-    "ast_hash": "7bcc2de040aa07585b8ba85f84a5fb53",
-    "semantic_hash": ""
-  },
-  "public/downloads/workflow_thumbnails/step_3.jpg": {
-    "mtime": 1790747004.2281291,
-    "seen": 1790998531.5765727,
-    "ast_hash": "b0ccb7364bbede9b4abd76968f6786ec",
-    "semantic_hash": ""
-  },
-  "public/downloads/workflow_thumbnails/step_4.jpg": {
-    "mtime": 1790747004.3421538,
-    "seen": 1790998531.5765758,
-    "ast_hash": "d4ffe20dc353a3e7f5dbd49b33a16280",
-    "semantic_hash": ""
-  },
-  "public/downloads/workflow_thumbnails/step_5.jpg": {
-    "mtime": 1790747004.5226834,
-    "seen": 1790998531.5765789,
-    "ast_hash": "fd14353381056668a699f083fda8f330",
-    "semantic_hash": ""
-  },
-  "test_edge_screen.png": {
-    "mtime": 1790747698.1192107,
-    "seen": 1790998531.5765815,
-    "ast_hash": "a40993a6d02af69b40935db64a9f9673",
-    "semantic_hash": ""
-  },
-  "public/downloads/SwifLoad-Promo-Reel.mp4": {
-    "mtime": 1790748136.217262,
-    "seen": 1790998531.5765848,
-    "ast_hash": "0bdfa9405c475ba43a7480b41ba32e74",
-    "semantic_hash": ""
   }
 }

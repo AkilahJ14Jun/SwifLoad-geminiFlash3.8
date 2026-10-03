@@ -4,6 +4,95 @@ This document tracks all technical updates, architectural additions, and feature
 
 ---
 
+## 📅 Session: 2026-10-03 (Sponsored Partner Ads Placement & Stack Layout Refactor)
+
+### Objectives
+1. **Relocate Sponsored Partner Ads:** Move the "Sponsored Partner Ads" section to the bottom of the Customer Home screen after all vehicle category selections.
+2. **Reformat Ad Card Layout:** Change the ad layout from a 2-column grid to full-width horizontal cards appearing one below the other vertically.
+
+### Bullet-Point Changes
+- `src/components/Customer/CustomerApp.tsx`:
+  - Relocated the Sponsored Partner Ads component block from above the vehicle category selection to the very bottom of Screen A (Home view), below the EV category card.
+  - Replaced the `grid grid-cols-1 md:grid-cols-2` container with `flex flex-col space-y-2.5` so each partner ad (Apollo Tyres CBE Hub and Exide Battery Commercial Hub) renders as a full-width horizontal bar stacked one below the other.
+  - Enhanced layout styling for mobile and desktop responsiveness (`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`).
+
+### Verification Status
+- Build verification: `npm run build` executed successfully (exit code 0, 0 TypeScript/lint errors).
+
+---
+
+## 📅 Session: 2026-10-03 (Implementation of Changes Required.txt Customer App & Admin Portal Specifications)
+
+### Objectives
+Implement all features requested in `Changes Required.txt`:
+1. **Download Verification:** Customer app download gated behind sharing a mobile number where the app will be installed, verified via OTP confirmation. Email address requested as optional field.
+2. **Customer Home Screen Metrics:** Display ONLY Wallet value, Total referrals, and an option to view transactions history.
+3. **Referral Code Section Layout:** Fix right-side button boundary overflow by implementing a two-line layout (Line 1: code & text message, Line 2: Copy and Share buttons within the container).
+4. **Remove Map from Home Screen:** Suppress maps section on the customer home screen.
+5. **Wider Sponsored Ads Area:** Utilize freed screen real estate on home screen to provide a wider, multi-partner commercial ad placement space.
+6. **Vehicle Category Selection with 'More' Options:**
+   - Two wheeler with more button: select between moto bike or scooter type.
+   - Three wheeler with more button: select between open body or closed body vehicles.
+   - Four wheeler with more button: select between open body and closed body vehicles.
+   - EV vehicles with 2, 3, and 4-wheeler icons prominently shown with more button to select electric vehicle model.
+7. **Dedicated Booking Page:** Move actual booking, maps, shipment info, helper toggle, pickup/drop location, and payment modes to a dedicated booking details page accessed after vehicle selection.
+8. **Customer Category Management in Admin Portal:** Removed customer category selector from customer home screen; built a dedicated "Customer Categories" management section in the Admin Portal to categorize shippers as Regular, New, Multi-Pickup, or Corporate B2B.
+
+---
+
+### Key Changes & Bullet Points
+
+#### 1. Customer App Download Verification Modal (`src/app/downloads/page.tsx`)
+- Added mobile number validation (mandatory 10-digit number) and email address (optional) collection.
+- Added OTP verification step (test OTP: 1234) before unlocking APK direct download or PWA home screen installation.
+- Saved verified device state to `localStorage` (`swifload_customer_verified_phone`) with verified badge and option to change number.
+
+#### 2. Customer App Home Screen & Dedicated Booking Refactor (`src/components/Customer/CustomerApp.tsx`)
+- **Top Metrics:** Streamlined dashboard stats to exactly 3 items: Wallet Value, Total Referrals, and Transactions History / Passbook shortcut.
+- **Referral Code Box:** Redesigned into a two-line layout eliminating right-boundary overflow.
+- **Wider Ads:** Expanded sponsored ad area to a two-column partner grid (Apollo Tyres CBE Hub, Exide Battery Commercial Hub).
+- **Vehicle Selection:** Created 4 vehicle category modules (Two Wheeler, Three Wheeler, Four Wheeler, EV Vehicles) each with accordion "More Options" toggle for subtype selection (Moto bike / Scooter; Open / Closed 3W; Open / Closed 4W; 2W / 3W / 4W EV) and "Proceed to Booking" CTA.
+- **Dedicated Booking Page:** Created dedicated step-2 screen housing `LeafletMap`, pickup/drop landmark selectors, shipment weight/helper toggles, payment mode selector with wallet shortage recharge, and final fare quotation/booking dispatch.
+- **Customer Category Removed from Home:** Cleanly removed customer category selector from Customer App.
+
+#### 3. Customer Categorization Management in Admin Portal (`src/components/Admin/AdminPortal.tsx`)
+- Added `customer-categories` tab to the Admin Portal navigation bar.
+- Implemented comprehensive Customer Directory & Categorization Management view with directory table, category definitions (Regular, New User, Multi-Pickup, Corporate B2B), search/filtering, and interactive category switcher calling `updateCustomerType`.
+
+---
+
+### Verification Status
+- **Build Command:** `npm run build`
+- **Result:** Successfully compiled Next.js 14.2.23 production build with 0 TypeScript and ESLint errors across all 8 routes.
+
+## 📅 Session: 2026-10-03 (Knowledge Graph Generation & AST Code Re-indexing)
+
+### Objectives
+1. Execute `/graphify .` to re-extract and update the codebase knowledge graph and architecture map.
+2. Verify updated graph artifacts in `graphify-out/` (`graph.json`, `graph.html`, `GRAPH_REPORT.md`, `manifest.json`).
+3. Verify production build integrity via `npm run build`.
+
+---
+
+### Key Changes & Bullet Points
+
+#### 1. Graph Extraction & Updates (`graphify-out/`)
+- Executed `graphify update .` using local AST code re-extraction.
+- Re-indexed codebase from commit `d4baff8a`:
+  - Total Nodes: 370
+  - Total Edges: 682
+  - Communities: 28 communities identified
+  - Generated visual interactive graph report: [`graph.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.html) and [`GRAPH_REPORT.md`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_REPORT.md).
+  - Stored backup of previous curated graph state to `graphify-out/2026-10-03/`.
+
+---
+
+### Verification Status
+- **Build Command:** `npm run build`
+- **Result:** Successfully compiled production build in Next.js 14.2.23 (0 TypeScript / ESLint errors across all 8 static and dynamic routes).
+
+---
+
 ## 📅 Session: 2026-10-01 (Implementation of Features Requested in Changes Required.txt)
 
 ### Objectives
