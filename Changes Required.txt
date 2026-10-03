@@ -1,12 +1,18 @@
 Go through output of graphify to understand this solution.
 
-There are several aspects which have to be configurable and should be included in Admin Portal. The features are as below:
-The rate per kilometer is applied in slab distance rates. 
-Example: 0 to 1 km flat minimum price. Above 1 km to 3 km another price, From 3 kn to 5 km another price. Based on the distance from driver location to customer pick up and drop locations , the charges should be calculated and that would be showing in the pop up for each driver. For example: For the driver who is 1 km away from the customer pickup location and another one is 2 kms away from the customer pickup location , the rates showing up for the task on their app should be Rs.68 and 74 respectively which is based on slab rates fixed. The customer should get to see the rates based on the driver who is the most distance in the closest range for the customer. This is to ensure that the customer does not feel uncomfortable if a lesser price is shown initially and later charged more because a different driver accepted the task. There should also be a message displayed for the customer informing that the prices shown can vary. The distance slabs and the rate for each should be configurable. The slabs and rates can vary based on new customer, regular customer, multiple pickup location customer or corporate customer.
+ 
+Need the following features implemented in Customer App :
 
-There are referral bonus programs also for driver referring another driver , driver referrring another customer or a customer referring another customer. 
+Wallet value, Total bookings made , bookings cancelled , bookings completed , referrals made to be displayed on home screen of customer app.
+A referral code to be generated for each customer which should be used while making any customer , driver referral
+A space earmarked and blocked for posting ads in the ap and should be visible prominently on the home screen
+Capability to change light and dark mode for visual comfort of user.
+The type of vehicle a customer can choose with charge for each mode to be available on home screen like two wheeler, 3 wheeler, 4 wheeler (Light motor vehicle), 4 wheeler (Heavy Motor vehicle), Vehicle with open trailer and closed body options
+Currently that app support whole house shifting services. Hide it for now. It can be enabled later.
+The app should allow for pre payment , post payment , online payment and payment to be adjusted from wallet balance. If there is a shortage in wallet balance, it should allow the user to recharge it with additional amount required or more
+Once a task is completed the app should allow for rating of the service, provide feedback and allocate reward points to be credited to wallet balance for that customer.
+Customer should also be able to see his transactions history in a different page with link to that page available on booking page
 
-There has to a wallet facility also implemented for both driver and customers. Negative balance also allowed only for driver subject to pre-determined limit fixed for each driver. 
 
 
 

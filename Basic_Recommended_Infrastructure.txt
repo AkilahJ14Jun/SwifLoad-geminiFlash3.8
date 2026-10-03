@@ -1,0 +1,140 @@
+ To host SwifLoad on Microsoft Azure to cater to a minimum of 1,000 concurrent active users launched in Coimbatore,
+  Tamil Nadu, with load balancing, automated failover, and admin-configurable maps and payment systems, here is the
+  complete infrastructure blueprint.
+
+  The complete architectural guide and deployment script has also been added to AZURE_INFRASTRUCTURE_ARCHITECTURE.md.
+  ──────
+  ### 1. Concurrency Profile & Workload Sizing (1,000 Users)
+
+  In an on-demand logistics system in Coimbatore, 1,000 concurrent users break down into:
+
+  • ~200 Driver-Partners: Continuous GPS telemetry pings every 5–10s, active SSE order streams (~30–40 req/sec).
+  • ~780 Active Customers: Browsing, calculating slab fares, placing bookings, tracking cargo (~100–180 req/sec).
+  • ~20 Dispatchers & Admins: Live dispatch maps and audit logs (~10–20 req/sec).
+  • Aggregate Demand: 150 – 250 requests/sec (RPS) peak throughput and 1,000 persistent SSE/WebSocket connections.
+
+  │ Important
+  │ The current single B1 container with local JSON disk storage cannot sustain this concurrency. Moving beyond 500
+  │ connections requires horizontal compute behind a Layer 7 Load Balancer, an external relational database
+  │ (PostgreSQL), and a shared Redis cache for real-time pub/sub.
+  ──────
+  ### 2. Azure Regional Selection (Coimbatore Launch)
+
+  • Primary Active Region: southindia (Chennai, Tamil Nadu)
+      • Distance: ~500 km from Coimbatore.
+      • Round-Trip Latency: 8 – 14 ms over Airtel/Jio/Vi mobile networks.
+      • Features 3 Availability Zones (AZ 1, 2, 3) for intra-region high availability.
+  • Secondary DR Region: centralindia (Pune, Maharashtra)
+      • Paired region for cross-region disaster recovery and data sovereignty compliance (RBI/DPDP).
+
+  ──────
+  ### 3. Side-by-Side Azure Infrastructure Comparison
+
+   Infrastructure Component │ 🟢 Option 1: Basic (Cost-Effective / MV… │ 🚀 Option 2: Recommended (Enterprise Product…
+  ──────────────────────────┼─────────────────────────────────────────┼───────────────────────────────────────────────
+   Target Capacity          │ 1,000 – 1,500 Concurrent Users          │ 5,000 – 15,000+ Concurrent Users
+   Availability SLA         │ 99.9% (~43 mins downtime/mo)            │ 99.99% (<4.3 mins downtime/mo)
+   Edge & Traffic Balancer  │ Azure Application Gateway v2            │ Azure Front Door Premium (Anycast Edge, WAF,
+                            │ (Standard_v2)                           │ DDoS) + App Gateway v2
+   Compute Tier             │ Azure App Service (Linux) P1v3 (2 vCPU, │ Azure App Service (Linux) P1v3 / P2v3 Zone-
+                            │ 8 GB RAM)• 2–4 instances with auto-     │ Redundant• 3–10 instances spread across 3 AZs
+                            │ scaling                                 │ + 1 DR standby in Pune
+   Database Tier            │ Azure Database for PostgreSQL (Flexible │ PostgreSQL Flexible Server (D4ds_v5)• Zone-
+                            │ Server)• Standard_B2ms / D2ds_v5 (64 GB │ Redundant High Availability (<60s auto-
+                            │ SSD)                                    │ failover)• Asynchronous Read Replica in
+                            │                                         │ Central India
+   Real-Time & Cache        │ Azure Cache for Redis (Standard C1 - 1  │ Azure Cache for Redis Premium (P1) with
+                            │ GB)• Dual-node primary/replica          │ Multi-AZ OR Azure Web PubSub
+   Decoupled Queue          │ In-memory Redis queue                   │ Azure Service Bus (Standard) (for bookings,
+                            │                                         │ webhooks, SMS)
+   Secret Management        │ App Service Application Settings        │ Azure Key Vault with Managed Identities
+   Storage & APK Hosting    │ Azure Blob Storage (Standard Hot LRS)   │ Azure Blob Storage (ZRS/GRS) + Azure Front
+                            │                                         │ Door CDN
+   Estimated Cost (INR)     │ ~₹16,500 – ₹24,000 / month              │ ~₹58,000 – ₹85,000 / month
+   Estimated Cost (USD)     │ ~$195 – $290 / month                    │ ~$695 – $1,020 / month
+  ──────
+  ### 4. Load Balancing & Failover Mechanics
+
+    Mobile App / Browser (Coimbatore)
+            │
+            ▼ (HTTPS 443)
+    Azure Front Door (Edge WAF / Global Anycast)
+            │
+            ├─── [Primary Route (Weight 100)] ────► Azure App Gateway v2 (South India - Chennai)
+            │                                              │
+            │                                       ┌──────┴──────┐
+            │                                       ▼             ▼
+            │                                  App Node AZ-1  App Node AZ-2
+            │
+            └─── [Failover Route (<30s Auto)] ────► Azure App Gateway v2 (Central India - Pune)
+
+  1. Traffic Distribution: The load balancer uses round-robin routing with sticky session cookies for web browsers and
+  stateless Bearer/JWT tokens for the Android APKs.
+  2. Health Probing: Probes ping /api/state every 10 seconds. If an instance fails 2 consecutive checks, it is cut
+  from the backend pool within 20 seconds.
+  3. Database Failover: In the Recommended setup, PostgreSQL maintains synchronous replication between AZ-1 and AZ-2.
+  If AZ-1 fails, failover to AZ-2 completes automatically in under 60 seconds with zero data loss.
+  ──────
+  ### 5. Configurable Maps Provider via Admin Portal
+
+  The SwifLoad Admin Portal dynamically switches map engines by storing configuration in the database/Redis without
+  requiring a redeployment:
+
+    // SystemConfig.maps schema
+    {
+      activeProvider: "mappls" | "google_maps" | "openstreetmap" | "mapbox",
+      defaultCenter: { lat: 11.0168, lng: 76.9558 }, // Coimbatore Hub
+      defaultZoom: 13,
+      providers: {
+        mappls: { enabled: true, clientId: "...", clientSecret: "..." },      // Best for Coimbatore landmarks
+        google_maps: { enabled: true, apiKey: "AIza..." },                     // Best for live traffic
+        openstreetmap: { enabled: true, tileUrl: "https://{s}.tile.osm.org" }, // Zero-cost fallback
+        mapbox: { enabled: false, accessToken: "pk.ey..." }
+      }
+    }
+
+  • Coimbatore Recommendation: Mappls (MapmyIndia) provides superior local address accuracy for Coimbatore (e.g.,
+  Gandhipuram, RS Puram, Peelamedu, Singanallur, Kurichi, Pollachi Road) with door-level pinpoints. OpenStreetMap /
+  Leaflet serves as the free, zero-cost backup.
+  • Client App Behavior: Mobile apps and browsers query /api/config on launch. Only the active provider name and
+  public API key are returned; secret credentials stay in Azure Key Vault.
+  ──────
+  ### 6. Configurable Payment Systems via Admin Portal
+
+  The payment system allows admins to toggle payment gateways and payment modes on the fly:
+
+    // SystemConfig.payments schema
+    {
+      activeGateway: "razorpay" | "phonepe" | "cashfree" | "stripe",
+      supportedMethods: {
+        upiGpay: true,
+        upiPhonePe: true,
+        upiPaytm: true,
+        netbanking: true,
+        cashOnDelivery: true,
+        driverWallet: true
+      },
+      gateways: {
+        razorpay: { enabled: true, keyId: "rzp_live_...", keySecret: "..." },
+        phonepe: { enabled: true, merchantId: "...", saltKey: "..." },
+        cashfree: { enabled: false, appId: "...", secretKey: "..." },
+        stripe: { enabled: false, publishableKey: "...", secretKey: "..." }
+      }
+    }
+
+  • Security & Integrity:
+      • Client APKs only receive keyId / merchantId. Secret keys are never sent to mobile devices.
+      • Transactions are initiated server-side via /api/payments/create-order and verified using cryptographic HMAC
+      SHA256 webhook signatures at /api/payments/webhook.
+      • For Coimbatore and Tamil Nadu retail, Razorpay + PhonePe PG covers over 98% of UPI, GPay, and Rupay debit card
+      transactions.
+
+  ──────
+  ### 7. Recommended Action Plan
+
+  1. Initial Coimbatore Launch: Deploy Option 1 (Basic) in Azure South India (Chennai). It handles 1,000–1,500
+  concurrent users reliably at ~₹16,500 – ₹24,000/month.
+  2. Review the Deployment Guide: Follow the Azure CLI scripts in AZURE_INFRASTRUCTURE_ARCHITECTURE.md to provision
+  the resource group, PostgreSQL flexible server, Redis cache, and auto-scaling App Service.
+  3. Upgrade Path: When expanding across Western Tamil Nadu (Tirupur, Erode, Salem) and concurrency reaches 2,500+,
+  upgrade to Option 2 by enabling Azure Front Door WAF and multi-zone database redundancy.

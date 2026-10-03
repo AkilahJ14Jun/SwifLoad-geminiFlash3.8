@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import {
   MapPin,
@@ -34,9 +34,15 @@ import {
   ArrowDownLeft,
   Users,
   Check,
+  Sun,
+  Moon,
+  Megaphone,
+  Receipt,
+  Award,
+  ExternalLink,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
-import { VehicleCategory, GoodsCategory, PaymentMethod, LocationPoint, CustomerType } from '@/types/logistics';
+import { VehicleCategory, GoodsCategory, PaymentMethod, LocationPoint, CustomerType, WalletTransaction } from '@/types/logistics';
 import { calculateDistanceKm, calculateCustomerQuotedSlabFare, estimateDurationMins } from '@/lib/pricing';
 
 // Dynamic import of Leaflet map to prevent SSR window reference error
@@ -67,8 +73,33 @@ export default function CustomerApp() {
     updateCustomerType,
   } = useLogistics();
 
-  // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'wallet' | 'referrals' | 'profile' | 'support'
-  const [activeTab, setActiveTab] = useState<'book' | 'tracking' | 'history' | 'wallet' | 'referrals' | 'profile' | 'support'>('book');
+  // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'transactions' | 'wallet' | 'referrals' | 'profile' | 'support'
+  const [activeTab, setActiveTab] = useState<'book' | 'tracking' | 'history' | 'transactions' | 'wallet' | 'referrals' | 'profile' | 'support'>('book');
+
+  // Dark / Light Mode state for visual comfort (Requirement 4)
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('swifload_customer_theme');
+      if (saved) setDarkMode(saved === 'dark');
+    } catch {}
+  }, []);
+
+  const toggleTheme = () => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('swifload_customer_theme', next ? 'dark' : 'light');
+      } catch {}
+      return next;
+    });
+  };
+
+  // Earmarked Ad Space state (Requirement 3)
+  const [showAdModal, setShowAdModal] = useState<boolean>(false);
+
+  // Transactions ledger filter (Requirement 9)
+  const [txFilter, setTxFilter] = useState<'ALL' | 'CREDIT' | 'DEBIT' | 'REWARD_POINTS'>('ALL');
 
   // Referral and Wallet UI States
   const [referralInputCode, setReferralInputCode] = useState<string>('');
@@ -90,12 +121,12 @@ export default function CustomerApp() {
   // Booking Flow States
   const [pickupPoint, setPickupPoint] = useState<LocationPoint>(landmarks[2] || landmarks[0]); // Peelamedu
   const [dropPoint, setDropPoint] = useState<LocationPoint>(landmarks[0] || landmarks[1]); // Gandhipuram
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('tata_ace');
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('4wheeler_lmv');
   const [goodsCategory, setGoodsCategory] = useState<GoodsCategory>('Industrial Equipment');
   const [weightKg, setWeightKg] = useState<number>(180);
   const [hasHelper, setHasHelper] = useState<boolean>(true);
   const [notes, setNotes] = useState<string>('Machined engineering components, handle carefully');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI_GPAY');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ONLINE_PAYMENT');
   const [isScheduled, setIsScheduled] = useState<boolean>(false);
   const [scheduleTime, setScheduleTime] = useState<string>('Tomorrow, 10:00 AM');
   const [senderName, setSenderName] = useState<string>(currentCustomer?.name || 'Kavitha Sundaram');
@@ -142,6 +173,12 @@ export default function CustomerApp() {
   const currentTrip = trips.find((t) => t.id === activeTripId) || trips[0];
 
   const handleBookNow = () => {
+    if (paymentMethod === 'WALLET' && (currentCustomer?.wallet?.balance || 0) < fareBreakdown.totalFare) {
+      const shortage = Math.ceil(fareBreakdown.totalFare - (currentCustomer?.wallet?.balance || 0));
+      showToast(`Shortage of ₹${shortage} in your wallet. Please recharge to book.`);
+      return;
+    }
+
     const newTripId = createBooking({
       pickup: {
         ...pickupPoint,
@@ -169,21 +206,50 @@ export default function CustomerApp() {
     }
   };
 
-  const getVehicleIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Bike':
-        return <Bike className="w-6 h-6 text-emerald-600" />;
-      case 'CarFront':
-        return <CarFront className="w-6 h-6 text-emerald-600" />;
-      case 'Container':
-        return <Container className="w-6 h-6 text-emerald-600" />;
-      default:
-        return <Truck className="w-6 h-6 text-emerald-600" />;
+  // Requirement 1 Dashboard Metrics
+  const customerTrips = trips.filter(
+    (t) => t.customerId === currentCustomer?.id || t.customerPhone === currentCustomer?.phone || !t.customerId
+  );
+  const totalBookingsCount = customerTrips.length;
+  const bookingsCompletedCount = customerTrips.filter((t) => t.status === 'DELIVERED').length;
+  const bookingsCancelledCount = customerTrips.filter((t) => t.status === 'CANCELLED').length;
+  const referralsMadeCount = referrals.filter(
+    (r) => r.referrerId === currentCustomer?.id || r.referrerRole === 'customer'
+  ).length;
+
+  // Filtered transactions for Transactions History tab (Requirement 9)
+  const allCustomerTransactions = currentCustomer?.wallet?.transactions || [];
+  const filteredTransactions = allCustomerTransactions.filter((tx) => {
+    if (txFilter === 'ALL') return true;
+    if (txFilter === 'CREDIT') return tx.type === 'CREDIT';
+    if (txFilter === 'DEBIT') return tx.type === 'DEBIT';
+    if (txFilter === 'REWARD_POINTS') return tx.category === 'REWARD_POINTS' || tx.category === 'REFERRAL_BONUS';
+    return true;
+  });
+
+  const getVehicleIcon = (iconName: string, vehicleId?: string) => {
+    if (vehicleId === '2wheeler' || iconName === 'Bike') {
+      return <Bike className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />;
     }
+    if (vehicleId === '3wheeler' || iconName === 'CarFront') {
+      return <CarFront className="w-6 h-6 text-teal-600 dark:text-teal-400" />;
+    }
+    if (vehicleId === '4wheeler_hmv') {
+      return <Truck className="w-6 h-6 text-purple-600 dark:text-purple-400" />;
+    }
+    if (vehicleId === 'open_trailer') {
+      return <Container className="w-6 h-6 text-amber-600 dark:text-amber-400" />;
+    }
+    if (vehicleId === 'closed_container' || iconName === 'Container') {
+      return <Container className="w-6 h-6 text-blue-600 dark:text-blue-400" />;
+    }
+    return <Truck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />;
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 text-slate-900 pb-20 md:pb-6">
+    <div className={`flex flex-col h-full pb-20 md:pb-6 transition-colors duration-200 ${
+      darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
       {/* Top Customer Header */}
       <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white px-4 py-3.5 shadow-md flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
@@ -199,16 +265,30 @@ export default function CustomerApp() {
           </div>
         </div>
 
-        {/* Profile / Wallet / Referrals / Support Shortcut */}
-        <div className="flex items-center space-x-2">
+        {/* Profile / Wallet / Referrals / Light-Dark Toggle / Support Shortcut */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
           {/* Quick Wallet Balance Badge */}
           <button
-            onClick={() => setActiveTab('wallet')}
+            onClick={() => setActiveTab('transactions')}
             className="px-2.5 py-1 text-xs bg-white/15 hover:bg-white/25 text-white font-bold rounded-lg flex items-center space-x-1.5 transition-all border border-white/20"
-            title="Customer Wallet Balance"
+            title="Customer Wallet Balance & Passbook"
           >
             <Wallet className="w-3.5 h-3.5 text-emerald-300" />
             <span>₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}</span>
+          </button>
+
+          {/* Light / Dark Mode Toggle Button (Requirement 4) */}
+          <button
+            onClick={toggleTheme}
+            className={`p-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all border ${
+              darkMode
+                ? 'bg-amber-400/20 text-amber-300 border-amber-400/40 hover:bg-amber-400/30'
+                : 'bg-white/20 text-white border-white/25 hover:bg-white/30'
+            }`}
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode for visual comfort'}
+          >
+            {darkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-white" />}
+            <span className="hidden md:inline text-[11px]">{darkMode ? 'Light' : 'Dark'}</span>
           </button>
 
           <button
@@ -236,18 +316,230 @@ export default function CustomerApp() {
             className="px-2.5 py-1 text-xs bg-emerald-800/60 hover:bg-emerald-800 rounded-lg flex items-center space-x-1 transition-colors"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>Help</span>
+            <span className="hidden sm:inline">Help</span>
           </button>
         </div>
       </div>
 
       {/* Main Content Area based on sub-tab */}
       <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4">
-        {/* ================= TAB 1: BOOKING VIEW ================= */}
+        {/* ================= TAB 1: BOOKING VIEW (HOME SCREEN) ================= */}
         {activeTab === 'book' && (
           <div className="space-y-4 max-w-xl mx-auto">
+            {/* ================= REQUIREMENT 1: DASHBOARD STATS BAR ON HOME SCREEN ================= */}
+            <div className={`rounded-2xl p-3.5 shadow-sm border space-y-3 transition-colors ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Customer Dashboard
+                </span>
+                <button
+                  onClick={() => setActiveTab('transactions')}
+                  className="text-[11px] font-bold text-emerald-600 hover:text-emerald-500 flex items-center space-x-1"
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>View Transactions History →</span>
+                </button>
+              </div>
+
+              {/* 5 Prominent Stat Cards (Requirement 1) */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {/* 1. Wallet Value */}
+                <div
+                  onClick={() => setActiveTab('transactions')}
+                  className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all hover:scale-[1.02] col-span-2 sm:col-span-1 ${
+                    darkMode
+                      ? 'bg-slate-800/80 border-emerald-500/40 text-emerald-300'
+                      : 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+                  }`}
+                  title="Click to view Transactions History & Passbook"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase">Wallet Value</span>
+                    <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                    ₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[9px] text-emerald-700 dark:text-emerald-400/80 mt-0.5 font-semibold flex items-center space-x-0.5">
+                    <span>Passbook →</span>
+                  </div>
+                </div>
+
+                {/* 2. Total Bookings Made */}
+                <div className={`p-2.5 rounded-xl border text-left ${
+                  darkMode ? 'bg-slate-800/60 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">Total Bookings</span>
+                    <Truck className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div className="text-lg font-black mt-1">
+                    {totalBookingsCount}
+                  </div>
+                  <div className="text-[9px] text-slate-400 mt-0.5">All bookings</div>
+                </div>
+
+                {/* 3. Bookings Completed */}
+                <div className={`p-2.5 rounded-xl border text-left ${
+                  darkMode ? 'bg-slate-800/60 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">Completed</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                    {bookingsCompletedCount}
+                  </div>
+                  <div className="text-[9px] text-emerald-600/80 mt-0.5">Delivered</div>
+                </div>
+
+                {/* 4. Bookings Cancelled */}
+                <div className={`p-2.5 rounded-xl border text-left ${
+                  darkMode ? 'bg-slate-800/60 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">Cancelled</span>
+                    <X className="w-3.5 h-3.5 text-rose-500" />
+                  </div>
+                  <div className="text-lg font-black text-rose-600 dark:text-rose-400 mt-1">
+                    {bookingsCancelledCount}
+                  </div>
+                  <div className="text-[9px] text-rose-500/80 mt-0.5">Cancelled</div>
+                </div>
+
+                {/* 5. Referrals Made */}
+                <div
+                  onClick={() => setActiveTab('referrals')}
+                  className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all hover:scale-[1.02] col-span-2 sm:col-span-1 ${
+                    darkMode
+                      ? 'bg-slate-800/60 border-purple-500/30 text-purple-300'
+                      : 'bg-purple-50/80 border-purple-200 text-purple-900'
+                  }`}
+                  title="Click to view referrals program"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase">Referrals</span>
+                    <Gift className="w-3.5 h-3.5 text-purple-500" />
+                  </div>
+                  <div className="text-lg font-black text-purple-600 dark:text-purple-400 mt-1">
+                    {referralsMadeCount}
+                  </div>
+                  <div className="text-[9px] text-purple-700 dark:text-purple-300 mt-0.5 font-semibold">Invited →</div>
+                </div>
+              </div>
+
+              {/* ================= REQUIREMENT 2: CUSTOMER REFERRAL CODE BANNER ================= */}
+              <div className={`p-3 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-2 ${
+                darkMode ? 'bg-slate-800/80 border-emerald-500/30' : 'bg-emerald-50/60 border-emerald-200'
+              }`}>
+                <div className="flex items-center space-x-2.5 w-full sm:w-auto">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                    🎁
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold leading-tight flex items-center space-x-1.5">
+                      <span>Your Referral Code:</span>
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black px-1.5 py-0.5 bg-white dark:bg-slate-900 rounded border border-emerald-300 dark:border-emerald-700">
+                        {currentCustomer?.referralCode || 'SWIF-KAVITHA-20'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Use code for customer & driver referrals. Bonus: ₹150 for customer, ₹500 for driver!
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1.5 w-full sm:w-auto justify-end">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentCustomer?.referralCode || 'SWIF-KAVITHA-20');
+                      setReferralCopied(true);
+                      showToast('Referral code copied to clipboard!');
+                      setTimeout(() => setReferralCopied(false), 2000);
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-bold border rounded-lg flex items-center space-x-1 ${
+                      darkMode ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {referralCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    <span>{referralCopied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const shareText = `Ship smart with SwifLoad Coimbatore on-demand city logistics! Use my referral code ${currentCustomer?.referralCode || 'SWIF-KAVITHA-20'} to get ₹100 welcome credit: https://swifload-cbe.azurewebsites.net/customer`;
+                      if (navigator.share) {
+                        navigator.share({ title: 'SwifLoad Referral Code', text: shareText }).catch(() => {});
+                      } else {
+                        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                      }
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center space-x-1 shadow-sm"
+                  >
+                    <Share2 className="w-3 h-3" />
+                    <span>Share</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ================= REQUIREMENT 3: EARMARKED AD SPACE ================= */}
+            <div className={`rounded-2xl p-3.5 shadow-sm border space-y-2.5 relative overflow-hidden transition-colors ${
+              darkMode
+                ? 'bg-slate-900 border-slate-800'
+                : 'bg-gradient-to-r from-amber-50/60 via-white to-orange-50/40 border-amber-200/80'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase bg-amber-500 text-slate-950 flex items-center space-x-1 shadow-xs">
+                    <Megaphone className="w-3 h-3" />
+                    <span>SPONSORED AD SPACE</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">Coimbatore Commercial Partner Promotions</span>
+                </div>
+                <button
+                  onClick={() => setShowAdModal(true)}
+                  className="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1"
+                >
+                  <Info className="w-3 h-3" />
+                  <span>Post Ad Here</span>
+                </button>
+              </div>
+
+              {/* Blocked Ad Space Content */}
+              <div className={`p-3 rounded-xl border flex items-start justify-between gap-3 shadow-xs ${
+                darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-amber-200/90'
+              }`}>
+                <div className="text-2xl shrink-0 mt-0.5">🛞</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2">
+                    <span className={`font-extrabold text-xs ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      Apollo Commercial Tyres • Coimbatore Hub
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 font-bold rounded">
+                      Verified Partner
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 font-bold mt-0.5">
+                    Flat 20% Off Commercial LMV/HMV Tyres at 8 Coimbatore Centers
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Exclusive discount for SwifLoad shippers and fleet owners with free computer wheel alignment.
+                  </p>
+                </div>
+                <button
+                  onClick={() => showToast('Promo code APOLLO-SWIF20 applied to your profile!')}
+                  className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[10px] rounded-lg shrink-0 shadow-xs transition-transform active:scale-95"
+                >
+                  Claim 20%
+                </button>
+              </div>
+            </div>
+
             {/* Customer Tier / Category Selector */}
-            <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
+            <div className={`rounded-2xl p-3.5 shadow-sm border space-y-2.5 transition-colors ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
+            }`}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-0.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Customer Category / Pricing Tier
@@ -394,14 +686,34 @@ export default function CustomerApp() {
               </div>
             </div>
 
-            {/* Vehicle Selection with Slab Rates */}
+            {/* ================= REQUIREMENT 5: VEHICLE SELECTION WITH LIVE CHARGES ON HOME SCREEN ================= */}
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Vehicle Category</span>
-                <span className="text-[11px] text-emerald-600 font-medium">Distance slab pricing active</span>
+                <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Select Vehicle Category
+                </span>
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Live Distance Slab Charges
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
-                {vehicleConfigs.map((veh) => {
+                {[
+                  '2wheeler',
+                  '3wheeler',
+                  '4wheeler_lmv',
+                  '4wheeler_hmv',
+                  'open_trailer',
+                  'closed_container',
+                ].map((catId) => {
+                  const veh = vehicleConfigs.find((v) => v.id === catId) || {
+                    id: catId as VehicleCategory,
+                    name: catId,
+                    capacityKg: 1000,
+                    dimensions: 'N/A',
+                    icon: 'Truck',
+                    baseFare: 200,
+                    perKmRate: 15,
+                  };
                   const isSel = selectedVehicle === veh.id;
                   const estimate = calculateCustomerQuotedSlabFare(
                     distanceKm,
@@ -418,24 +730,44 @@ export default function CustomerApp() {
                   return (
                     <button
                       key={veh.id}
+                      type="button"
                       onClick={() => setSelectedVehicle(veh.id)}
-                      className={`text-left p-3 rounded-2xl border transition-all relative ${
+                      className={`text-left p-3 rounded-2xl border transition-all relative flex flex-col justify-between ${
                         isSel
-                          ? 'border-emerald-600 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500'
+                          ? 'border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/40 shadow-sm ring-2 ring-emerald-500'
+                          : darkMode
+                          ? 'border-slate-800 bg-slate-900 hover:border-slate-700'
                           : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
                     >
                       {isSel && (
-                        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-600" />
+                        <span className="absolute top-2.5 right-2.5 flex items-center space-x-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded-full">
+                          <span>Selected</span>
+                        </span>
                       )}
-                      <div className="flex items-center space-x-2 mb-1">
-                        {getVehicleIcon(veh.icon)}
-                        <span className="font-bold text-xs text-slate-900 leading-tight">{veh.name.split('(')[0]}</span>
+                      <div>
+                        <div className="flex items-center space-x-2 mb-1.5">
+                          {getVehicleIcon(veh.icon, veh.id)}
+                          <span className={`font-bold text-xs leading-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {veh.name.split('(')[0].trim()}
+                          </span>
+                        </div>
+                        <div className={`text-[10px] mb-2 leading-tight ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Max {veh.capacityKg} kg • {veh.dimensions}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-500 mb-1.5">Max {veh.capacityKg} kg • {veh.dimensions}</div>
-                      <div className="flex items-baseline justify-between pt-1 border-t border-slate-100">
-                        <span className="text-sm font-extrabold text-slate-900">₹{estimate.totalFare}</span>
-                        <span className="text-[10px] text-emerald-600 font-semibold">ETA ~10m</span>
+                      <div className={`flex items-baseline justify-between pt-2 border-t ${
+                        darkMode ? 'border-slate-800' : 'border-slate-100'
+                      }`}>
+                        <div className="flex flex-col">
+                          <span className={`text-base font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                            ₹{estimate.totalFare}
+                          </span>
+                          <span className="text-[9px] text-slate-400">Live quoted fare</span>
+                        </div>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded">
+                          ETA ~10m
+                        </span>
                       </div>
                     </button>
                   );
@@ -444,27 +776,31 @@ export default function CustomerApp() {
             </div>
 
             {/* Shipment & Helper Summary Card */}
-            <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-3">
+            <div className={`rounded-2xl p-3.5 shadow-sm border space-y-3 transition-colors ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs">
+                  <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 flex items-center justify-center font-bold text-xs">
                     📦
                   </div>
                   <div>
-                    <h3 className="text-xs font-bold text-slate-800">Shipment & Loading Info</h3>
-                    <p className="text-[11px] text-slate-500">{goodsCategory} • ~{weightKg} kg</p>
+                    <h3 className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>Shipment & Loading Info</h3>
+                    <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{goodsCategory} • ~{weightKg} kg</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowShipmentModal(true)}
-                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 px-2 py-1 bg-emerald-50 rounded-lg"
+                  className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg"
                 >
                   Edit Details
                 </button>
               </div>
 
               {/* Helper Checkbox */}
-              <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer">
+              <label className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer ${
+                darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-100'
+              }`}>
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -473,11 +809,11 @@ export default function CustomerApp() {
                     className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                   />
                   <div>
-                    <div className="text-xs font-semibold text-slate-800">Need Loading & Unloading Helper</div>
-                    <div className="text-[10px] text-slate-500">Driver/porter assist in moving cargo</div>
+                    <div className={`text-xs font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>Need Loading & Unloading Helper</div>
+                    <div className={`text-[10px] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Driver/porter assist in moving cargo</div>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-slate-700">
+                <span className={`text-xs font-bold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                   +₹{vehicleConfigs.find((v) => v.id === selectedVehicle)?.helperFee || 0}
                 </span>
               </label>
@@ -486,13 +822,15 @@ export default function CustomerApp() {
               <div className="flex items-center justify-between pt-1">
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs font-medium text-slate-700">Schedule for later?</span>
+                  <span className={`text-xs font-medium ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Schedule for later?</span>
                 </div>
                 <button
                   onClick={() => setIsScheduled(!isScheduled)}
                   className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${
                     isScheduled
                       ? 'bg-emerald-600 text-white'
+                      : darkMode
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -501,58 +839,129 @@ export default function CustomerApp() {
               </div>
             </div>
 
-            {/* Payment Mode Selector with Wallet Option */}
-            <div className="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 space-y-2.5">
+            {/* ================= REQUIREMENT 7: PAYMENT MODES & WALLET SHORTAGE RECHARGE ================= */}
+            <div className={`rounded-2xl p-3.5 shadow-sm border space-y-3 transition-colors ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Payment Option</span>
-                <span className="text-[10px] text-slate-500 font-medium">Customer Wallet Balance: ₹{currentCustomer?.wallet?.balance || 0}</span>
+                <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Payment Mode
+                </span>
+                <span className={`text-[10px] font-semibold ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                  Wallet Balance: ₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}
+                </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
+                  {
+                    id: 'PRE_PAYMENT',
+                    name: 'Pre-Payment',
+                    icon: '💳',
+                    sub: 'Advance Pay before dispatch',
+                  },
+                  {
+                    id: 'POST_PAYMENT',
+                    name: 'Post-Payment',
+                    icon: '💵',
+                    sub: 'Pay upon delivery (Cash/QR)',
+                  },
+                  {
+                    id: 'ONLINE_PAYMENT',
+                    name: 'Online Payment',
+                    icon: '⚡',
+                    sub: 'Instant UPI / Cards / IMPS',
+                  },
                   {
                     id: 'WALLET',
                     name: 'SwifLoad Wallet',
                     icon: '👛',
                     sub: `Bal: ₹${currentCustomer?.wallet?.balance || 0}`,
                   },
-                  { id: 'UPI_GPAY', name: 'GPay / UPI', icon: '⚡', sub: 'Instant UPI' },
-                  { id: 'NETBANKING_IMPS', name: 'IMPS Bank', icon: '🏛', sub: 'Direct transfer' },
-                  { id: 'CASH_ON_DELIVERY', name: 'Cash on Drop', icon: '💵', sub: 'Pay driver cash' },
                 ].map((pm) => (
                   <button
                     key={pm.id}
+                    type="button"
                     onClick={() => setPaymentMethod(pm.id as PaymentMethod)}
                     className={`p-2.5 rounded-xl border text-left transition-all ${
                       paymentMethod === pm.id
-                        ? 'border-emerald-600 bg-emerald-50/70 font-bold text-emerald-900 ring-1 ring-emerald-500'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 font-medium'
+                        ? 'border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/50 font-bold text-emerald-900 dark:text-emerald-300 ring-2 ring-emerald-500'
+                        : darkMode
+                        ? 'border-slate-800 bg-slate-800/60 text-slate-200 hover:border-slate-700'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
                     }`}
                   >
                     <div className="text-base">{pm.icon}</div>
                     <div className="text-xs font-bold mt-0.5">{pm.name}</div>
-                    <div className="text-[9px] text-slate-500 truncate">{pm.sub}</div>
+                    <div className={`text-[9px] truncate ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{pm.sub}</div>
                   </button>
                 ))}
               </div>
 
-              {/* Insufficient Wallet Warning */}
-              {paymentMethod === 'WALLET' && (currentCustomer?.wallet?.balance || 0) < fareBreakdown.totalFare && (
-                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs">
-                  <div className="text-rose-700">
-                    <span className="font-bold">Insufficient Wallet Balance: </span>
-                    You have ₹{currentCustomer?.wallet?.balance || 0}, required is ₹{fareBreakdown.totalFare}.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWalletTopupAmount(Math.max(100, fareBreakdown.totalFare - (currentCustomer?.wallet?.balance || 0)));
-                      setShowWalletTopupModal(true);
-                    }}
-                    className="ml-2 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shrink-0 text-[11px]"
-                  >
-                    Top Up
-                  </button>
-                </div>
+              {/* Wallet Selected Logic: Check Shortage */}
+              {paymentMethod === 'WALLET' && (
+                (() => {
+                  const currentBalance = currentCustomer?.wallet?.balance || 0;
+                  const shortage = Math.max(0, fareBreakdown.totalFare - currentBalance);
+
+                  if (shortage > 0) {
+                    return (
+                      <div className="p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-xl space-y-2.5">
+                        <div className="flex items-start justify-between text-xs">
+                          <div className="text-rose-700 dark:text-rose-300">
+                            <span className="font-bold">Shortage in Wallet Balance: </span>
+                            You need <strong className="text-rose-900 dark:text-rose-100 font-extrabold">₹{shortage}</strong> more to complete this booking (Available: ₹{currentBalance}, Total: ₹{fareBreakdown.totalFare}).
+                          </div>
+                        </div>
+
+                        <div className="text-[11px] font-semibold text-rose-800 dark:text-rose-300">
+                          Recharge exact shortage or choose a quick top-up amount:
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              topUpCustomerWallet(shortage);
+                              showToast(`Added exact shortage of ₹${shortage} to your wallet!`);
+                            }}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg text-xs shadow-xs transition-transform active:scale-95"
+                          >
+                            + Recharge Exact ₹{shortage}
+                          </button>
+                          {[100, 250, 500, 1000].map((extra) => (
+                            <button
+                              key={extra}
+                              type="button"
+                              onClick={() => {
+                                topUpCustomerWallet(shortage + extra);
+                                showToast(`Added ₹${shortage + extra} (Shortage + ₹${extra}) to wallet!`);
+                              }}
+                              className={`px-2.5 py-1.5 border font-bold rounded-lg text-[11px] transition-colors ${
+                                darkMode
+                                  ? 'bg-slate-800 border-rose-800/80 text-slate-200 hover:bg-slate-700'
+                                  : 'bg-white border-rose-300 text-slate-800 hover:bg-rose-100/50'
+                              }`}
+                            >
+                              +₹{shortage + extra} (+₹{extra})
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                      <div className="flex items-center space-x-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>Sufficient balance! <strong>₹{fareBreakdown.totalFare}</strong> will be debited seamlessly from your wallet.</span>
+                      </div>
+                      <span className="font-bold text-[11px] text-emerald-700 dark:text-emerald-300 shrink-0">
+                        Remaining: ₹{currentBalance - fareBreakdown.totalFare}
+                      </span>
+                    </div>
+                  );
+                })()
               )}
             </div>
 
@@ -873,45 +1282,320 @@ export default function CustomerApp() {
               )}
             </div>
 
-            {/* Rating Section if Delivered */}
-            {currentTrip.status === 'DELIVERED' && !hasRated && (
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 text-center space-y-2.5">
-                <h4 className="text-xs font-bold text-emerald-900">How was your delivery experience?</h4>
-                <div className="flex items-center justify-center space-x-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => setRatingVal(star)}
-                      className="p-1 hover:scale-125 transition-transform"
-                    >
-                      <Star
-                        className={`w-6 h-6 ${
-                          star <= ratingVal
-                            ? 'text-amber-500 fill-amber-500'
-                            : 'text-slate-300'
-                        }`}
-                      />
-                    </button>
-                  ))}
+            {/* ================= REQUIREMENT 8: RATING, FEEDBACK & REWARD POINTS ON DELIVERED ================= */}
+            {currentTrip.status === 'DELIVERED' && (
+              !hasRated ? (
+                <div className={`rounded-2xl p-4.5 border space-y-3 shadow-md ${
+                  darkMode
+                    ? 'bg-slate-900 border-emerald-500/30'
+                    : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-white border-emerald-200'
+                }`}>
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-xs">
+                      <Award className="w-5 h-5 text-emerald-200" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-emerald-900 dark:text-emerald-300 uppercase tracking-wider">
+                        Rate Delivery & Earn 50 Reward Points (₹50)
+                      </h4>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Share your feedback to help us maintain top quality and claim instant ₹50 wallet credit!
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center space-x-3 py-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRatingVal(star)}
+                        className="p-1 hover:scale-125 transition-transform"
+                        title={`${star} Star`}
+                      >
+                        <Star
+                          className={`w-7 h-7 ${
+                            star <= ratingVal
+                              ? 'text-amber-400 fill-amber-400 drop-shadow-sm'
+                              : 'text-slate-300 dark:text-slate-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Leave detailed feedback for driver (e.g. on-time, courteous, careful handling)..."
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      className={`w-full text-xs p-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                        darkMode
+                          ? 'bg-slate-800 border-slate-700 text-slate-100'
+                          : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      submitRating(currentTrip.id, ratingVal, feedbackText || 'Great delivery service!');
+                      setHasRated(true);
+                      showToast('Review submitted! 50 Reward Points (₹50) credited to your wallet!');
+                    }}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-transform active:scale-95 flex items-center justify-center space-x-1.5"
+                  >
+                    <Gift className="w-4 h-4 text-emerald-200" />
+                    <span>Submit Feedback & Claim 50 Reward Points</span>
+                  </button>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Leave a comment for driver..."
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  className="w-full text-xs p-2 bg-white rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
+              ) : (
+                <div className={`rounded-2xl p-4 border text-center space-y-2 ${
+                  darkMode ? 'bg-slate-900 border-emerald-500/40' : 'bg-emerald-50 border-emerald-200'
+                }`}>
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-sm">
+                    <Check className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-xs font-black text-emerald-800 dark:text-emerald-300">
+                    Thank You! 50 Reward Points Credited
+                  </h4>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
+                    Your feedback was received and ₹50 has been credited to your SwifLoad Wallet balance.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('transactions')}
+                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline pt-1 inline-flex items-center space-x-1"
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>View in Transactions Passbook →</span>
+                  </button>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
+        {/* ================= TAB: CUSTOMER TRANSACTIONS HISTORY & PASSBOOK (Requirement 9) ================= */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-4 max-w-xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className={`text-base font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Transactions History & Passbook
+                </h2>
+                <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Complete ledger of wallet credits, debits, online payments & reward points
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveTab('book')}
+                className="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-colors flex items-center space-x-1"
+              >
+                <span>← Book Freight</span>
+              </button>
+            </div>
+
+            {/* Wallet Overview Hero Card */}
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              darkMode
+                ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 border-emerald-500/30 text-white'
+                : 'bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 text-white border-emerald-600'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-white">
+                    <Wallet className="w-4 h-4 text-emerald-300" />
+                  </div>
+                  <div>
+                    <span className="text-xs text-emerald-100 font-bold uppercase tracking-wider">Available Wallet Balance</span>
+                    <div className="text-[10px] text-emerald-200">Zero Negative Balance Protected</div>
+                  </div>
+                </div>
                 <button
-                  onClick={() => {
-                    submitRating(currentTrip.id, ratingVal, feedbackText || 'Great service!');
-                    setHasRated(true);
-                  }}
-                  className="text-xs bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-emerald-700"
+                  onClick={() => setShowWalletTopupModal(true)}
+                  className="px-3 py-1.5 text-xs font-bold bg-white text-slate-950 hover:bg-emerald-100 rounded-xl shadow-sm flex items-center space-x-1 transition-all"
                 >
-                  Submit Rating
+                  <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Top Up</span>
                 </button>
               </div>
-            )}
+
+              <div className="pt-1">
+                <div className="text-3xl font-black text-white tracking-tight">
+                  ₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              {/* Quick Add Presets */}
+              <div className="pt-2 border-t border-white/20 flex gap-2">
+                {[100, 250, 500, 1000].map((amt) => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={() => {
+                      topUpCustomerWallet(amt);
+                      showToast(`Added ₹${amt} to your wallet!`);
+                    }}
+                    className="flex-1 py-1 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-bold transition-colors"
+                  >
+                    +₹{amt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Financial Summary 3-Col Stats */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className={`p-3 rounded-xl border ${
+                darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Total Credited</div>
+                <div className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  ₹{allCustomerTransactions
+                    .filter((t) => t.type === 'CREDIT')
+                    .reduce((acc, t) => acc + t.amount, 0)
+                    .toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className={`p-3 rounded-xl border ${
+                darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Total Spent</div>
+                <div className={`text-base font-black mt-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  ₹{allCustomerTransactions
+                    .filter((t) => t.type === 'DEBIT')
+                    .reduce((acc, t) => acc + t.amount, 0)
+                    .toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className={`p-3 rounded-xl border ${
+                darkMode ? 'bg-slate-900 border-purple-900/40 text-purple-300' : 'bg-purple-50/70 border-purple-200 text-purple-900'
+              }`}>
+                <div className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Rewards Earned</div>
+                <div className="text-base font-black text-purple-600 dark:text-purple-400 mt-0.5">
+                  ₹{allCustomerTransactions
+                    .filter((t) => t.category === 'REWARD_POINTS' || t.category === 'REFERRAL_BONUS')
+                    .reduce((acc, t) => acc + t.amount, 0)
+                    .toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className={`p-1 rounded-xl border flex gap-1 ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-100 border-slate-200'
+            }`}>
+              {[
+                { id: 'ALL', label: 'All Activity' },
+                { id: 'CREDIT', label: 'Credits (+)' },
+                { id: 'DEBIT', label: 'Debits (-)' },
+                { id: 'REWARD_POINTS', label: 'Rewards (🎁)' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setTxFilter(tab.id as any)}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                    txFilter === tab.id
+                      ? darkMode
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-white text-slate-900 shadow-xs'
+                      : darkMode
+                      ? 'text-slate-400 hover:text-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Transaction Ledger List */}
+            <div className={`rounded-2xl p-4 shadow-sm border space-y-2.5 ${
+              darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
+            }`}>
+              <div className="flex items-center justify-between border-b pb-2 border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Transaction Records ({filteredTransactions.length})
+                </span>
+                <span className="text-[10px] text-slate-400">Chronological</span>
+              </div>
+
+              {filteredTransactions.length > 0 ? (
+                <div className="space-y-2">
+                  {filteredTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-colors ${
+                        darkMode ? 'bg-slate-800/60 border-slate-700/60' : 'bg-slate-50 border-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-2.5">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            tx.category === 'REWARD_POINTS' || tx.category === 'REFERRAL_BONUS'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+                              : tx.type === 'CREDIT'
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+                              : 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300'
+                          }`}
+                        >
+                          {tx.category === 'REWARD_POINTS' || tx.category === 'REFERRAL_BONUS' ? (
+                            <Award className="w-4 h-4" />
+                          ) : tx.type === 'CREDIT' ? (
+                            <ArrowDownLeft className="w-4 h-4" />
+                          ) : (
+                            <ArrowUpRight className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`font-bold text-xs leading-tight ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                              {tx.description}
+                            </span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded font-bold uppercase bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                              {tx.category.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {new Date(tx.timestamp).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            {tx.referenceId && ` • Ref: ${tx.referenceId.slice(0, 10)}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`font-black text-sm ${
+                            tx.type === 'CREDIT'
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : darkMode
+                              ? 'text-slate-300'
+                              : 'text-slate-900'
+                          }`}
+                        >
+                          {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
+                        </span>
+                        <div className="text-[10px] text-slate-400">Bal: ₹{tx.balanceAfter}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-400 text-xs space-y-2">
+                  <div className="text-2xl">🧾</div>
+                  <p>No transactions match the selected filter.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1433,10 +2117,12 @@ export default function CustomerApp() {
       </div>
 
       {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-between z-30 shadow-lg">
+      <div className={`fixed bottom-0 left-0 right-0 max-w-md mx-auto backdrop-blur-md border-t px-2 py-2 flex items-center justify-between z-30 shadow-lg ${
+        darkMode ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200'
+      }`}>
         <button
           onClick={() => setActiveTab('book')}
-          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'book' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'book' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
         >
           <Truck className="w-5 h-5" />
           <span className="text-[10px]">Book</span>
@@ -1444,7 +2130,7 @@ export default function CustomerApp() {
 
         <button
           onClick={() => setActiveTab('tracking')}
-          className={`flex flex-col items-center space-y-0.5 relative ${activeTab === 'tracking' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+          className={`flex flex-col items-center space-y-0.5 relative ${activeTab === 'tracking' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
         >
           <Navigation className="w-5 h-5" />
           <span className="text-[10px]">Active</span>
@@ -1454,8 +2140,17 @@ export default function CustomerApp() {
         </button>
 
         <button
+          onClick={() => setActiveTab('transactions')}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'transactions' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+          title="Customer Transactions History & Passbook"
+        >
+          <Receipt className="w-5 h-5" />
+          <span className="text-[10px]">Passbook</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('wallet')}
-          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'wallet' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'wallet' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
         >
           <Wallet className="w-5 h-5" />
           <span className="text-[10px]">Wallet</span>
@@ -1463,7 +2158,7 @@ export default function CustomerApp() {
 
         <button
           onClick={() => setActiveTab('referrals')}
-          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'referrals' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'referrals' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
         >
           <Gift className="w-5 h-5" />
           <span className="text-[10px]">Refer</span>
@@ -1471,7 +2166,7 @@ export default function CustomerApp() {
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'history' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'history' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
         >
           <Clock className="w-5 h-5" />
           <span className="text-[10px]">History</span>
@@ -1479,7 +2174,7 @@ export default function CustomerApp() {
 
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'profile' ? 'text-emerald-600 font-bold' : 'text-slate-400 font-medium'}`}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'profile' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
         >
           <ShieldCheck className="w-5 h-5" />
           <span className="text-[10px]">Profile</span>
@@ -1992,6 +2687,88 @@ export default function CustomerApp() {
               >
                 Add ₹{walletTopupAmount}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= REQUIREMENT 3: SPONSORED AD PLACEMENT MODAL ================= */}
+      {showAdModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto border ${
+            darkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <span className="p-2 rounded-xl bg-amber-500/20 text-amber-500 font-bold text-sm">
+                  <Megaphone className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-base">Advertise on SwifLoad Coimbatore</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Earmarked Home Screen Partner Spaces</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAdModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-900/60 space-y-1.5">
+                <div className="font-bold text-amber-900 dark:text-amber-300 flex items-center space-x-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Reach High-Intent Industrial & Commercial Shippers</span>
+                </div>
+                <p className="text-[11px] text-amber-800 dark:text-amber-400 leading-snug">
+                  Promote your brand, auto components, commercial tyres, warehousing, logistics services, or industrial equipment to thousands of verified business shippers in Coimbatore.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Available Ad Placements:</h4>
+                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+                  <div className="flex justify-between font-bold">
+                    <span>1. Home Screen Top Banner</span>
+                    <span className="text-emerald-600 font-bold">From ₹4,999/mo</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Highest visibility directly above vehicle booking selector. Includes verified partner badge and promo code redemption.
+                  </p>
+                </div>
+                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+                  <div className="flex justify-between font-bold">
+                    <span>2. Post-Trip Tax Invoice Footer</span>
+                    <span className="text-emerald-600 font-bold">From ₹2,499/mo</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Delivered on every digital PDF receipt and email confirmation sent to corporate accounts.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                <a
+                  href="https://wa.me/919845012345?text=Hi%20SwifLoad%20Team,%20I%20am%20interested%20in%20advertising%20on%20the%20Customer%20App"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-center text-xs flex items-center justify-center space-x-1.5 shadow"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>WhatsApp Ad Desk</span>
+                </a>
+                <button
+                  onClick={() => {
+                    setShowAdModal(false);
+                    showToast('Our commercial ad team will contact you shortly!');
+                  }}
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold rounded-xl text-xs transition-colors"
+                >
+                  Request Call Back
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,15 @@
 export type UserRole = 'customer' | 'driver' | 'admin';
 export type AdminRole = 'super_admin' | 'dispatcher' | 'support' | 'finance';
 
-export type VehicleCategory = '2wheeler' | '3wheeler' | 'tata_ace' | 'pickup_8ft';
+export type VehicleCategory =
+  | '2wheeler'
+  | '3wheeler'
+  | '4wheeler_lmv'
+  | '4wheeler_hmv'
+  | 'open_trailer'
+  | 'closed_container'
+  | 'tata_ace'
+  | 'pickup_8ft';
 
 export interface VehicleConfig {
   id: VehicleCategory;
@@ -40,7 +48,15 @@ export type TripStatus =
 
 export type CustomerType = 'new' | 'regular' | 'multi_pickup' | 'corporate';
 
-export type PaymentMethod = 'UPI_GPAY' | 'UPI_PHONEPE' | 'NETBANKING_IMPS' | 'CASH_ON_DELIVERY' | 'WALLET';
+export type PaymentMethod =
+  | 'PRE_PAYMENT'
+  | 'POST_PAYMENT'
+  | 'ONLINE_PAYMENT'
+  | 'WALLET'
+  | 'UPI_GPAY'
+  | 'UPI_PHONEPE'
+  | 'NETBANKING_IMPS'
+  | 'CASH_ON_DELIVERY';
 
 export interface LocationPoint {
   address: string;
@@ -129,7 +145,8 @@ export interface WalletTransaction {
     | 'TOPUP'
     | 'PAYOUT'
     | 'COMMISSION_DEDUCTION'
-    | 'ADMIN_ADJUSTMENT';
+    | 'ADMIN_ADJUSTMENT'
+    | 'REWARD_POINTS';
 }
 
 export interface FareBreakdown {

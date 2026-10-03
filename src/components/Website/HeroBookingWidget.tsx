@@ -243,21 +243,24 @@ export default function HeroBookingWidget({
           <span>2-Wheeler (Express)</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('packers');
-            setSelectedVehicleCategory('tata_ace');
-          }}
-          className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-2xl font-bold text-xs transition-all ${
-            activeTab === 'packers'
-              ? 'bg-white text-blue-700 shadow-md shadow-slate-300/50 border border-slate-200/80'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          <span>Packers & Movers</span>
-        </button>
+        {/* Whole house shifting / Packers & Movers (Hidden per Changes Required.txt; can be enabled later) */}
+        {false && (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('packers');
+              setSelectedVehicleCategory('tata_ace');
+            }}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-2xl font-bold text-xs transition-all ${
+              activeTab === 'packers'
+                ? 'bg-white text-blue-700 shadow-md shadow-slate-300/50 border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            <span>Packers & Movers</span>
+          </button>
+        )}
 
         <button
           type="button"

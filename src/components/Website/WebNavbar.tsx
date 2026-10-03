@@ -190,19 +190,22 @@ export default function WebNavbar({
                   </div>
                 </button>
 
-                <button
-                  onClick={() => {
-                    scrollToSection('packers-movers');
-                    setIsServicesOpen(false);
-                  }}
-                  className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 flex items-center space-x-2.5 transition-colors"
-                >
-                  <Package className="w-4 h-4 text-emerald-600" />
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">Packers & Movers</div>
-                    <div className="text-[10px] text-slate-500">House & office shifting</div>
-                  </div>
-                </button>
+                {/* Packers & Movers (Hidden per Changes Required.txt; can be re-enabled later) */}
+                {false && (
+                  <button
+                    onClick={() => {
+                      scrollToSection('packers-movers');
+                      setIsServicesOpen(false);
+                    }}
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 flex items-center space-x-2.5 transition-colors"
+                  >
+                    <Package className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Packers & Movers</div>
+                      <div className="text-[10px] text-slate-500">House & office shifting</div>
+                    </div>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -371,12 +374,15 @@ export default function WebNavbar({
           >
             🛵 2-Wheeler Courier
           </button>
-          <button
-            onClick={() => scrollToSection('packers-movers')}
-            className="w-full text-left py-2 text-slate-800"
-          >
-            📦 Packers & Movers
-          </button>
+          {/* Packers & Movers (Hidden per Changes Required.txt; can be re-enabled later) */}
+          {false && (
+            <button
+              onClick={() => scrollToSection('packers-movers')}
+              className="w-full text-left py-2 text-slate-800"
+            >
+              📦 Packers & Movers
+            </button>
+          )}
           <button
             onClick={() => scrollToSection('fleet')}
             className="w-full text-left py-2 text-slate-800"

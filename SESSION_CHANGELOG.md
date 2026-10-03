@@ -4,6 +4,146 @@ This document tracks all technical updates, architectural additions, and feature
 
 ---
 
+## 📅 Session: 2026-10-01 (Implementation of Features Requested in Changes Required.txt)
+
+### Objectives
+1. Implement all 9 customer app features requested in `Changes Required.txt`:
+   - Top dashboard metrics (Wallet value, Total bookings, Cancelled, Completed, Referrals).
+   - Customer referral code usable for customer & driver referrals.
+   - Prominently earmarked ad space on the home screen with "Post Ad Here" partner popup.
+   - Light / Dark mode toggle for visual comfort.
+   - Vehicle selection with live charges displayed on home screen: Two wheeler, 3 wheeler, 4 wheeler (LMV), 4 wheeler (HMV), Vehicle with open trailer, and Closed body options.
+   - Whole house shifting / Packers & Movers hidden cleanly for future re-enablement.
+   - Pre-payment, Post-payment, Online payment, and Wallet adjustment with interactive shortage recharge.
+   - Post-trip rating, detailed feedback, and 50 Reward Points (₹50) credited to customer wallet.
+   - Dedicated Customer Transactions History & Passbook page with prominent links from booking page.
+2. Maintain project architecture, TypeScript types, pricing models, and zero negative balance customer wallet constraints.
+3. Validate production build (`npm run build`) with 0 errors.
+
+---
+
+### Key Changes & Bullet Points
+
+#### 1. Customer Types & Vehicle Configuration Extensions
+- **`src/types/logistics.ts`:**
+  - Extended `VehicleCategory` union type to include `'2wheeler' | '3wheeler' | '4wheeler_lmv' | '4wheeler_hmv' | 'open_trailer' | 'closed_container' | 'tata_ace' | 'pickup_8ft'`.
+  - Extended `PaymentMethod` union type to include `'PRE_PAYMENT' | 'POST_PAYMENT' | 'ONLINE_PAYMENT' | 'WALLET' | 'UPI_GPAY' | 'UPI_PHONEPE' | 'NETBANKING_IMPS' | 'CASH_ON_DELIVERY'`.
+  - Added `'REWARD_POINTS'` to `WalletTransaction['category']`.
+- **`src/lib/data.ts`:**
+  - Added configurations in `VEHICLE_CONFIGS` for all 6 requested vehicle modes (specifications, dimensions, capacities, rates, base fares, helper fees).
+- **`src/lib/pricing.ts`:**
+  - Updated `calculateCustomerQuotedSlabFare` to scale base and distance fares by vehicle configurations so each vehicle category produces accurate, distinctive pricing based on distance.
+
+#### 2. Business Logic & Context State Updates (`src/context/LogisticsContext.tsx`)
+- **`createBooking`:**
+  - Added support for `POST_PAYMENT` (marks `paymentStatus = 'PENDING'`), immediate wallet debit and server sync for `WALLET`, and online digital payment handling.
+- **`submitRating`:**
+  - Added automatic credit of 50 Reward Points (₹50) to the customer wallet upon review submission.
+  - Creates a dedicated `REWARD_POINTS` ledger transaction, syncs to server DB, and displays confirmation toast.
+
+#### 3. Packers & Movers / House Shifting Suppressed
+- **`src/components/Website/HeroBookingWidget.tsx`:** Conditionally suppressed Packers & Movers tab rendering (`false && ...`) for future reactivation.
+- **`src/components/Website/WebPlatform.tsx`:** Wrapped `PackersMoversSection` in `false && (...)`.
+- **`src/components/Website/WebNavbar.tsx`:** Suppressed Packers & Movers links from desktop dropdown and mobile nav drawer.
+
+#### 4. Complete Customer App Modernization (`src/components/Customer/CustomerApp.tsx`)
+- **Requirement 1 — Home Screen Metrics Bar:**
+  - Added top metric cards: Wallet Value (₹), Total Bookings, Completed, Cancelled, and Referrals Invited with direct click navigation to transactions and referrals.
+- **Requirement 2 — Customer Referral Code Banner:**
+  - Added customer referral code display (`SWIF-KAVITHA-20` / `currentCustomer.referralCode`) with 1-tap clipboard copy and WhatsApp/Web Share API sharing. Usable for both customer and driver partner onboarding.
+- **Requirement 3 — Earmarked Ad Space & Modal:**
+  - Blocked sponsored ad space on the customer home screen featuring Coimbatore commercial partner promos (e.g., Apollo Commercial Tyres 20% discount).
+  - Added interactive `showAdModal` dialog detailing banner packages, target audience reach, and direct contact buttons to WhatsApp / Operations Ad Desk.
+- **Requirement 4 — Visual Comfort Theme Toggle (Light & Dark Mode):**
+  - Added persistent `darkMode` state with local storage retention.
+  - Header toggle button (☀️ / 🌙) updating background, card borders, typography, inputs, and modals across the application.
+- **Requirement 5 — Vehicle Category Selection with Live Distance Slab Charges:**
+  - Prominently displays all 6 requested categories on the home screen:
+    1. 2-Wheeler (Bike / Scooter)
+    2. 3-Wheeler (Cargo Auto)
+    3. 4-Wheeler (LMV - Light Motor Vehicle)
+    4. 4-Wheeler (HMV - Heavy Motor Vehicle)
+    5. Vehicle with Open Trailer
+    6. Closed Body / Container Option
+  - Each option computes and displays live distance slab fare (`estimate.totalFare`), capacity, dimensions, and dedicated icons.
+- **Requirement 7 — Payment Options & Interactive Wallet Shortage Recharge:**
+  - Added Pre-Payment, Post-Payment, Online Payment, and SwifLoad Wallet options.
+  - When Wallet is selected and balance is short, calculates exact shortage (`₹{shortage}`) and provides 1-tap `+ Recharge Exact ₹{shortage}` button alongside preset top-ups (`+₹100`, `+₹250`, `+₹500`, `+₹1000`) for seamless booking.
+- **Requirement 8 — Post-Trip Rating, Feedback & 50 Reward Points Credit:**
+  - Added review incentive banner on delivered orders explaining 50 reward points (₹50) credit.
+  - Rating stars (1-5), comments field, and celebratory post-submission card with direct link to passbook.
+- **Requirement 9 — Dedicated Customer Transactions History & Passbook (`activeTab === 'transactions'`):**
+  - Added dedicated passbook page with direct link on the home screen and in bottom navigation.
+  - Features current wallet balance, 1-tap top-up buttons, financial summary (Total Credited, Total Spent, Total Rewards), filter chips (All, Credits, Debits, Rewards), and full chronological transaction ledger.
+- **Bottom Navigation Bar:**
+  - Added `Passbook` button linking directly to the new Transactions view.
+
+---
+
+### Verification Status
+- **Build Command:** `npm run build`
+- **Build Outcome:** Compiled successfully (Exit Code 0).
+- **TypeScript & Lint Verification:** 0 errors across all 8 static and dynamic routes (`/`, `/customer`, `/driver`, `/admin`, `/downloads`, `/api/*`).
+
+---
+
+## 📅 Session: 2026-10-01 (Repository Knowledge Graph Generation & Graphify Pipeline Execution)
+
+### Objectives
+1. Execute full `/graphify .` pipeline on SwifLoad repository.
+2. Perform structural AST extraction across all TypeScript/JavaScript/JSON source code files and semantic extraction on all project documentation, specifications, and architecture diagrams.
+3. Build unified NetworkX knowledge graph, cluster into functional communities, and label each community in plain language.
+4. Export interactive HTML visualizer (`graphify-out/graph.html`), JSON GraphRAG graph (`graphify-out/graph.json`), and comprehensive audit report (`graphify-out/GRAPH_REPORT.md`).
+5. Verify graph integrity, diagnostics, and update persistent tracking manifest.
+
+---
+
+### Key Changes & Bullet Points
+
+#### 1. Repository Scanning & Extraction Pipeline
+- **Corpus Detected:** 76 files (~353,845 words) categorized into 52 code files, 23 documentation files, and 1 architecture diagram image.
+- **AST Structural Extraction:** Deterministically parsed 253 nodes and 658 edges mapping symbols, functions, types, and route handlers across Next.js 14 App Router and Capacitor components.
+- **Semantic Extraction:** Extracted 63 nodes and 68 edges across requirements, pricing specifications, architecture diagrams, and hardware/setup cost models.
+- **Unified Knowledge Graph:** Built composite graph containing 320 nodes and 726 edges (96% EXTRACTED, 4% INFERRED, 0% AMBIGUOUS).
+
+#### 2. Community Detection & Labeling (17 Communities)
+- Clustered the graph into 17 cohesive operational modules:
+  - `Community 0`: Core UI Components & Admin Portal (39 nodes)
+  - `Community 1`: Booking Fulfillment & Server Database Engine (45 nodes)
+  - `Community 2`: Mobile Architecture & Capacitor Integration (42 nodes)
+  - `Community 3`: Real-Time Telemetry & Backend REST Routes (32 nodes)
+  - `Community 4`: Tariff Slabs & OTP Verification Flow (21 nodes)
+  - `Community 5`: Agent Instructions & Deployment Operations (18 nodes)
+  - `Community 6`: TypeScript Configuration & Compiler Options (17 nodes)
+  - `Community 7`: Core Product Requirements & Portal Scopes (12 nodes)
+  - `Community 8`: PWA Web App Manifest & Branding (10 nodes)
+  - `Community 9`: Archify Architecture Specifications & Diagram Models (9 nodes)
+  - `Community 10`: Build Tooling & UI Dependencies (9 nodes)
+  - `Community 11`: Hub Infrastructure & Hardware Cost Analysis (6 nodes)
+  - `Communities 12-16`: Next.js Framework, Software Outsourcing, Styling, PostCSS, Service Worker Cache.
+
+#### 3. Hyperedges & Architectural Patterns
+- Preserved 4 key multi-node hyperedges:
+  - `Tripartite Logistics Marketplace Architecture` (Shipper Customer App, Driver-Partner App, Operations Admin Portal, 12 Architecture Components)
+  - `Dual-City Hub Setup and Financial Cost Comparison Pattern` (Coimbatore vs. Bengaluru CapEx/OpEx, AIS-140 telemetry, aggregator licensing)
+  - `Realtime Cloud State Synchronization & Telemetry Pipeline` (SSE events, telemetry dataflow, state machine transitions)
+  - `Urban Fare Calculation and Dispatch Engine Flow` (Slab distance tariffs, dynamic upfront quoting)
+
+#### 4. Diagnostic & Output Generation
+- `graphify-out/graph.html` (318 KB): Interactive force-directed HTML visualization with community colors and search.
+- `graphify-out/graph.json` (394 KB): GraphRAG-ready node and link specification.
+- `graphify-out/GRAPH_REPORT.md` (8.9 KB): Diagnostic summary, God Nodes, Surprising Connections, and Suggested Questions.
+- Updated `manifest.json` and `cost.json` with tracking metadata.
+
+---
+
+### Verification Status
+- **Graph Health Check:** 0 missing-endpoint edges, 0 self-loop edges, 0 collapsed edges.
+- **Export Verification:** `graph.html` (318 KB) and `graph.json` (394 KB) confirmed written to disk.
+- **Integrity Gate:** Passed shrink-guard check (#479) preserving full graph fidelity.
+
+---
+
 ## 📅 Session: 2026-09-27 (Azure Cloud Live Deployment & Native Android APK Distribution)
 
 ### Objectives

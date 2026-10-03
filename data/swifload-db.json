@@ -1,0 +1,1166 @@
+{
+  "trips": [
+    {
+      "id": "trip_cbe_1001",
+      "bookingCode": "SWF-CBE-8921",
+      "createdAt": "2026-10-01T08:50:28.423Z",
+      "customerId": "cust_01",
+      "customerName": "Kavitha Sundaram",
+      "customerPhone": "+91 98422 19283",
+      "vehicleCategory": "tata_ace",
+      "pickup": {
+        "address": "Avinashi Road, Near Tidel Park Coimbatore",
+        "area": "Peelamedu",
+        "lat": 11.0284,
+        "lng": 77.0252,
+        "landmark": "Near PSG Tech & Civil Aerodrome",
+        "senderOrReceiverName": "Kavitha (Sundaram Spares)",
+        "contactPhone": "+91 98422 19283"
+      },
+      "drop": {
+        "address": "Cross Cut Road, Gandhipuram Commercial Center",
+        "area": "Gandhipuram",
+        "lat": 11.0183,
+        "lng": 76.9634,
+        "landmark": "Opposite Central Bus Stand Complex",
+        "senderOrReceiverName": "Venkatesh Babu (Receiver)",
+        "contactPhone": "+91 98422 88712"
+      },
+      "distanceKm": 7.2,
+      "durationMins": 24,
+      "shipment": {
+        "goodsCategory": "Industrial Equipment",
+        "approxWeightKg": 280,
+        "packageCount": 6,
+        "hasHelperRequired": true,
+        "notes": "Machined cast iron pump brackets and textile spindles. Handle with care.",
+        "pickupOtp": "4821",
+        "deliveryOtp": "7392",
+        "cargoPhotoUrl": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80"
+      },
+      "fare": {
+        "baseFare": 260,
+        "distanceFare": 79.8,
+        "waitingFare": 0,
+        "helperFee": 250,
+        "surgeFare": 28,
+        "taxGst": 30.9,
+        "totalFare": 648.7,
+        "platformCommission": 115,
+        "driverEarnings": 533.7
+      },
+      "paymentMethod": "UPI_GPAY",
+      "paymentStatus": "PAID",
+      "status": "IN_TRANSIT",
+      "driverId": "drv_01",
+      "driverName": "Murugan K",
+      "driverPhone": "+91 98422 12345",
+      "driverVehicleNumber": "TN-38-AX-4821",
+      "driverRating": 4.91,
+      "driverLocation": {
+        "lat": 11.024,
+        "lng": 77.005
+      },
+      "auditHistory": [
+        {
+          "timestamp": "2026-10-01T08:50:28.423Z",
+          "event": "Trip booked by Kavitha Sundaram",
+          "actor": "Customer"
+        },
+        {
+          "timestamp": "2026-10-01T08:52:28.423Z",
+          "event": "Driver Murugan K assigned (Group East)",
+          "actor": "System"
+        },
+        {
+          "timestamp": "2026-10-01T08:54:28.423Z",
+          "event": "Driver accepted trip offer",
+          "actor": "Driver"
+        },
+        {
+          "timestamp": "2026-10-01T09:01:28.423Z",
+          "event": "Driver arrived at Peelamedu pickup",
+          "actor": "Driver"
+        },
+        {
+          "timestamp": "2026-10-01T09:07:28.423Z",
+          "event": "Goods loaded. Pickup OTP 4821 verified",
+          "actor": "Driver"
+        }
+      ]
+    },
+    {
+      "id": "trip_cbe_1002",
+      "bookingCode": "SWF-CBE-8919",
+      "createdAt": "2026-10-01T06:15:28.423Z",
+      "customerId": "cust_02",
+      "customerName": "Kovai Gourmet Cloud Kitchen",
+      "customerPhone": "+91 98941 44102",
+      "vehicleCategory": "2wheeler",
+      "pickup": {
+        "address": "DB Road, Near Flower Market Junction, RS Puram",
+        "area": "RS Puram",
+        "lat": 11.0105,
+        "lng": 76.9458,
+        "landmark": "Near Post Office Road Junction",
+        "senderOrReceiverName": "Kitchen Dispatch Lead",
+        "contactPhone": "+91 98941 44102"
+      },
+      "drop": {
+        "address": "Keeranatham Road, CHIL SEZ IT Park",
+        "area": "Saravanampatti",
+        "lat": 11.0827,
+        "lng": 76.9972,
+        "landmark": "KGISL Campus Food Court",
+        "senderOrReceiverName": "Corporate Catering Desk",
+        "contactPhone": "+91 98430 11928"
+      },
+      "distanceKm": 10.4,
+      "durationMins": 28,
+      "shipment": {
+        "goodsCategory": "Groceries & Perishables",
+        "approxWeightKg": 14,
+        "packageCount": 3,
+        "hasHelperRequired": false,
+        "notes": "Bulk corporate lunch hampers. Keep upright.",
+        "pickupOtp": "1109",
+        "deliveryOtp": "8820",
+        "proofOfDeliveryPhoto": "https://placehold.co/600x400/10b981/ffffff?text=Delivery+Proof+Handover+Confirmed"
+      },
+      "fare": {
+        "baseFare": 40,
+        "distanceFare": 71.4,
+        "waitingFare": 0,
+        "helperFee": 0,
+        "surgeFare": 0,
+        "taxGst": 5.6,
+        "totalFare": 117,
+        "platformCommission": 22,
+        "driverEarnings": 95
+      },
+      "paymentMethod": "NETBANKING_IMPS",
+      "paymentStatus": "PAID",
+      "status": "DELIVERED",
+      "driverId": "drv_03",
+      "driverName": "Vignesh Ramasamy",
+      "driverPhone": "+91 99441 54321",
+      "driverVehicleNumber": "TN-38-CD-2198",
+      "driverRating": 4.96,
+      "customerRating": 5,
+      "customerFeedback": "Delivered in under 30 mins to Saravanampatti. Excellent packaging handling!",
+      "auditHistory": [
+        {
+          "timestamp": "2026-10-01T06:15:28.423Z",
+          "event": "Trip booked",
+          "actor": "Customer"
+        },
+        {
+          "timestamp": "2026-10-01T06:27:28.423Z",
+          "event": "Assigned to Vignesh Ramasamy",
+          "actor": "System"
+        },
+        {
+          "timestamp": "2026-10-01T06:51:28.423Z",
+          "event": "Delivered successfully with OTP 8820",
+          "actor": "Driver"
+        }
+      ]
+    },
+    {
+      "id": "trip_cbe_1003",
+      "bookingCode": "SWF-CBE-8910",
+      "createdAt": "2026-10-01T04:15:28.423Z",
+      "customerId": "cust_03",
+      "customerName": "Shri Murugan Foundry & Pumps",
+      "customerPhone": "+91 94430 33190",
+      "vehicleCategory": "3wheeler",
+      "pickup": {
+        "address": "Kurichi SIDCO Industrial Estate, Pollachi Road",
+        "area": "Kurichi SIDCO",
+        "lat": 10.9382,
+        "lng": 76.9649,
+        "landmark": "Near Sundarapuram Junction"
+      },
+      "drop": {
+        "address": "Trichy Road, Near Singanallur Bus Terminal",
+        "area": "Singanallur",
+        "lat": 11.0028,
+        "lng": 77.0205,
+        "landmark": "Motor & Pump Industrial Complex"
+      },
+      "distanceKm": 9.8,
+      "durationMins": 32,
+      "shipment": {
+        "goodsCategory": "Hardware & Building Materials",
+        "approxWeightKg": 380,
+        "hasHelperRequired": false,
+        "pickupOtp": "3391",
+        "deliveryOtp": "9012"
+      },
+      "fare": {
+        "baseFare": 130,
+        "distanceFare": 95.2,
+        "waitingFare": 0,
+        "helperFee": 0,
+        "surgeFare": 0,
+        "taxGst": 11.3,
+        "totalFare": 236.5,
+        "platformCommission": 48,
+        "driverEarnings": 188.5
+      },
+      "paymentMethod": "CASH_ON_DELIVERY",
+      "paymentStatus": "PAID",
+      "status": "DELIVERED",
+      "driverId": "drv_02",
+      "driverName": "Karthik Selvam",
+      "driverPhone": "+91 97892 88765",
+      "driverVehicleNumber": "TN-37-BY-9102",
+      "driverRating": 4.84,
+      "customerRating": 5,
+      "customerFeedback": "Very professional driver. Pump castings delivered on time.",
+      "auditHistory": [
+        {
+          "timestamp": "2026-10-01T04:15:28.423Z",
+          "event": "Trip booked",
+          "actor": "Customer"
+        },
+        {
+          "timestamp": "2026-10-01T05:03:28.423Z",
+          "event": "Delivered & Cash Collected ₹237",
+          "actor": "Driver"
+        }
+      ]
+    }
+  ],
+  "drivers": [
+    {
+      "id": "drv_01",
+      "name": "Murugan K",
+      "phone": "+91 98422 12345",
+      "email": "murugan.k@swifload.test",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "groupId": "grp_cbe_east",
+      "groupName": "Group East (Peelamedu & Tidel Park)",
+      "locationRange": "Peelamedu, Tidel Park & Avinashi Road (Radius 6km)",
+      "vehicleCategory": "tata_ace",
+      "vehicleModel": "Tata Ace Gold Diesel (White)",
+      "vehicleNumber": "TN-38-AX-4821",
+      "isOnline": true,
+      "currentStatus": "IDLE",
+      "currentLocation": {
+        "lat": 11.025,
+        "lng": 77.02
+      },
+      "rating": 4.91,
+      "totalTrips": 432,
+      "acceptanceRate": 97,
+      "kycStatus": "VERIFIED",
+      "kycDocuments": [
+        {
+          "docType": "DRIVING_LICENSE",
+          "docNumber": "TN3820190012345",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Commercial+Driving+License",
+          "verified": true
+        },
+        {
+          "docType": "RC_BOOK",
+          "docNumber": "TN38AX4821",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Vehicle+RC+Smartcard",
+          "verified": true
+        },
+        {
+          "docType": "VEHICLE_INSURANCE",
+          "docNumber": "POL-ICICI-882194",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Comprehensive+Insurance",
+          "verified": true
+        },
+        {
+          "docType": "AADHAAR",
+          "docNumber": "XXXX-XXXX-8921",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=UIDAI+Aadhaar+Front+Back",
+          "verified": true
+        }
+      ],
+      "bankDetails": {
+        "accountName": "Murugan Karuppusamy",
+        "accountNumber": "50100234918231",
+        "ifscCode": "HDFC0000240",
+        "upiId": "murugan.k@oksbi"
+      },
+      "referralCode": "DRV-MURUGAN-92",
+      "wallet": {
+        "balance": 3450,
+        "negativeBalanceLimit": 1500,
+        "todayEarnings": 1680,
+        "pendingPayout": 1200,
+        "transactions": [
+          {
+            "id": "tx_d1_01",
+            "timestamp": "2026-10-01T04:15:28.423Z",
+            "type": "CREDIT",
+            "amount": 500,
+            "balanceAfter": 3450,
+            "description": "Referral Bonus: Invited driver Saravanan P",
+            "category": "REFERRAL_BONUS"
+          },
+          {
+            "id": "tx_d1_02",
+            "timestamp": "2026-09-30T23:15:28.423Z",
+            "type": "CREDIT",
+            "amount": 533.7,
+            "balanceAfter": 2950,
+            "description": "Trip Payout for SWF-CBE-8921",
+            "category": "TRIP_EARNING"
+          }
+        ]
+      }
+    },
+    {
+      "id": "drv_02",
+      "name": "Karthik Selvam",
+      "phone": "+91 97892 88765",
+      "email": "karthik.selvam@swifload.test",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "groupId": "grp_cbe_central",
+      "groupName": "Group Central (Gandhipuram & RS Puram)",
+      "locationRange": "Gandhipuram, RS Puram & Town Hall (Radius 5km)",
+      "vehicleCategory": "3wheeler",
+      "vehicleModel": "Piaggio Ape Extra LDX",
+      "vehicleNumber": "TN-37-BY-9102",
+      "isOnline": true,
+      "currentStatus": "IDLE",
+      "currentLocation": {
+        "lat": 11.018,
+        "lng": 76.963
+      },
+      "rating": 4.84,
+      "totalTrips": 645,
+      "acceptanceRate": 95,
+      "kycStatus": "VERIFIED",
+      "kycDocuments": [
+        {
+          "docType": "DRIVING_LICENSE",
+          "docNumber": "TN3720180098471",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Commercial+DL",
+          "verified": true
+        },
+        {
+          "docType": "RC_BOOK",
+          "docNumber": "TN37BY9102",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Vehicle+RC",
+          "verified": true
+        },
+        {
+          "docType": "VEHICLE_INSURANCE",
+          "docNumber": "BAJAJ-ALL-4421",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Insurance+Valid",
+          "verified": true
+        },
+        {
+          "docType": "AADHAAR",
+          "docNumber": "XXXX-XXXX-3341",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Aadhaar+Card",
+          "verified": true
+        }
+      ],
+      "bankDetails": {
+        "accountName": "Karthik Selvam",
+        "accountNumber": "918739120934",
+        "ifscCode": "SBIN0004121",
+        "upiId": "karthikselvam@paytm"
+      },
+      "referralCode": "DRV-KARTHIK-88",
+      "wallet": {
+        "balance": 2150,
+        "negativeBalanceLimit": 1200,
+        "todayEarnings": 920,
+        "pendingPayout": 650,
+        "transactions": [
+          {
+            "id": "tx_d2_01",
+            "timestamp": "2026-10-01T05:15:28.423Z",
+            "type": "CREDIT",
+            "amount": 100,
+            "balanceAfter": 2150,
+            "description": "Referral Bonus: Merchant onboarded (Shri Murugan Foundry)",
+            "category": "REFERRAL_BONUS"
+          }
+        ]
+      }
+    },
+    {
+      "id": "drv_03",
+      "name": "Vignesh Ramasamy",
+      "phone": "+91 99441 54321",
+      "email": "vignesh.r@swifload.test",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "groupId": "grp_cbe_central",
+      "groupName": "Group Central (Gandhipuram & RS Puram)",
+      "locationRange": "Gandhipuram, RS Puram & Town Hall (Radius 5km)",
+      "vehicleCategory": "2wheeler",
+      "vehicleModel": "Hero Splendor Plus (Delivery Rack)",
+      "vehicleNumber": "TN-38-CD-2198",
+      "isOnline": true,
+      "currentStatus": "IDLE",
+      "currentLocation": {
+        "lat": 11.011,
+        "lng": 76.947
+      },
+      "rating": 4.96,
+      "totalTrips": 1310,
+      "acceptanceRate": 99,
+      "kycStatus": "VERIFIED",
+      "kycDocuments": [
+        {
+          "docType": "DRIVING_LICENSE",
+          "docNumber": "TN3820200084321",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=2W+DL",
+          "verified": true
+        },
+        {
+          "docType": "RC_BOOK",
+          "docNumber": "TN38CD2198",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Bike+RC",
+          "verified": true
+        },
+        {
+          "docType": "VEHICLE_INSURANCE",
+          "docNumber": "GO-DIGIT-9921",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Digit+Insurance",
+          "verified": true
+        },
+        {
+          "docType": "AADHAAR",
+          "docNumber": "XXXX-XXXX-6112",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Aadhaar+KYC",
+          "verified": true
+        }
+      ],
+      "bankDetails": {
+        "accountName": "Vignesh Ramasamy",
+        "accountNumber": "60199201948",
+        "ifscCode": "CNRB0001923",
+        "upiId": "vigneshr@ybl"
+      },
+      "referralCode": "DRV-VIGNESH-54",
+      "wallet": {
+        "balance": 2680,
+        "negativeBalanceLimit": 1000,
+        "todayEarnings": 1040,
+        "pendingPayout": 800,
+        "transactions": []
+      }
+    },
+    {
+      "id": "drv_04",
+      "name": "Senthil Kumar",
+      "phone": "+91 96298 73210",
+      "email": "senthil.k@swifload.test",
+      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+      "groupId": "grp_cbe_southeast",
+      "groupName": "Group South-East (Singanallur & Trichy Road)",
+      "locationRange": "Singanallur, Ramanathapuram & Trichy Road (Radius 6km)",
+      "vehicleCategory": "pickup_8ft",
+      "vehicleModel": "Mahindra Bolero Maxi Truck Plus",
+      "vehicleNumber": "TN-66-AB-7712",
+      "isOnline": true,
+      "currentStatus": "IDLE",
+      "currentLocation": {
+        "lat": 11.002,
+        "lng": 77.018
+      },
+      "rating": 4.81,
+      "totalTrips": 340,
+      "acceptanceRate": 93,
+      "kycStatus": "VERIFIED",
+      "kycDocuments": [
+        {
+          "docType": "DRIVING_LICENSE",
+          "docNumber": "TN6620170041234",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Heavy+Commercial+DL",
+          "verified": true
+        },
+        {
+          "docType": "RC_BOOK",
+          "docNumber": "TN66AB7712",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Bolero+RC",
+          "verified": true
+        },
+        {
+          "docType": "VEHICLE_INSURANCE",
+          "docNumber": "ROYAL-SUNDARAM-1049",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Commercial+Insurance",
+          "verified": true
+        },
+        {
+          "docType": "AADHAAR",
+          "docNumber": "XXXX-XXXX-1994",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Aadhaar+Card",
+          "verified": true
+        }
+      ],
+      "bankDetails": {
+        "accountName": "Senthil Kumar V",
+        "accountNumber": "110294820194",
+        "ifscCode": "IOBA0000102",
+        "upiId": "senthilkumar@axl"
+      },
+      "referralCode": "DRV-SENTHIL-73",
+      "wallet": {
+        "balance": 4980,
+        "negativeBalanceLimit": 2500,
+        "todayEarnings": 1450,
+        "pendingPayout": 2500,
+        "transactions": []
+      }
+    },
+    {
+      "id": "drv_05",
+      "name": "Saravanan P",
+      "phone": "+91 94871 22938",
+      "email": "saravanan.p@swifload.test",
+      "avatar": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
+      "groupId": "grp_cbe_north",
+      "groupName": "Group North (Ganapathy & Saravanampatti)",
+      "locationRange": "Ganapathy, Saravanampatti & Sathy Road (Radius 8km)",
+      "vehicleCategory": "tata_ace",
+      "vehicleModel": "Tata Ace EV (Electric 1-Ton)",
+      "vehicleNumber": "TN-37-CZ-1844",
+      "isOnline": true,
+      "currentStatus": "IDLE",
+      "currentLocation": {
+        "lat": 11.042,
+        "lng": 76.984
+      },
+      "rating": 4.88,
+      "totalTrips": 210,
+      "acceptanceRate": 98,
+      "kycStatus": "VERIFIED",
+      "kycDocuments": [
+        {
+          "docType": "DRIVING_LICENSE",
+          "docNumber": "TN3720230099881",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Driving+License",
+          "verified": true
+        },
+        {
+          "docType": "RC_BOOK",
+          "docNumber": "TN37CZ1844",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Tata+Ace+EV+RC",
+          "verified": true
+        },
+        {
+          "docType": "VEHICLE_INSURANCE",
+          "docNumber": "ICICI-LOMB-7741",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Insurance+Copy",
+          "verified": true
+        },
+        {
+          "docType": "AADHAAR",
+          "docNumber": "XXXX-XXXX-9023",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Aadhaar+Card",
+          "verified": true
+        }
+      ],
+      "bankDetails": {
+        "accountName": "Saravanan P",
+        "accountNumber": "0024104000192834",
+        "ifscCode": "KVBL0001102",
+        "upiId": "saravananp@icici"
+      },
+      "referralCode": "DRV-SARAVANAN-22",
+      "wallet": {
+        "balance": -350,
+        "negativeBalanceLimit": 1500,
+        "todayEarnings": 620,
+        "pendingPayout": 0,
+        "transactions": [
+          {
+            "id": "tx_d5_01",
+            "timestamp": "2026-10-01T07:15:28.423Z",
+            "type": "DEBIT",
+            "amount": 450,
+            "balanceAfter": -350,
+            "description": "Platform commission adjustment on COD orders (Overdraft used)",
+            "category": "COMMISSION_DEDUCTION"
+          }
+        ]
+      }
+    },
+    {
+      "id": "drv_06",
+      "name": "Manikandan R",
+      "phone": "+91 94432 33412",
+      "email": "manikandan.r@swifload.test",
+      "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
+      "groupId": "grp_cbe_south",
+      "groupName": "Group South (Kurichi SIDCO & Sundarapuram)",
+      "locationRange": "Kurichi SIDCO & Sundarapuram (Radius 7km)",
+      "vehicleCategory": "tata_ace",
+      "vehicleModel": "Tata Ace Mega (Yellow)",
+      "vehicleNumber": "TN-38-EF-8819",
+      "isOnline": true,
+      "currentStatus": "IDLE",
+      "currentLocation": {
+        "lat": 10.94,
+        "lng": 76.966
+      },
+      "rating": 4.93,
+      "totalTrips": 560,
+      "acceptanceRate": 98,
+      "kycStatus": "VERIFIED",
+      "kycDocuments": [
+        {
+          "docType": "DRIVING_LICENSE",
+          "docNumber": "TN3820180011223",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Commercial+DL",
+          "verified": true
+        },
+        {
+          "docType": "RC_BOOK",
+          "docNumber": "TN38EF8819",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Tata+Ace+RC",
+          "verified": true
+        },
+        {
+          "docType": "VEHICLE_INSURANCE",
+          "docNumber": "IFFCO-TOKIO-9011",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Insurance",
+          "verified": true
+        },
+        {
+          "docType": "AADHAAR",
+          "docNumber": "XXXX-XXXX-4411",
+          "fileUrl": "https://placehold.co/600x400/1e293b/ffffff?text=Aadhaar",
+          "verified": true
+        }
+      ],
+      "bankDetails": {
+        "accountName": "Manikandan R",
+        "accountNumber": "30291040008819",
+        "ifscCode": "TMBL0000045",
+        "upiId": "mani.ramasamy@tmb"
+      },
+      "referralCode": "DRV-MANI-33",
+      "wallet": {
+        "balance": 3350,
+        "negativeBalanceLimit": 1500,
+        "todayEarnings": 1380,
+        "pendingPayout": 0,
+        "transactions": []
+      }
+    }
+  ],
+  "driverGroups": [
+    {
+      "id": "grp_cbe_central",
+      "name": "Group Central (Gandhipuram & RS Puram)",
+      "code": "GRP-CBE-C",
+      "description": "Caters to Gandhipuram, Cross Cut Road, RS Puram, DB Road, Town Hall",
+      "locationRange": "Gandhipuram, RS Puram & Town Hall (Radius 5km)",
+      "center": {
+        "lat": 11.0183,
+        "lng": 76.9558
+      },
+      "radiusKm": 5
+    },
+    {
+      "id": "grp_cbe_east",
+      "name": "Group East (Peelamedu & Tidel Park)",
+      "code": "GRP-CBE-E",
+      "description": "Caters to Peelamedu, Tidel Park, Avinashi Road, Airport, Hope College",
+      "locationRange": "Peelamedu, Tidel Park & Avinashi Road (Radius 6km)",
+      "center": {
+        "lat": 11.0284,
+        "lng": 77.0252
+      },
+      "radiusKm": 6
+    },
+    {
+      "id": "grp_cbe_south",
+      "name": "Group South (Kurichi SIDCO & Sundarapuram)",
+      "code": "GRP-CBE-S",
+      "description": "Caters to Kurichi SIDCO Industrial Estate, Sundarapuram, Eachanari",
+      "locationRange": "Kurichi SIDCO & Sundarapuram (Radius 7km)",
+      "center": {
+        "lat": 10.9382,
+        "lng": 76.9649
+      },
+      "radiusKm": 7
+    },
+    {
+      "id": "grp_cbe_southeast",
+      "name": "Group South-East (Singanallur & Trichy Road)",
+      "code": "GRP-CBE-SE",
+      "description": "Caters to Singanallur, Ramanathapuram, Trichy Road, Ondipudur",
+      "locationRange": "Singanallur, Ramanathapuram & Trichy Road (Radius 6km)",
+      "center": {
+        "lat": 11.0028,
+        "lng": 77.0205
+      },
+      "radiusKm": 6
+    },
+    {
+      "id": "grp_cbe_north",
+      "name": "Group North (Ganapathy & Saravanampatti)",
+      "code": "GRP-CBE-N",
+      "description": "Caters to Ganapathy, Saravanampatti IT Park, Sathy Road, Thudiyalur",
+      "locationRange": "Ganapathy, Saravanampatti & Sathy Road (Radius 8km)",
+      "center": {
+        "lat": 11.05,
+        "lng": 76.99
+      },
+      "radiusKm": 8
+    }
+  ],
+  "vehicleConfigs": [
+    {
+      "id": "2wheeler",
+      "name": "2-Wheeler (Bike / Scooter)",
+      "tagline": "Ideal for courier, documents & parcels up to 20kg",
+      "capacityKg": 20,
+      "dimensions": "40 x 40 x 40 cm",
+      "icon": "Bike",
+      "baseFare": 40,
+      "baseKm": 2,
+      "perKmRate": 8.5,
+      "waitingChargePerMin": 1.5,
+      "helperFee": 0,
+      "surgeMultiplier": 1
+    },
+    {
+      "id": "3wheeler",
+      "name": "3-Wheeler (Cargo Auto)",
+      "tagline": "Best for boxes, small appliances & textile goods up to 500kg",
+      "capacityKg": 500,
+      "dimensions": "5 x 4 x 4 ft",
+      "icon": "CarFront",
+      "baseFare": 130,
+      "baseKm": 3,
+      "perKmRate": 14,
+      "waitingChargePerMin": 2,
+      "helperFee": 150,
+      "surgeMultiplier": 1
+    },
+    {
+      "id": "4wheeler_lmv",
+      "name": "4-Wheeler (LMV - Light Motor Vehicle)",
+      "tagline": "Tata Ace / Bolero Pickup for industrial spares, commercial loads up to 1000kg",
+      "capacityKg": 1000,
+      "dimensions": "7 x 4.5 x 5 ft",
+      "icon": "Truck",
+      "baseFare": 260,
+      "baseKm": 3,
+      "perKmRate": 19,
+      "waitingChargePerMin": 2.5,
+      "helperFee": 250,
+      "surgeMultiplier": 1.1
+    },
+    {
+      "id": "4wheeler_hmv",
+      "name": "4-Wheeler (HMV - Heavy Motor Vehicle)",
+      "tagline": "Heavy commercial truck (14ft / 17ft) for foundry castings, machinery up to 4000kg",
+      "capacityKg": 4000,
+      "dimensions": "14 x 6 x 6.5 ft",
+      "icon": "Truck",
+      "baseFare": 750,
+      "baseKm": 5,
+      "perKmRate": 42,
+      "waitingChargePerMin": 5,
+      "helperFee": 500,
+      "surgeMultiplier": 1.15
+    },
+    {
+      "id": "open_trailer",
+      "name": "Vehicle with Open Trailer",
+      "tagline": "Open flatbed trailer for pipes, steel rods, timber, oversized machinery up to 2500kg",
+      "capacityKg": 2500,
+      "dimensions": "12 x 6 ft flatbed",
+      "icon": "Container",
+      "baseFare": 550,
+      "baseKm": 4,
+      "perKmRate": 34,
+      "waitingChargePerMin": 4,
+      "helperFee": 400,
+      "surgeMultiplier": 1.1
+    },
+    {
+      "id": "closed_container",
+      "name": "Closed Body / Container Option",
+      "tagline": "All-weather secure closed container for electronics, garments, pharmaceuticals up to 1500kg",
+      "capacityKg": 1500,
+      "dimensions": "9 x 5 x 5.5 ft closed",
+      "icon": "Container",
+      "baseFare": 380,
+      "baseKm": 3,
+      "perKmRate": 26,
+      "waitingChargePerMin": 3,
+      "helperFee": 300,
+      "surgeMultiplier": 1.05
+    },
+    {
+      "id": "tata_ace",
+      "name": "Tata Ace (Chota Hathi)",
+      "tagline": "Coimbatore favorite for industrial spares, pumps & commercial freight",
+      "capacityKg": 1000,
+      "dimensions": "7 x 4.5 x 5 ft",
+      "icon": "Truck",
+      "baseFare": 260,
+      "baseKm": 3,
+      "perKmRate": 19,
+      "waitingChargePerMin": 2.5,
+      "helperFee": 250,
+      "surgeMultiplier": 1.1
+    },
+    {
+      "id": "pickup_8ft",
+      "name": "8ft Large Pickup (Bolero)",
+      "tagline": "Heavy machinery, foundry castings, large equipment",
+      "capacityKg": 1700,
+      "dimensions": "8 x 5 x 5.5 ft",
+      "icon": "Container",
+      "baseFare": 450,
+      "baseKm": 4,
+      "perKmRate": 32,
+      "waitingChargePerMin": 4,
+      "helperFee": 350,
+      "surgeMultiplier": 1.1
+    }
+  ],
+  "serviceZones": [
+    {
+      "id": "zone_cbe_central",
+      "name": "Central Coimbatore Commercial Core",
+      "city": "Coimbatore",
+      "center": {
+        "lat": 11.0183,
+        "lng": 76.9558
+      },
+      "radiusKm": 6,
+      "isActive": true,
+      "surgeMultiplier": 1.1,
+      "pincodes": [
+        "641001",
+        "641002",
+        "641018",
+        "641009"
+      ]
+    },
+    {
+      "id": "zone_cbe_east",
+      "name": "East Coimbatore & Tidel Tech Corridor",
+      "city": "Coimbatore",
+      "center": {
+        "lat": 11.0284,
+        "lng": 77.0252
+      },
+      "radiusKm": 7,
+      "isActive": true,
+      "surgeMultiplier": 1.15,
+      "pincodes": [
+        "641004",
+        "641014",
+        "641016"
+      ]
+    },
+    {
+      "id": "zone_cbe_south",
+      "name": "Kurichi SIDCO & Heavy Engineering Belt",
+      "city": "Coimbatore",
+      "center": {
+        "lat": 10.9382,
+        "lng": 76.9649
+      },
+      "radiusKm": 9,
+      "isActive": true,
+      "surgeMultiplier": 1.05,
+      "pincodes": [
+        "641021",
+        "641024",
+        "641032"
+      ]
+    },
+    {
+      "id": "zone_cbe_southeast",
+      "name": "Singanallur & Motor Manufacturing Hub",
+      "city": "Coimbatore",
+      "center": {
+        "lat": 11.0028,
+        "lng": 77.0205
+      },
+      "radiusKm": 7,
+      "isActive": true,
+      "surgeMultiplier": 1.05,
+      "pincodes": [
+        "641005",
+        "641015",
+        "641045"
+      ]
+    },
+    {
+      "id": "zone_cbe_north",
+      "name": "Ganapathy & Saravanampatti IT/Foundry Zone",
+      "city": "Coimbatore",
+      "center": {
+        "lat": 11.05,
+        "lng": 76.99
+      },
+      "radiusKm": 8,
+      "isActive": true,
+      "surgeMultiplier": 1,
+      "pincodes": [
+        "641006",
+        "641035",
+        "641034"
+      ]
+    }
+  ],
+  "customerSlabConfigs": [
+    {
+      "customerType": "regular",
+      "customerTypeName": "Regular Customer",
+      "description": "Standard slab distance pricing for daily commercial & retail shipments",
+      "slabs": [
+        {
+          "id": "reg_s1",
+          "fromKm": 0,
+          "toKm": 1,
+          "rate": 50,
+          "rateType": "flat",
+          "label": "0 to 1 km (Flat Minimum)"
+        },
+        {
+          "id": "reg_s2",
+          "fromKm": 1,
+          "toKm": 3,
+          "rate": 6,
+          "rateType": "per_km",
+          "label": "Above 1 to 3 km (₹6/km)"
+        },
+        {
+          "id": "reg_s3",
+          "fromKm": 3,
+          "toKm": 5,
+          "rate": 6,
+          "rateType": "per_km",
+          "label": "Above 3 to 5 km (₹6/km)"
+        },
+        {
+          "id": "reg_s4",
+          "fromKm": 5,
+          "toKm": 999,
+          "rate": 8,
+          "rateType": "per_km",
+          "label": "Above 5 km (₹8/km)"
+        }
+      ]
+    },
+    {
+      "customerType": "new",
+      "customerTypeName": "New Customer",
+      "description": "Special introductory slab rates for first-time onboarding customers",
+      "slabs": [
+        {
+          "id": "new_s1",
+          "fromKm": 0,
+          "toKm": 1,
+          "rate": 45,
+          "rateType": "flat",
+          "label": "0 to 1 km (Promo Min ₹45)"
+        },
+        {
+          "id": "new_s2",
+          "fromKm": 1,
+          "toKm": 3,
+          "rate": 5.5,
+          "rateType": "per_km",
+          "label": "Above 1 to 3 km (₹5.5/km)"
+        },
+        {
+          "id": "new_s3",
+          "fromKm": 3,
+          "toKm": 5,
+          "rate": 5.5,
+          "rateType": "per_km",
+          "label": "Above 3 to 5 km (₹5.5/km)"
+        },
+        {
+          "id": "new_s4",
+          "fromKm": 5,
+          "toKm": 999,
+          "rate": 7.5,
+          "rateType": "per_km",
+          "label": "Above 5 km (₹7.5/km)"
+        }
+      ]
+    },
+    {
+      "customerType": "multi_pickup",
+      "customerTypeName": "Multiple Pickup Location Customer",
+      "description": "Optimized multi-stop distribution slab rates with transition buffers",
+      "slabs": [
+        {
+          "id": "multi_s1",
+          "fromKm": 0,
+          "toKm": 1,
+          "rate": 55,
+          "rateType": "flat",
+          "label": "0 to 1 km (Multi-Stop Base ₹55)"
+        },
+        {
+          "id": "multi_s2",
+          "fromKm": 1,
+          "toKm": 3,
+          "rate": 6.5,
+          "rateType": "per_km",
+          "label": "Above 1 to 3 km (₹6.5/km)"
+        },
+        {
+          "id": "multi_s3",
+          "fromKm": 3,
+          "toKm": 5,
+          "rate": 6.5,
+          "rateType": "per_km",
+          "label": "Above 3 to 5 km (₹6.5/km)"
+        },
+        {
+          "id": "multi_s4",
+          "fromKm": 5,
+          "toKm": 999,
+          "rate": 8.5,
+          "rateType": "per_km",
+          "label": "Above 5 km (₹8.5/km)"
+        }
+      ]
+    },
+    {
+      "customerType": "corporate",
+      "customerTypeName": "Corporate Customer",
+      "description": "Contracted high-volume B2B enterprise SLA rates with tiered slab discounts",
+      "slabs": [
+        {
+          "id": "corp_s1",
+          "fromKm": 0,
+          "toKm": 1,
+          "rate": 42,
+          "rateType": "flat",
+          "label": "0 to 1 km (Corporate Min ₹42)"
+        },
+        {
+          "id": "corp_s2",
+          "fromKm": 1,
+          "toKm": 3,
+          "rate": 5,
+          "rateType": "per_km",
+          "label": "Above 1 to 3 km (₹5/km)"
+        },
+        {
+          "id": "corp_s3",
+          "fromKm": 3,
+          "toKm": 5,
+          "rate": 5,
+          "rateType": "per_km",
+          "label": "Above 3 to 5 km (₹5/km)"
+        },
+        {
+          "id": "corp_s4",
+          "fromKm": 5,
+          "toKm": 999,
+          "rate": 7,
+          "rateType": "per_km",
+          "label": "Above 5 km (₹7/km)"
+        }
+      ]
+    }
+  ],
+  "referralConfig": {
+    "driverToDriverBonus": 500,
+    "driverToCustomerBonus": 100,
+    "customerToCustomerReferrerBonus": 150,
+    "customerToCustomerRefereeBonus": 100
+  },
+  "referrals": [
+    {
+      "id": "ref_01",
+      "type": "DRIVER_TO_DRIVER",
+      "referrerId": "drv_01",
+      "referrerName": "Murugan K",
+      "referrerRole": "driver",
+      "refereeId": "drv_05",
+      "refereeName": "Saravanan P",
+      "refereePhone": "+91 94871 22938",
+      "refereeRole": "driver",
+      "bonusAmount": 500,
+      "status": "CREDITED",
+      "createdAt": "2026-09-24T09:15:28.423Z",
+      "creditedAt": "2026-09-26T09:15:28.423Z",
+      "notes": "Saravanan P completed KYC and first 5 commercial deliveries in Ganapathy."
+    },
+    {
+      "id": "ref_02",
+      "type": "DRIVER_TO_CUSTOMER",
+      "referrerId": "drv_02",
+      "referrerName": "Karthik Selvam",
+      "referrerRole": "driver",
+      "refereeId": "cust_03",
+      "refereeName": "Shri Murugan Foundry & Pumps",
+      "refereePhone": "+91 94430 33190",
+      "refereeRole": "customer",
+      "bonusAmount": 100,
+      "status": "CREDITED",
+      "createdAt": "2026-09-28T09:15:28.423Z",
+      "creditedAt": "2026-09-29T09:15:28.423Z",
+      "notes": "Referred foundry merchant completed first 3-Wheeler freight trip."
+    },
+    {
+      "id": "ref_03",
+      "type": "CUSTOMER_TO_CUSTOMER",
+      "referrerId": "cust_01",
+      "referrerName": "Kavitha Sundaram",
+      "referrerRole": "customer",
+      "refereeId": "cust_02",
+      "refereeName": "Rajan Textiles",
+      "refereePhone": "+91 98941 44102",
+      "refereeRole": "customer",
+      "bonusAmount": 150,
+      "status": "CREDITED",
+      "createdAt": "2026-09-29T09:15:28.423Z",
+      "creditedAt": "2026-09-30T09:15:28.423Z",
+      "notes": "Referral code SWIF-KAVITHA-20 applied on signup."
+    }
+  ],
+  "customer": {
+    "id": "cust_01",
+    "name": "Kavitha Sundaram",
+    "phone": "+91 98422 19283",
+    "email": "kavitha.sundaram@example.com",
+    "companyName": "Sundaram Engineering & Spares",
+    "customerType": "regular",
+    "referralCode": "SWIF-KAVITHA-20",
+    "isLoggedIn": true,
+    "wallet": {
+      "balance": 1250,
+      "transactions": [
+        {
+          "id": "tx_c_01",
+          "timestamp": "2026-09-29T09:15:28.423Z",
+          "type": "CREDIT",
+          "amount": 1000,
+          "balanceAfter": 1000,
+          "description": "UPI Wallet Recharge via GPay",
+          "category": "TOPUP"
+        },
+        {
+          "id": "tx_c_02",
+          "timestamp": "2026-09-30T09:15:28.423Z",
+          "type": "CREDIT",
+          "amount": 250,
+          "balanceAfter": 1250,
+          "description": "Referral Bonus: Friend Rajan Textiles joined",
+          "category": "REFERRAL_BONUS"
+        }
+      ]
+    }
+  },
+  "lastUpdated": "2026-10-01T09:15:28.431Z"
+}

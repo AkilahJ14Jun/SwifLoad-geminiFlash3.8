@@ -146,13 +146,15 @@ export default function WebPlatform({ onOpenSimulator }: WebPlatformProps) {
         }}
       />
 
-      {/* Packers & Movers Dedicated Section */}
-      <PackersMoversSection
-        onBookMove={() => {
-          const el = document.getElementById('booking-hero');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
+      {/* Packers & Movers Dedicated Section (Hidden per Changes Required.txt; can be re-enabled later) */}
+      {false && (
+        <PackersMoversSection
+          onBookMove={() => {
+            const el = document.getElementById('booking-hero');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
+      )}
 
       {/* Enterprise Logistics Hub with Interactive ROI Calculator */}
       <EnterpriseSection />

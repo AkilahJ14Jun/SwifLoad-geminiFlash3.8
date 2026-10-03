@@ -1196,6 +1196,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             transactions: [tx, ...(prev.wallet.transactions || [])],
           },
         }));
+        syncWalletToServer({
+          entityType: 'customer',
+          id: currentCustomer.id,
+          amount: -fare.totalFare,
+          description: `Trip Booking Wallet Payment: -₹${fare.totalFare}`,
+        });
       }
 
       const pickupOtp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -1211,6 +1217,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
       const nearestGroup = orderedGroups[0];
       const sequence = orderedGroups.map((g) => g.id);
+
+      const isPendingPayment = payload.paymentMethod === 'CASH_ON_DELIVERY' || payload.paymentMethod === 'POST_PAYMENT';
 
       const newTrip: Trip = {
         id: tripId,
@@ -1238,7 +1246,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         },
         fare,
         paymentMethod: payload.paymentMethod,
-        paymentStatus: payload.paymentMethod === 'CASH_ON_DELIVERY' ? 'PENDING' : 'PAID',
+        paymentStatus: isPendingPayment ? 'PENDING' : 'PAID',
         status: 'SEARCHING',
         currentDispatchGroupId: nearestGroup.id,
         currentDispatchGroupName: nearestGroup.name,
@@ -1626,9 +1634,38 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [updateTripOnServer, updateDriverOnServer, showToast]
   );
 
-  // Submit Rating & Feedback
+  // Submit Rating & Feedback with Reward Points
   const submitRating = useCallback(
     (tripId: string, rating: number, feedback: string) => {
+      // Reward points: 50 points = ₹50 credited to customer wallet
+      const rewardPoints = 50;
+      setCurrentCustomer((prev) => {
+        const newBal = Math.round((prev.wallet.balance + rewardPoints) * 10) / 10;
+        const tx: WalletTransaction = {
+          id: `tx_c_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: 'CREDIT',
+          amount: rewardPoints,
+          balanceAfter: newBal,
+          description: `Reward Points Cashback for rating trip (${rating}★): 50 pts`,
+          category: 'REWARD_POINTS',
+        };
+        return {
+          ...prev,
+          wallet: {
+            balance: newBal,
+            transactions: [tx, ...(prev.wallet.transactions || [])],
+          },
+        };
+      });
+
+      syncWalletToServer({
+        entityType: 'customer',
+        id: currentCustomer.id,
+        amount: rewardPoints,
+        description: `Trip Review Reward Points Cashback: +₹${rewardPoints}`,
+      });
+
       setTrips((prev) =>
         prev.map((t) => {
           if (t.id === tripId) {
@@ -1640,7 +1677,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 ...t.auditHistory,
                 {
                   timestamp: new Date().toISOString(),
-                  event: `Customer rated trip ${rating} stars: "${feedback}"`,
+                  event: `Customer rated trip ${rating} stars: "${feedback}". Credited ${rewardPoints} reward points to wallet.`,
                   actor: 'Customer',
                 },
               ],
@@ -1651,9 +1688,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return t;
         })
       );
-      showToast('Thank you for rating your trip!');
+      showToast(`Thank you for rating! 50 Reward Points (₹50) credited to your SwifLoad Wallet!`);
     },
-    [updateTripOnServer, showToast]
+    [currentCustomer, updateTripOnServer, syncWalletToServer, showToast]
   );
 
   // Toggle Driver Online / Offline

@@ -156,11 +156,18 @@ export function calculateCustomerQuotedSlabFare(
   const totalSlabDistanceKm = Math.round((farthestDriverDistanceKm + tripDistanceKm) * 10) / 10;
   const slabResult = calculateSlabDistanceFare(totalSlabDistanceKm, slabConfig.slabs);
 
+  // Scale slab base fare and distance fare by vehicle category specifications
+  const vehicleBaseRatio = vehicle.baseFare ? vehicle.baseFare / 260.0 : 1.0;
+  const vehicleRateRatio = vehicle.perKmRate ? vehicle.perKmRate / 19.0 : 1.0;
+  const scaledBaseFare = Math.max(vehicle.baseFare || 40, Math.round(slabResult.baseFare * vehicleBaseRatio));
+  const scaledDistanceFare = Math.round(slabResult.distanceFare * vehicleRateRatio);
+  const totalSlabCost = scaledBaseFare + scaledDistanceFare;
+
   const zoneSurge = detectZoneSurge(pickup, drop, serviceZones);
   const surgeMultiplier = Math.max(vehicle.surgeMultiplier, zoneSurge);
 
   const helperFee = hasHelper ? vehicle.helperFee : 0;
-  const subtotalBeforeSurge = slabResult.totalSlabCost + helperFee;
+  const subtotalBeforeSurge = totalSlabCost + helperFee;
   const surgeFare = surgeMultiplier > 1.0 ? Math.round(subtotalBeforeSurge * (surgeMultiplier - 1.0)) : 0;
 
   const subtotal = subtotalBeforeSurge + surgeFare;
@@ -171,9 +178,14 @@ export function calculateCustomerQuotedSlabFare(
   const platformCommission = Math.round(subtotal * commissionRate);
   const driverEarnings = Math.round(totalFare - platformCommission);
 
+  const scaledBreakdown = slabResult.breakdown.map((item) => ({
+    ...item,
+    cost: Math.round(item.cost * (item.rateType === 'flat' ? vehicleBaseRatio : vehicleRateRatio)),
+  }));
+
   return {
-    baseFare: slabResult.baseFare,
-    distanceFare: slabResult.distanceFare,
+    baseFare: scaledBaseFare,
+    distanceFare: scaledDistanceFare,
     waitingFare: 0,
     helperFee,
     surgeFare,
@@ -181,7 +193,7 @@ export function calculateCustomerQuotedSlabFare(
     totalFare,
     platformCommission,
     driverEarnings,
-    slabBreakdown: slabResult.breakdown,
+    slabBreakdown: scaledBreakdown,
     farthestDriverDistanceKm,
     totalSlabDistanceKm,
     pricingNotice: `Prices shown can vary. Quoted based on the farthest driver in your pickup range (${farthestDriverDistanceKm} km away) to guarantee no surprise fare increases when a driver accepts.`,
