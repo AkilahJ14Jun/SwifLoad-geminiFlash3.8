@@ -1,23 +1,32 @@
 Go through output of graphify to understand this solution.
 
  
-Need the following features implemented in Customer App :
+Need the following features implemented in Driver App :
 
-The app should allow the download to happen only when the customer shares a mobile number on which the app is going to be installed. This has to be confirmed by sending an OTP confirmation to that number. A mail id also is required before download but it is not mandatory. 
-The home screen should show only Wallet value , Total referrals and option to view transactions history.
-The referral code section currently looks a little misaligned with the 'Share' button going beyond the right side box boundary.
-Make it as two lines display in that section so that the text message , the 'Copy' and 'Share' buttons appear on another line within that section. 
-The home screen need not show the maps section. 
-Since there is more space is available now on home screen a wider area can be used for placing ads.
-The home screen should show vehicle category as follows 
-- Two wheeler  with a more button. On clicking this will give option to select between moto bike or scooter type
-- Three wheeler with a more button. On clicking this it will give option to select between open body or closed body vehicles
-- Four wheeler with a more button. On clicking this it will give option to select between open body and closed body vehilces
-- EV vehicles with two , three and foud wheeler icons shown in that section with more button. On clicking that it should allow the user to take to the next screen where the actual booking can happen.
-The actual booking should happens in another page and not in the home page after the vehicle type is selected.
-Only vehicle selection options displayed on home page and further navigation provided. 
-The actual booking and all other activities like maps, 'Shipment & Loading Info , 'Need Loading & Unloading Helper' , pickup and drop location, the payment mode section move to another page which will be the place where the actual booking related details are captured.This would be the actual booking page.
-The customer category feature not required in home page. This feature is required only at the Admin Portal which would have a specific section which will allow the customer to be categorized as Regular, New, Multi-Pickup or Corporate customer.
+The app should be downloadable only on providing a mobile number which will be confirmed by a OTP confirmation. 
+A mail id also has to be collected before download, but it is not mandatory.
+On the home page the driver Greetings for the day to be at the top of the screen.
+Current overall Wallet balance to be displayed. It can go up to a max of Rs.200
+On clicking the Wallet the button should allow the user to recharge or withdraw the existing amount. 
+If the amount is more than minus Rs.200 , the driver app should be blocked from getting pickup calls, till he recharges it. Minimal recharge at that time has to be Rs.200. But if the driver recharges with Rs.300 then the wallet value will show as Rs.100.
+Today earnings to be displayed on top. That should be displayed as a button which will have a view history option at the bottom of that button.
+This button will show the history of transactions in reverse chronological order
+Total incentives to be displayed on top. For example if a driver completes four calls he may be entitled to Rs.25. This slab and amount for the incentives should be configurable on the admin portal.
+A section on the home page similar to the one on customer app , at the bottom of the page for sponsored ads. The ads should be displayed in horizontal order one below the other.
+A welcome button to be displayed on the home page. Clicking this button should lead to another page where the actual the pop-ups for the pickup calls will be displayed for a maximum of 10 seconds. This timeframe also should be configurable on the admin portal.
+The app should allow for  multiple pickup locations or multiple drop locations for a single customer.
+The page which the driver sees on clicking the welcome button should have the following :
+Maps which will be the one moved from the home page
+Order pop-ups showing the pickup location , drop location and charges applicable.
+The pick-up location should show the contact number. Touching that number the driver should be able to contact the customer.
+The driver will have 10 seconds to select any task. The countdown of secons also should be clearly visible.
+The driver should also have an option to skip tasks which are showing up.
+
+
+
+
+
+
 
 
 

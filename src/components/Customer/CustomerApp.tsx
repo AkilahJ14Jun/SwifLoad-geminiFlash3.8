@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import { VehicleCategory, GoodsCategory, PaymentMethod, LocationPoint, CustomerType, WalletTransaction } from '@/types/logistics';
-import { calculateDistanceKm, calculateCustomerQuotedSlabFare, estimateDurationMins } from '@/lib/pricing';
+import { calculateDistanceKm, calculateCustomerQuotedSlabFare, estimateDurationMins, calculateMultiStopDistanceKm } from '@/lib/pricing';
 
 // Dynamic import of Leaflet map to prevent SSR window reference error
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
@@ -203,8 +203,19 @@ export default function CustomerApp() {
   // Invoice Modal
   const [viewInvoiceTripId, setViewInvoiceTripId] = useState<string | null>(null);
 
-  // Distance and slab pricing calculation
-  const distanceKm = calculateDistanceKm(pickupPoint, dropPoint);
+  // Multi-pickup or Multi-drop stop support (Changes Required Item 17)
+  const [stopMode, setStopMode] = useState<'standard' | 'multi_pickup' | 'multi_drop'>('standard');
+  const [extraPickups, setExtraPickups] = useState<LocationPoint[]>([]);
+  const [extraDrops, setExtraDrops] = useState<LocationPoint[]>([]);
+
+  // Distance and slab pricing calculation (multi-stop route aware)
+  const allRouteStops = stopMode === 'multi_pickup'
+    ? [pickupPoint, ...extraPickups, dropPoint]
+    : stopMode === 'multi_drop'
+    ? [pickupPoint, dropPoint, ...extraDrops]
+    : [pickupPoint, dropPoint];
+
+  const distanceKm = calculateMultiStopDistanceKm(allRouteStops);
   const durationMins = estimateDurationMins(distanceKm);
   const custType: CustomerType = currentCustomer?.customerType || 'regular';
 
@@ -232,22 +243,39 @@ export default function CustomerApp() {
       return;
     }
 
+    const allPickups = stopMode === 'multi_pickup'
+      ? [
+          { ...pickupPoint, senderOrReceiverName: senderName, contactPhone: senderPhone },
+          ...extraPickups.map((p, idx) => ({
+            ...p,
+            senderOrReceiverName: p.senderOrReceiverName || `Pickup Point ${idx + 2}`,
+            contactPhone: p.contactPhone || senderPhone,
+          })),
+        ]
+      : [{ ...pickupPoint, senderOrReceiverName: senderName, contactPhone: senderPhone }];
+
+    const allDrops = stopMode === 'multi_drop'
+      ? [
+          { ...dropPoint, senderOrReceiverName: receiverName, contactPhone: receiverPhone },
+          ...extraDrops.map((d, idx) => ({
+            ...d,
+            senderOrReceiverName: d.senderOrReceiverName || `Drop Destination ${idx + 2}`,
+            contactPhone: d.contactPhone || receiverPhone,
+          })),
+        ]
+      : [{ ...dropPoint, senderOrReceiverName: receiverName, contactPhone: receiverPhone }];
+
     const newTripId = createBooking({
-      pickup: {
-        ...pickupPoint,
-        senderOrReceiverName: senderName,
-        contactPhone: senderPhone,
-      },
-      drop: {
-        ...dropPoint,
-        senderOrReceiverName: receiverName,
-        contactPhone: receiverPhone,
-      },
+      pickup: allPickups[0],
+      drop: allDrops[0],
+      pickups: allPickups,
+      drops: allDrops,
+      stopType: stopMode === 'multi_pickup' ? 'multi_pickup' : stopMode === 'multi_drop' ? 'multi_drop' : 'single',
       vehicleCategory: selectedVehicle,
       goodsCategory,
       approxWeightKg: Number(weightKg) || 50,
       hasHelperRequired: hasHelper,
-      notes: `${notes} [Vehicle: ${getVehicleSubtypeDisplay()}]`,
+      notes: `${notes} [Vehicle: ${getVehicleSubtypeDisplay()}]${stopMode !== 'standard' ? ` [${stopMode === 'multi_pickup' ? `${allPickups.length} Pickups` : `${allDrops.length} Drops`}]` : ''}`,
       paymentMethod,
       customerType: custType,
       scheduledTime: isScheduled ? scheduleTime : 'Instant Now',
@@ -1194,7 +1222,7 @@ export default function CustomerApp() {
                   </div>
                 </div>
 
-                {/* Requirement 19: Pickup and Drop Location Card */}
+                {/* Requirement 19: Pickup and Drop Location Card with Multiple Pickup / Drop Support (Changes Required Item 17) */}
                 <div className={`rounded-2xl p-4 shadow-sm border space-y-3 ${
                   darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
                 }`}>
@@ -1207,61 +1235,227 @@ export default function CustomerApp() {
                         setPickupPoint(dropPoint);
                         setDropPoint(temp);
                       }}
-                      className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center space-x-1"
+                      className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center space-x-1 cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      <span>Swap Locations</span>
+                      <span>Swap Points</span>
+                    </button>
+                  </div>
+
+                  {/* Multi-stop Mode Selector */}
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStopMode('standard');
+                        setExtraPickups([]);
+                        setExtraDrops([]);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center ${
+                        stopMode === 'standard'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      1 Pick ➔ 1 Drop
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStopMode('multi_pickup');
+                        if (extraPickups.length === 0) {
+                          setExtraPickups([landmarks[3] || landmarks[1]]);
+                        }
+                        setExtraDrops([]);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center ${
+                        stopMode === 'multi_pickup'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      + Multi-Pickup
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStopMode('multi_drop');
+                        if (extraDrops.length === 0) {
+                          setExtraDrops([landmarks[4] || landmarks[2]]);
+                        }
+                        setExtraPickups([]);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center ${
+                        stopMode === 'multi_drop'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      + Multi-Drop
                     </button>
                   </div>
 
                   {/* Pickup & Drop Selectors */}
-                  <div className="flex items-start space-x-3">
-                    <div className="mt-1 flex flex-col items-center">
-                      <div className="w-3 h-3 rounded-full bg-emerald-600 ring-4 ring-emerald-100" />
-                      <div className="w-0.5 h-8 bg-slate-200 dark:bg-slate-700 my-0.5" />
-                      <div className="w-3 h-3 rounded-full bg-rose-600 ring-4 ring-rose-100" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Pickup Landmark / Area</label>
-                        <select
-                          value={pickupPoint.address}
-                          onChange={(e) => {
-                            const found = landmarks.find((l) => l.address === e.target.value);
-                            if (found) setPickupPoint(found);
-                          }}
-                          className={`w-full text-xs font-semibold rounded-lg p-2 border focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
-                            darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
-                          }`}
-                        >
-                          {landmarks.map((l, i) => (
-                            <option key={i} value={l.address}>
-                              {l.area}: {l.address}
-                            </option>
-                          ))}
-                        </select>
+                  <div className="space-y-3">
+                    {/* Primary Pickup */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase flex items-center space-x-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                          <span>{stopMode === 'multi_pickup' ? 'Pickup Point 1 (Primary)' : 'Pickup Landmark / Area'}</span>
+                        </label>
                       </div>
+                      <select
+                        value={pickupPoint.address}
+                        onChange={(e) => {
+                          const found = landmarks.find((l) => l.address === e.target.value);
+                          if (found) setPickupPoint(found);
+                        }}
+                        className={`w-full text-xs font-semibold rounded-lg p-2 border focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                          darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        {landmarks.map((l, i) => (
+                          <option key={i} value={l.address}>
+                            {l.area}: {l.address}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Drop Landmark / Area</label>
-                        <select
-                          value={dropPoint.address}
-                          onChange={(e) => {
-                            const found = landmarks.find((l) => l.address === e.target.value);
-                            if (found) setDropPoint(found);
+                    {/* Extra Pickups if in multi_pickup mode */}
+                    {stopMode === 'multi_pickup' && (
+                      <div className="space-y-2 pl-3 border-l-2 border-emerald-500/40">
+                        {extraPickups.map((p, idx) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-bold text-emerald-500 uppercase flex items-center space-x-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                                <span>Pickup Point {idx + 2}</span>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setExtraPickups((prev) => prev.filter((_, i) => i !== idx))}
+                                className="text-[10px] text-rose-500 hover:underline"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <select
+                              value={p.address}
+                              onChange={(e) => {
+                                const found = landmarks.find((l) => l.address === e.target.value);
+                                if (found) {
+                                  setExtraPickups((prev) =>
+                                    prev.map((item, i) => (i === idx ? found : item))
+                                  );
+                                }
+                              }}
+                              className={`w-full text-xs font-semibold rounded-lg p-2 border focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                                darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              {landmarks.map((l, i) => (
+                                <option key={i} value={l.address}>
+                                  {l.area}: {l.address}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextL = landmarks[(pickupPoint.lat ? 3 : 0) + extraPickups.length] || landmarks[0];
+                            setExtraPickups((prev) => [...prev, nextL]);
                           }}
-                          className={`w-full text-xs font-semibold rounded-lg p-2 border focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
-                            darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
-                          }`}
+                          className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-1 pt-1"
                         >
-                          {landmarks.map((l, i) => (
-                            <option key={i} value={l.address}>
-                              {l.area}: {l.address}
-                            </option>
-                          ))}
-                        </select>
+                          <Plus className="w-3 h-3" />
+                          <span>Add Another Pickup Stop</span>
+                        </button>
                       </div>
+                    )}
+
+                    {/* Primary Drop */}
+                    <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase flex items-center space-x-1">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                          <span>{stopMode === 'multi_drop' ? 'Drop Destination 1 (Primary)' : 'Drop Landmark / Area'}</span>
+                        </label>
+                      </div>
+                      <select
+                        value={dropPoint.address}
+                        onChange={(e) => {
+                          const found = landmarks.find((l) => l.address === e.target.value);
+                          if (found) setDropPoint(found);
+                        }}
+                        className={`w-full text-xs font-semibold rounded-lg p-2 border focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                          darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                        }`}
+                      >
+                        {landmarks.map((l, i) => (
+                          <option key={i} value={l.address}>
+                            {l.area}: {l.address}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
+                    {/* Extra Drops if in multi_drop mode */}
+                    {stopMode === 'multi_drop' && (
+                      <div className="space-y-2 pl-3 border-l-2 border-rose-500/40">
+                        {extraDrops.map((d, idx) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-bold text-rose-500 uppercase flex items-center space-x-1">
+                                <span className="w-2 h-2 rounded-full bg-rose-400 inline-block" />
+                                <span>Drop Destination {idx + 2}</span>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setExtraDrops((prev) => prev.filter((_, i) => i !== idx))}
+                                className="text-[10px] text-rose-500 hover:underline"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <select
+                              value={d.address}
+                              onChange={(e) => {
+                                const found = landmarks.find((l) => l.address === e.target.value);
+                                if (found) {
+                                  setExtraDrops((prev) =>
+                                    prev.map((item, i) => (i === idx ? found : item))
+                                  );
+                                }
+                              }}
+                              className={`w-full text-xs font-semibold rounded-lg p-2 border focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                                darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              {landmarks.map((l, i) => (
+                                <option key={i} value={l.address}>
+                                  {l.area}: {l.address}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextL = landmarks[(dropPoint.lat ? 4 : 1) + extraDrops.length] || landmarks[1];
+                            setExtraDrops((prev) => [...prev, nextL]);
+                          }}
+                          className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center space-x-1 pt-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Another Drop Stop</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

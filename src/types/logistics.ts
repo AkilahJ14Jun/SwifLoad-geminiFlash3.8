@@ -66,6 +66,7 @@ export interface LocationPoint {
   landmark?: string;
   senderOrReceiverName?: string;
   contactPhone?: string;
+  senderOrReceiverPhone?: string;
 }
 
 export interface ShipmentDetails {
@@ -165,6 +166,13 @@ export interface FareBreakdown {
   totalSlabDistanceKm?: number;
 }
 
+export interface IncentiveSlab {
+  id: string;
+  minCompletedTrips: number;
+  incentiveAmount: number;
+  label: string;
+}
+
 export interface Trip {
   id: string;
   bookingCode: string;
@@ -177,6 +185,9 @@ export interface Trip {
   vehicleCategory: VehicleCategory;
   pickup: LocationPoint;
   drop: LocationPoint;
+  pickups?: LocationPoint[];
+  drops?: LocationPoint[];
+  stopType?: 'single' | 'multi_pickup' | 'multi_drop';
   distanceKm: number;
   durationMins: number;
   shipment: ShipmentDetails;

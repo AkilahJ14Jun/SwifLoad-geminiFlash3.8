@@ -10,6 +10,7 @@ import {
   ReferralProgramConfig,
   ReferralRecord,
   CustomerUser,
+  IncentiveSlab,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -20,6 +21,8 @@ import {
   DEFAULT_CUSTOMER_SLABS,
   DEFAULT_REFERRAL_CONFIG,
   INITIAL_REFERRALS,
+  DEFAULT_INCENTIVE_SLABS,
+  DEFAULT_DISPATCH_TIMEOUT_SECS,
 } from '@/lib/data';
 
 export interface DatabaseSchema {
@@ -31,6 +34,8 @@ export interface DatabaseSchema {
   customerSlabConfigs: CustomerTypeSlabConfig[];
   referralConfig: ReferralProgramConfig;
   referrals: ReferralRecord[];
+  incentiveSlabs: IncentiveSlab[];
+  dispatchTimeoutSecs: number;
   customer: CustomerUser;
   lastUpdated: string;
 }
@@ -110,6 +115,8 @@ export function getDatabase(): DatabaseSchema {
     customerSlabConfigs: DEFAULT_CUSTOMER_SLABS,
     referralConfig: DEFAULT_REFERRAL_CONFIG,
     referrals: INITIAL_REFERRALS,
+    incentiveSlabs: DEFAULT_INCENTIVE_SLABS,
+    dispatchTimeoutSecs: DEFAULT_DISPATCH_TIMEOUT_SECS,
     customer: INITIAL_CUSTOMER,
     lastUpdated: new Date().toISOString(),
   };
@@ -146,6 +153,8 @@ export function resetDatabase(): DatabaseSchema {
     customerSlabConfigs: DEFAULT_CUSTOMER_SLABS,
     referralConfig: DEFAULT_REFERRAL_CONFIG,
     referrals: INITIAL_REFERRALS,
+    incentiveSlabs: DEFAULT_INCENTIVE_SLABS,
+    dispatchTimeoutSecs: DEFAULT_DISPATCH_TIMEOUT_SECS,
     customer: INITIAL_CUSTOMER,
     lastUpdated: new Date().toISOString(),
   };

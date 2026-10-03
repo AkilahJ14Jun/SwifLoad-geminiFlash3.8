@@ -2,6 +2,122 @@
 
 This document tracks all technical updates, architectural additions, and feature implementations made in each development session across any LLM model.
 
+## 📅 Session: 2026-10-03 (Fix Application Launch & Dependency Configuration)
+
+### Objectives
+1. Diagnose and fix failure when launching the application.
+2. Resolve CSS / Webpack build errors caused by mismatched Tailwind CSS v4 and Next.js 16 entries in `package.json` and `postcss.config.js`.
+3. Verify build cleanly passes with 0 errors.
+4. Launch the application server.
+
+### Bullet-Point Changes
+- `package.json`:
+  - Restored Next.js 14 (`14.2.23`) and Tailwind CSS v3 (`^3.4.17`), matching installed dependencies and `AGENTS.md` architecture specifications.
+  - Removed missing `@tailwindcss/postcss` and unneeded capacitor cli upgrade.
+- `postcss.config.js`:
+  - Restored Tailwind CSS v3 PostCSS plugin configuration (`tailwindcss: {}`).
+- `src/app/globals.css`:
+  - Restored standard Tailwind directives (`@tailwind base; @tailwind components; @tailwind utilities;`).
+- `package-lock.json`:
+  - Re-synced dependency lockfile to match installed versions.
+
+### Verification Status
+- Production build: `npm run build` executed successfully with exit code 0 and 0 TypeScript compilation errors. All 8 routes generated cleanly.
+- Application launch: Started development server via `npm run dev` on `http://localhost:3000`.
+
+## 📅 Session: 2026-10-03 (Implementation of Changes Required.txt — Driver App & Admin Features)
+
+### Objectives
+1. **Driver App Download OTP Verification (Items 6 & 7):** Ensure Driver App downloads are gated by mobile number confirmation via OTP, with optional email collection.
+2. **Driver App Home Screen Greeting (Item 8):** Add dynamic greeting of the day (Good Morning, Good Afternoon, Good Evening, Good Night) prominently at the top of the Driver Home view.
+3. **Driver Wallet Balance & Maximum Cap (Items 9, 10, 11):** Display current overall balance as a button on top with a maximum cap of Rs. 200. Clicking provides options to recharge or withdraw.
+4. **Negative Balance Block Rule & Formula (Item 11):** Block driver app from receiving pickup calls when debt exceeds -Rs. 200 (balance <= -200). Require minimal recharge of Rs. 200 to unblock, with exact formula: `-200 + 300 = 100`.
+5. **Today's Earnings & Reverse Chronological History (Items 12 & 13):** Display today's earnings button on top with a "view history" link that renders transactions and completed trips in reverse chronological order.
+6. **Total Incentives & Admin Portal Configuration (Item 14):** Display total incentives on top with milestone targets (e.g. 4 calls -> Rs. 25). Provide dynamic slab management in Admin Portal.
+7. **Sponsored Partner Ads (Item 15):** Add sponsored ads section at bottom of driver home screen, displayed horizontally stacked one below the other.
+8. **Welcome Button & Dedicated Duty Page (Items 16 & 19):** Add prominent Welcome button navigating to dedicated live pickup duty page; move maps from home screen to this dedicated duty page.
+9. **Multi-Pickup & Multi-Drop Locations (Items 17 & 18):** Support multi-pickup and multi-drop locations in customer booking and driver dispatch display.
+10. **Live Order Pop-ups on Duty Page (Items 20, 21, 22, 23):** Show pickup/drop locations, applicable charges, contact number of pickup point touchable to call customer (`tel:`), clearly visible 10-second countdown timer (configurable timeframe in Admin Portal), and skip task option.
+
+### Bullet-Point Changes
+- `src/types/logistics.ts`:
+  - Added `IncentiveSlab` interface (`id`, `minCompletedTrips`, `incentiveAmount`, `label`).
+  - Extended `Trip` interface with `pickups?: LocationPoint[]`, `drops?: LocationPoint[]`, `stopType?: 'single' | 'multi_pickup' | 'multi_drop'`.
+  - Added `senderOrReceiverPhone?: string` to `LocationPoint` for direct calling links.
+- `src/lib/data.ts`:
+  - Defined and exported `DEFAULT_INCENTIVE_SLABS` (milestone tiers: 4 calls -> ₹25, 8 calls -> ₹60, 12 calls -> ₹120) and `DEFAULT_DISPATCH_TIMEOUT_SECS = 10`.
+  - Configured sample driver `drv_05` with negative balance `-350` to demonstrate the blocked pickup calls state.
+- `src/lib/server/db.ts`:
+  - Updated `DatabaseSchema`, default in-memory database, and `resetDatabase` to persist `incentiveSlabs` and `dispatchTimeoutSecs`.
+- `src/app/api/config/route.ts`:
+  - Added handlers for `body.type === 'incentiveSlabs'` and `body.type === 'dispatchSettings'` with real-time SSE event broadcasting.
+- `src/lib/pricing.ts`:
+  - Implemented `calculateMultiStopDistanceKm(stops)` helper for multi-pickup / multi-drop route calculations.
+  - Implemented `calculateDriverIncentives(completedTripsCount, slabs)` helper for milestone reward computation, target progress, and next slab tracking.
+- `src/context/LogisticsContext.tsx`:
+  - Added state and persistence for `incentiveSlabs` and `dispatchTimeoutSecs` with localStorage caching and SSE synchronization.
+  - Added `updateIncentiveSlabs` and `updateDispatchTimeoutSecs`.
+  - Refactored `topUpDriverWallet` with exact negative balance clearance formula (`-200 + 300 = 100`) and max balance cap of ₹200.
+  - Updated `acceptTripByDriver` to reject bookings if driver balance `<= -200`.
+  - Updated `createBooking` to accept `pickups`, `drops`, `stopType`, calculate multi-stop distance, and apply `dispatchTimeoutSecs`.
+  - Updated cascading dispatch timer and `passTripToNextGroup` to use `dispatchTimeoutSecs`.
+- `src/app/downloads/page.tsx`:
+  - Added driver download OTP verification modal gating APK download and PWA installation behind mobile number confirmation and optional email.
+- `src/components/Customer/CustomerApp.tsx`:
+  - Implemented multi-pickup and multi-drop location selectors (`1 Pick ➔ 1 Drop`, `+ Multi-Pickup`, `+ Multi-Drop`) with stop addition/removal and multi-stop distance routing.
+- `src/components/Admin/AdminPortal.tsx`:
+  - Added `Driver Incentives & Dispatch Timeout` navigation tab (`id: 'driver-incentives'`).
+  - Built Driver Incentive Slabs table, Add/Edit Incentive Slab modal, and Pickup Call Pop-up Timeframe Configuration with presets and custom seconds input.
+- `src/components/Driver/DriverApp.tsx`:
+  - Added `getGreetingOfDay()` helper displaying personalized day greetings (`Good Morning`, `Good Afternoon`, `Good Evening`, `Good Night`) at the top of Driver Home.
+  - Added Top Metric Cards: Today's Earnings button with "View History" opening reverse chronological modal, Total Incentives card with milestone progress, and Wallet Balance button (max cap ₹200) opening combined Recharge / Withdraw modal.
+  - Added Red Account Blocked alert banner when wallet balance `<= -200`, explaining the minimal ₹200 recharge requirement.
+  - Added Welcome button (`Welcome / Enter Live Pickup Calls Terminal ➔`) transitioning views to dedicated `duty` page.
+  - Relocated `LeafletMap` from home screen to the dedicated duty page.
+  - Added live order pop-ups with visible 10-second countdown timer, charges applicable, multi-pickup and multi-drop locations, clickable phone numbers (`tel:`) to call customers, and skip task option.
+  - Added Sponsored Ads section at the bottom of Driver Home screen with horizontal stacked cards (Apollo Tyres, Castrol VECTON, Exide Batteries, Coimbatore Driver Wellness Hub).
+
+### Verification Status
+- Build verification: `npm run build` executed successfully with exit code 0 and 0 TypeScript compilation errors.
+
+
+## 📅 Session: 2026-10-03 (Codebase Graph Extraction & Artifact Generation via Graphify)
+
+### Objectives
+1. **Execute Graphify Extraction:** Run `/graphify .` across the codebase to re-index the architecture, AST symbols, dependencies, and generate updated knowledge graph artifacts.
+
+### Bullet-Point Changes
+- `graphify-out/`:
+  - Executed `graphify . --code-only` to parse 25 code files and refresh AST extraction without requiring external LLM API tokens.
+  - Re-clustered network graph and regenerated [graph.json](file:///C:/SwifLoad-geminiFlash3.8/graphify-out/graph.json), [graph.html](file:///C:/SwifLoad-geminiFlash3.8/graphify-out/graph.html), and [GRAPH_REPORT.md](file:///C:/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_REPORT.md) with 371 nodes, 721 edges across 21 community clusters.
+  - Generated interactive collapsible tree diagram in [GRAPH_TREE.html](file:///C:/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_TREE.html).
+  - Generated Mermaid-based architecture call-flow visualization in [SwifLoad-geminiFlash3.8-callflow.html](file:///C:/SwifLoad-geminiFlash3.8/graphify-out/SwifLoad-geminiFlash3.8-callflow.html).
+
+### Verification Status
+- Build verification: `npm run build` executed successfully (exit code 0, 0 TypeScript/lint errors).
+
+---
+
+## 📅 Session: 2026-10-03 (Build Fix for Next.js 15 Route Handlers & PostCSS)
+
+### Objectives
+1. **Fix Build Errors:** Resolve TypeScript compilation errors in Next.js API route handlers and fix PostCSS tailwindcss resolution errors to successfully build the project.
+
+### Bullet-Point Changes
+- `src/app/api/drivers/[id]/route.ts`:
+  - Updated `params` type signature to `Promise<{ id: string }>` and awaited it for Next.js 15 compatibility.
+- `src/app/api/trips/[id]/route.ts`:
+  - Updated `params` type signature to `Promise<{ id: string }>` and awaited it for Next.js 15 compatibility.
+- `postcss.config.js`:
+  - Updated the tailwindcss plugin to use `@tailwindcss/postcss`.
+- `src/app/globals.css`:
+  - Replaced legacy `@tailwind` directives with `@import "tailwindcss";` for Tailwind CSS v4 compatibility.
+- `package.json`:
+  - Installed `@tailwindcss/postcss` as a dev dependency.
+
+### Verification Status
+- Build verification: `npm run build` executed successfully (exit code 0, 0 TypeScript/lint errors).
+
 ---
 
 ## 📅 Session: 2026-10-03 (Sponsored Partner Ads Placement & Stack Layout Refactor)

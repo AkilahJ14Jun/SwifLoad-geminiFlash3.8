@@ -9,6 +9,7 @@ import {
   ReferralProgramConfig,
   ReferralRecord,
   WalletTransaction,
+  IncentiveSlab,
 } from '@/types/logistics';
 
 export const DRIVER_GROUPS: DriverGroup[] = [
@@ -887,3 +888,27 @@ export const INITIAL_TRIPS: Trip[] = [
     ],
   },
 ];
+
+export const DEFAULT_INCENTIVE_SLABS: IncentiveSlab[] = [
+  {
+    id: 'inc_slab_1',
+    minCompletedTrips: 4,
+    incentiveAmount: 25,
+    label: 'Silver Incentive (4 Completed Trips)',
+  },
+  {
+    id: 'inc_slab_2',
+    minCompletedTrips: 8,
+    incentiveAmount: 60,
+    label: 'Gold Incentive (8 Completed Trips)',
+  },
+  {
+    id: 'inc_slab_3',
+    minCompletedTrips: 12,
+    incentiveAmount: 120,
+    label: 'Platinum Incentive (12 Completed Trips)',
+  },
+];
+
+export const DEFAULT_DISPATCH_TIMEOUT_SECS = 10;
+

@@ -34,6 +34,8 @@ import {
   Share2,
   X,
   UserCheck,
+  Award,
+  Timer,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import {
@@ -47,6 +49,7 @@ import {
   CustomerTypeSlabConfig,
   ReferralRecord,
   WalletTransaction,
+  IncentiveSlab,
 } from '@/types/logistics';
 import { calculateSlabDistanceFare } from '@/lib/pricing';
 
@@ -81,6 +84,10 @@ export default function AdminPortal() {
     currentCustomer,
     topUpCustomerWallet,
     updateCustomerType,
+    incentiveSlabs,
+    updateIncentiveSlabs,
+    dispatchTimeoutSecs,
+    updateDispatchTimeoutSecs,
   } = useLogistics();
 
   // Admin Navigation Tab
@@ -91,12 +98,21 @@ export default function AdminPortal() {
     | 'drivers-kyc'
     | 'customer-categories'
     | 'slab-rates'
+    | 'driver-incentives'
     | 'referrals'
     | 'wallets'
     | 'pricing-zones'
     | 'finance'
     | 'audit'
   >('dashboard');
+
+  // Driver Incentives & Dispatch Timeout State (Changes Required Items 14 & 16)
+  const [editingIncentiveSlab, setEditingIncentiveSlab] = useState<IncentiveSlab | null>(null);
+  const [showAddIncentiveModal, setShowAddIncentiveModal] = useState<boolean>(false);
+  const [newIncentiveTrips, setNewIncentiveTrips] = useState<number>(4);
+  const [newIncentiveAmount, setNewIncentiveAmount] = useState<number>(25);
+  const [newIncentiveLabel, setNewIncentiveLabel] = useState<string>('Milestone (4 Calls)');
+  const [customTimeoutInput, setCustomTimeoutInput] = useState<number>(dispatchTimeoutSecs || 10);
 
   // Filters for Live Board
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -338,6 +354,7 @@ export default function AdminPortal() {
           { id: 'drivers-kyc', label: 'Driver Partners & KYC', icon: Users, badge: pendingKyc },
           { id: 'customer-categories', label: 'Customer Categories', icon: UserCheck },
           { id: 'slab-rates', label: 'Distance Slab Rates', icon: Calculator },
+          { id: 'driver-incentives', label: 'Driver Incentives & Dispatch Timeout', icon: Award },
           { id: 'referrals', label: 'Referral Programs', icon: Gift },
           { id: 'wallets', label: 'Driver & Customer Wallets', icon: Wallet },
           { id: 'pricing-zones', label: 'Vehicle Matrix & Zones', icon: Settings },
@@ -1225,6 +1242,314 @@ export default function AdminPortal() {
                 );
               })()}
             </div>
+          </div>
+        )}
+
+        {/* ================= 5B. DRIVER INCENTIVES & DISPATCH TIMEFRAME (CHANGES REQUIRED ITEMS 14 & 16) ================= */}
+        {adminTab === 'driver-incentives' && (
+          <div className="space-y-6">
+            {/* Panel 1: Driver Incentive Slabs Configuration */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <Award className="w-5 h-5 text-amber-500" />
+                    <span>Driver Daily Incentive Milestones & Slab Rewards</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure trip completion milestones and cash incentive rewards (e.g., 4 completed calls = ₹25 reward)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewIncentiveTrips(4);
+                    setNewIncentiveAmount(25);
+                    setNewIncentiveLabel('Milestone Reward');
+                    setEditingIncentiveSlab(null);
+                    setShowAddIncentiveModal(true);
+                  }}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-sm cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add Incentive Slab</span>
+                </button>
+              </div>
+
+              {/* Slabs Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b text-[11px]">
+                      <th className="py-2.5 px-3">Completed Calls Required</th>
+                      <th className="py-2.5 px-3">Incentive Reward (₹)</th>
+                      <th className="py-2.5 px-3">Milestone Label</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {incentiveSlabs && incentiveSlabs.length > 0 ? (
+                      [...incentiveSlabs]
+                        .sort((a, b) => a.minCompletedTrips - b.minCompletedTrips)
+                        .map((slab) => (
+                          <tr key={slab.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-3 font-bold text-slate-800">
+                              <span className="inline-flex items-center space-x-1.5 bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg">
+                                <span>🎯</span>
+                                <span>{slab.minCompletedTrips} Completed Calls</span>
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="font-extrabold text-emerald-600 text-sm font-mono">
+                                ₹{slab.incentiveAmount}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-slate-600 font-medium">
+                              {slab.label}
+                            </td>
+                            <td className="py-3 px-3 text-right space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingIncentiveSlab(slab);
+                                  setNewIncentiveTrips(slab.minCompletedTrips);
+                                  setNewIncentiveAmount(slab.incentiveAmount);
+                                  setNewIncentiveLabel(slab.label);
+                                  setShowAddIncentiveModal(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = incentiveSlabs.filter((s) => s.id !== slab.id);
+                                  updateIncentiveSlabs(updated);
+                                }}
+                                className="text-rose-600 hover:text-rose-800 font-bold hover:underline cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="text-center py-6 text-slate-400">
+                          No driver incentive slabs configured yet. Click "+ Add Incentive Slab" above.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Informational Guidance Box */}
+              <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                <div className="font-bold flex items-center space-x-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>How Driver Incentives Work</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Driver apps display the "Total Incentives" earned today on the home screen. For example, if a driver completes 4 calls, they unlock the ₹25 slab reward. Additional trips advance the driver towards the next milestone in real-time.
+                </p>
+              </div>
+            </div>
+
+            {/* Panel 2: Pickup Call Pop-up Timeframe Configuration (Item 16) */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <Timer className="w-5 h-5 text-blue-600" />
+                    <span>Pickup Call Pop-up Timeframe Configuration</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure the timeframe for which incoming pickup call pop-ups remain displayed to the driver before auto-cascading
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-slate-500 font-medium">Current Setting:</span>
+                  <span className="text-sm font-extrabold bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-xl font-mono">
+                    {dispatchTimeoutSecs} Seconds
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                  <div className="font-bold text-slate-700">Quick Preset Options</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5, 10, 15, 20].map((secs) => (
+                      <button
+                        key={secs}
+                        type="button"
+                        onClick={() => {
+                          setCustomTimeoutInput(secs);
+                          updateDispatchTimeoutSecs(secs);
+                        }}
+                        className={`py-2 px-2 rounded-xl font-bold border transition-all text-center cursor-pointer ${
+                          dispatchTimeoutSecs === secs
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {secs}s {secs === 10 ? '(Default)' : ''}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Changes Required Specification Item 16 specifies a 10-second response window for pickup calls.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                  <div className="font-bold text-slate-700">Custom Timeframe Duration</div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      min={3}
+                      max={60}
+                      value={customTimeoutInput}
+                      onChange={(e) => setCustomTimeoutInput(Number(e.target.value))}
+                      className="w-28 p-2 bg-white border border-slate-300 rounded-xl font-mono font-bold text-center text-sm focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="font-semibold text-slate-600">seconds</span>
+                    <button
+                      type="button"
+                      onClick={() => updateDispatchTimeoutSecs(customTimeoutInput)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      Save Timeframe
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    This determines the visible countdown seconds shown on the driver's order pop-up card.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal: Add/Edit Incentive Slab */}
+            {showAddIncentiveModal && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl border border-slate-200">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-sm text-slate-900 flex items-center space-x-2">
+                      <Award className="w-4 h-4 text-amber-500" />
+                      <span>{editingIncentiveSlab ? 'Edit Incentive Slab' : 'Add New Incentive Slab'}</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddIncentiveModal(false)}
+                      className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (newIncentiveTrips <= 0 || newIncentiveAmount <= 0) return;
+
+                      if (editingIncentiveSlab) {
+                        const updated = (incentiveSlabs || []).map((s) =>
+                          s.id === editingIncentiveSlab.id
+                            ? {
+                                ...s,
+                                minCompletedTrips: Number(newIncentiveTrips),
+                                incentiveAmount: Number(newIncentiveAmount),
+                                label: newIncentiveLabel.trim() || `Milestone (${newIncentiveTrips} Calls)`,
+                              }
+                            : s
+                        );
+                        updateIncentiveSlabs(updated);
+                      } else {
+                        const newSlab: IncentiveSlab = {
+                          id: `inc_slab_${Date.now()}`,
+                          minCompletedTrips: Number(newIncentiveTrips),
+                          incentiveAmount: Number(newIncentiveAmount),
+                          label: newIncentiveLabel.trim() || `Milestone (${newIncentiveTrips} Calls)`,
+                        };
+                        updateIncentiveSlabs([...(incentiveSlabs || []), newSlab]);
+                      }
+                      setShowAddIncentiveModal(false);
+                    }}
+                    className="space-y-3.5 text-xs"
+                  >
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Completed Calls Target *
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        required
+                        value={newIncentiveTrips}
+                        onChange={(e) => setNewIncentiveTrips(Number(e.target.value))}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:outline-none focus:border-amber-500"
+                        placeholder="e.g. 4"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        Number of completed customer deliveries required
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Incentive Reward Amount (₹) *
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 font-bold text-emerald-600">₹</span>
+                        <input
+                          type="number"
+                          min={5}
+                          required
+                          value={newIncentiveAmount}
+                          onChange={(e) => setNewIncentiveAmount(Number(e.target.value))}
+                          className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:outline-none focus:border-amber-500"
+                          placeholder="e.g. 25"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        Cash incentive bonus credited to driver's wallet
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Milestone Title / Label
+                      </label>
+                      <input
+                        type="text"
+                        value={newIncentiveLabel}
+                        onChange={(e) => setNewIncentiveLabel(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 focus:outline-none focus:border-amber-500"
+                        placeholder="e.g. Silver Milestone (4 Calls)"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2 pt-2 border-t">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddIncentiveModal(false)}
+                        className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-xl shadow-sm transition-colors cursor-pointer"
+                      >
+                        {editingIncentiveSlab ? 'Save Changes' : 'Create Slab'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

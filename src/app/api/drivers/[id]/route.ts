@@ -7,10 +7,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const db = getDatabase();
-  const driver = db.drivers.find((d) => d.id === params.id);
+  const driver = db.drivers.find((d) => d.id === id);
   if (!driver) {
     return NextResponse.json({ success: false, error: 'Driver not found' }, { status: 404 });
   }
@@ -19,12 +20,13 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const updates: Partial<DriverPartner> = await req.json();
     const db = getDatabase();
-    const index = db.drivers.findIndex((d) => d.id === params.id);
+    const index = db.drivers.findIndex((d) => d.id === id);
 
     if (index === -1) {
       return NextResponse.json({ success: false, error: 'Driver not found' }, { status: 404 });

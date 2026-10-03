@@ -9,6 +9,7 @@ import {
   DistanceSlab,
   DriverPartner,
   SlabBreakdownItem,
+  IncentiveSlab,
 } from '@/types/logistics';
 import { DEFAULT_CUSTOMER_SLABS, SERVICE_ZONES, VEHICLE_CONFIGS } from './data';
 
@@ -301,5 +302,51 @@ export function calculateCancellationFee(status: string, vehicleCategory: Vehicl
     return vehicleCategory === '2wheeler' ? 50 : 120;
   }
   return 0;
+}
+
+/**
+ * Calculates total route distance across multiple waypoints / stops
+ */
+export function calculateMultiStopDistanceKm(stops: { lat: number; lng: number }[]): number {
+  if (stops.length < 2) return 1.0;
+  let total = 0;
+  for (let i = 0; i < stops.length - 1; i++) {
+    total += calculateDistanceKm(stops[i], stops[i + 1]);
+  }
+  return Math.max(1.0, Math.round(total * 10) / 10);
+}
+
+/**
+ * Calculates driver incentives based on completed calls and configured incentive slabs (Changes Required Item 14)
+ */
+export function calculateDriverIncentives(
+  completedTripsCount: number,
+  slabs: IncentiveSlab[]
+): {
+  totalIncentive: number;
+  nextSlab: IncentiveSlab | null;
+  tripsToNextSlab: number;
+  currentSlab: IncentiveSlab | null;
+  progressPercent: number;
+} {
+  const sorted = [...slabs].sort((a, b) => a.minCompletedTrips - b.minCompletedTrips);
+  let totalIncentive = 0;
+  let currentSlab: IncentiveSlab | null = null;
+  let nextSlab: IncentiveSlab | null = null;
+
+  for (const slab of sorted) {
+    if (completedTripsCount >= slab.minCompletedTrips) {
+      totalIncentive = slab.incentiveAmount;
+      currentSlab = slab;
+    } else if (!nextSlab) {
+      nextSlab = slab;
+    }
+  }
+
+  const tripsToNextSlab = nextSlab ? Math.max(0, nextSlab.minCompletedTrips - completedTripsCount) : 0;
+  const targetTrips = nextSlab ? nextSlab.minCompletedTrips : (currentSlab ? currentSlab.minCompletedTrips : 4);
+  const progressPercent = Math.min(100, Math.round((completedTripsCount / targetTrips) * 100));
+
+  return { totalIncentive, nextSlab, tripsToNextSlab, currentSlab, progressPercent };
 }
 

@@ -27,10 +27,13 @@ export default function DownloadsPage() {
   const [pwaInstalled, setPwaInstalled] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
-  // Customer App Download OTP Verification State (Changes Required.txt - Item 1)
+  // Download OTP Verification State (Customer & Driver Partner Apps - Changes Required Items 6 & 7)
   const [showVerifyModal, setShowVerifyModal] = useState<boolean>(false);
+  const [targetApp, setTargetApp] = useState<'customer' | 'driver'>('customer');
   const [isCustomerVerified, setIsCustomerVerified] = useState<boolean>(false);
   const [verifiedPhone, setVerifiedPhone] = useState<string>('');
+  const [isDriverVerified, setIsDriverVerified] = useState<boolean>(false);
+  const [verifiedDriverPhone, setVerifiedDriverPhone] = useState<string>('');
   const [inputPhone, setInputPhone] = useState<string>('');
   const [inputEmail, setInputEmail] = useState<string>('');
   const [inputOtp, setInputOtp] = useState<string>('1234');
@@ -40,37 +43,55 @@ export default function DownloadsPage() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('swifload_customer_verified_phone');
-      if (stored) {
+      const storedCustomer = localStorage.getItem('swifload_customer_verified_phone');
+      if (storedCustomer) {
         setIsCustomerVerified(true);
-        setVerifiedPhone(stored);
+        setVerifiedPhone(storedCustomer);
+      }
+      const storedDriver = localStorage.getItem('swifload_driver_verified_phone');
+      if (storedDriver) {
+        setIsDriverVerified(true);
+        setVerifiedDriverPhone(storedDriver);
       }
     } catch {}
   }, []);
 
-  const triggerApkDownload = () => {
+  const triggerApkDownload = (app: 'customer' | 'driver') => {
+    const filename = app === 'driver' ? 'SwifLoad-Driver.apk' : 'SwifLoad-Customer.apk';
     const link = document.createElement('a');
-    link.href = '/downloads/SwifLoad-Customer.apk';
-    link.download = 'SwifLoad-Customer.apk';
+    link.href = `/downloads/${filename}`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleCustomerDownloadRequest = (action: 'apk' | 'pwa') => {
-    if (isCustomerVerified) {
+  const handleDownloadRequest = (app: 'customer' | 'driver', action: 'apk' | 'pwa') => {
+    const isVerified = app === 'driver' ? isDriverVerified : isCustomerVerified;
+    if (isVerified) {
       if (action === 'apk') {
-        triggerApkDownload();
+        triggerApkDownload(app);
       } else {
         handleInstallPwa();
       }
       return;
     }
 
+    setTargetApp(app);
     setPendingAction(action);
     setOtpSent(false);
     setOtpError('');
+    setInputPhone('');
+    setInputEmail('');
     setShowVerifyModal(true);
+  };
+
+  const handleCustomerDownloadRequest = (action: 'apk' | 'pwa') => {
+    handleDownloadRequest('customer', action);
+  };
+
+  const handleDriverDownloadRequest = (action: 'apk' | 'pwa') => {
+    handleDownloadRequest('driver', action);
   };
 
   const handleSendOtp = (e: React.FormEvent) => {
@@ -93,21 +114,31 @@ export default function DownloadsPage() {
 
     const fullPhone = inputPhone.startsWith('+91') ? inputPhone : `+91 ${inputPhone.trim()}`;
     try {
-      localStorage.setItem('swifload_customer_verified_phone', fullPhone);
-      if (inputEmail.trim()) {
-        localStorage.setItem('swifload_customer_verified_email', inputEmail.trim());
+      if (targetApp === 'driver') {
+        localStorage.setItem('swifload_driver_verified_phone', fullPhone);
+        if (inputEmail.trim()) {
+          localStorage.setItem('swifload_driver_verified_email', inputEmail.trim());
+        }
+        setIsDriverVerified(true);
+        setVerifiedDriverPhone(fullPhone);
+      } else {
+        localStorage.setItem('swifload_customer_verified_phone', fullPhone);
+        if (inputEmail.trim()) {
+          localStorage.setItem('swifload_customer_verified_email', inputEmail.trim());
+        }
+        setIsCustomerVerified(true);
+        setVerifiedPhone(fullPhone);
       }
     } catch {}
 
-    setIsCustomerVerified(true);
-    setVerifiedPhone(fullPhone);
     setShowVerifyModal(false);
     setOtpError('');
 
     // Proceed to pending action immediately after verification
+    const currentApp = targetApp;
     if (pendingAction === 'apk') {
       setTimeout(() => {
-        triggerApkDownload();
+        triggerApkDownload(currentApp);
       }, 300);
     } else if (pendingAction === 'pwa') {
       setTimeout(() => {
@@ -320,6 +351,31 @@ export default function DownloadsPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t border-slate-800">
+              {/* Verification Status Banner if driver verified */}
+              {isDriverVerified ? (
+                <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-400">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
+                    <span>Device Verified ({verifiedDriverPhone})</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsDriverVerified(false);
+                      setVerifiedDriverPhone('');
+                      localStorage.removeItem('swifload_driver_verified_phone');
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-white underline cursor-pointer"
+                  >
+                    Change Number
+                  </button>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center space-x-2 text-[11px] text-amber-300">
+                  <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Mobile OTP verification required before downloading.</span>
+                </div>
+              )}
+
               {/* Option A: Direct Web Launch */}
               <Link
                 href="/driver"
@@ -329,20 +385,23 @@ export default function DownloadsPage() {
                 <span>Launch Mobile Driver App</span>
               </Link>
 
-              {/* Option B: Direct Android APK */}
-              <a
-                href="/downloads/SwifLoad-Driver.apk"
-                download="SwifLoad-Driver.apk"
-                className="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl border border-slate-700 hover:border-slate-600 transition-all text-xs"
+              {/* Option B: Direct Android APK (Gated by Mobile + OTP) */}
+              <button
+                type="button"
+                onClick={() => handleDriverDownloadRequest('apk')}
+                className="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 px-4 rounded-xl border border-slate-700 hover:border-slate-600 transition-all text-xs cursor-pointer"
               >
                 <Download className="w-4 h-4 text-amber-400" />
-                <span>Download Android APK (Direct)</span>
-              </a>
+                <span>
+                  {isDriverVerified ? 'Download Android APK (Direct)' : 'Verify Mobile & Download APK'}
+                </span>
+              </button>
 
-              {/* Option C: 1-Click PWA Install */}
+              {/* Option C: 1-Click PWA Install (Gated by Mobile + OTP) */}
               <button
-                onClick={handleInstallPwa}
-                className="w-full text-center text-xs text-amber-400 hover:text-amber-300 underline py-1"
+                type="button"
+                onClick={() => handleDriverDownloadRequest('pwa')}
+                className="w-full text-center text-xs text-amber-400 hover:text-amber-300 underline py-1 cursor-pointer"
               >
                 📲 Install Driver App on Phone Home Screen
               </button>
@@ -409,17 +468,25 @@ export default function DownloadsPage() {
         </div>
       </div>
 
-      {/* ================= MODAL: CUSTOMER APP DOWNLOAD VERIFICATION ================= */}
+      {/* ================= MODAL: APP DOWNLOAD VERIFICATION ================= */}
       {showVerifyModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-blue-900/60 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl text-white relative">
+          <div className={`border rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl text-white relative ${
+            targetApp === 'driver' ? 'bg-slate-900 border-amber-900/60' : 'bg-slate-900 border-blue-900/60'
+          }`}>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  targetApp === 'driver'
+                    ? 'bg-amber-600/20 border border-amber-500/30 text-amber-400'
+                    : 'bg-blue-600/20 border border-blue-500/30 text-blue-400'
+                }`}>
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-white">Customer App Download Verification</h3>
+                  <h3 className="font-bold text-base text-white">
+                    {targetApp === 'driver' ? 'Driver-Partner App Download' : 'Customer App Download'} Verification
+                  </h3>
                   <p className="text-[11px] text-slate-400">Security requirement before APK installation</p>
                 </div>
               </div>
@@ -434,8 +501,14 @@ export default function DownloadsPage() {
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed bg-blue-950/40 p-3 rounded-xl border border-blue-900/40">
-              The SwifLoad Customer App requires the mobile number of the device where it will be installed. An OTP will be sent to confirm before initiating the download.
+            <p className={`text-xs text-slate-300 leading-relaxed p-3 rounded-xl border ${
+              targetApp === 'driver'
+                ? 'bg-amber-950/30 border-amber-900/40'
+                : 'bg-blue-950/40 border-blue-900/40'
+            }`}>
+              {targetApp === 'driver'
+                ? 'The SwifLoad Driver App requires the mobile number of the phone where it will be installed. An OTP confirmation is required before download.'
+                : 'The SwifLoad Customer App requires the mobile number of the device where it will be installed. An OTP will be sent to confirm before initiating the download.'}
             </p>
 
             {otpError && (

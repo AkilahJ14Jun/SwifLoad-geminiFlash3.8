@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>/ — graphify tree viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      margin: 20px 0 0 24px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #1e3a56;
+    }
+    .controls {
+      margin: 20px 0 15px 24px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 18px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:active {
+      background: #004085;
+    }
+    #tree-container {
+      width: calc(100vw - 48px); /* Adjust for body margin/padding */
+      height: 85vh;
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      margin-left: 24px;
+      margin-right: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #ddd;
+    }
+    svg {
+      background: #fff;
+      border-radius: 8px;
+      display: block; /* Important for D3 */
+    }
+    .node circle {
+      stroke-width: 2.5px;
+    }
+    .node text { /* Base style for the <text> container */
+      font: 13px 'Segoe UI', sans-serif;
+      paint-order: stroke fill; /* Ensures text is readable over lines */
+      stroke: #fff; /* White halo */
+      stroke-width: 3px; /* Halo thickness */
+      stroke-linejoin: round;
+      stroke-opacity: 0.85; /* Halo opacity */
+    }
+    .link {
+      fill: none;
+      stroke-opacity: 0.7;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>/ — Knowledge Graph</h1>
+  <div class="controls">
+    <button onclick="expandAll()">Expand All</button>
+    <button onclick="collapseAll()">Collapse All</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+  <div id="tree-container">
+    <svg id="tree-svg" width="6000" height="8000"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const initialJsonData = {"name":"/","total_count":311,"children":[{"name":".github","total_count":2,"children":[{"name":"copilot-instructions.md","total_count":2,"children":[{"name":"Copilot Architecture Guidelines","total_count":1,"children":[]},{"name":"Next.js and Leaflet Project Conventions","total_count":1,"children":[]}]}]},{"name":"AGENTS.md","total_count":3,"children":[{"name":"Build Verification Rule","total_count":1,"children":[]},{"name":"Mandatory Session Changelog Requirement","total_count":1,"children":[]},{"name":"SwifLoad Agent Mandatory Rules","total_count":1,"children":[]}]},{"name":"archify_input.txt","total_count":2,"children":[{"name":"Archify Architecture Generation Prompt","total_count":1,"children":[]},{"name":"Architecture Runtime Boundary Criteria","total_count":1,"children":[]}]},{"name":"AZURE_INFRASTRUCTURE_ARCHITECTURE.md","total_count":27,"children":[{"name":"1. Database Configuration Schema (`SystemConfig.maps`)","total_count":1,"children":[]},{"name":"1. Database Configuration Schema (`SystemConfig.payments`)","total_count":1,"children":[]},{"name":"1. Workload Profile & Concurrency Analysis (1,000 Users)","total_count":1,"children":[]},{"name":"2. Google Pay (GPay) Deep Integration Architecture","total_count":1,"children":[]},{"name":"2. Provider Strengths for Coimbatore Launch:","total_count":1,"children":[]},{"name":"2. Target Azure Geographic Regions (Coimbatore Focus)","total_count":1,"children":[]},{"name":"3. Architecture Option 1: Basic Infrastructure (Cost-Effective / MVP)","total_count":1,"children":[]},{"name":"3. Dynamic Rendering in Admin & Apps:","total_count":1,"children":[]},{"name":"3. Secure Payment Lifecycle:","total_count":1,"children":[]},{"name":"4. Architecture Option 2: Recommended Infrastructure (Production High Availability & DR)","total_count":1,"children":[]},{"name":"5. Load Balancing & Automated Failover Mechanics","total_count":1,"children":[]},{"name":"6. Dynamic Maps Provider Configuration Architecture","total_count":1,"children":[]},{"name":"7. Dynamic Payment Gateway Configuration Architecture","total_count":1,"children":[]},{"name":"8. Side-by-Side Cost & Feature Comparison","total_count":1,"children":[]},{"name":"9. Step-by-Step Azure CLI Deployment Script","total_count":1,"children":[]},{"name":"A. Native Android UPI Intent Flow (Zero Gateway Fees / 0% MDR)","total_count":1,"children":[]},{"name":"AZURE_INFRASTRUCTURE_ARCHITECTURE.md","total_count":1,"children":[]},{"name":"B. In-App Payment Gateway & Web Collect (Omnichannel Fallback)","total_count":1,"children":[]},{"name":"C. Admin Portal Configurable Parameters for GPay:","total_count":1,"children":[]},{"name":"Components Specification:","total_count":1,"children":[]},{"name":"Components Specification:","total_count":1,"children":[]},{"name":"High Availability, Load Balancing & Concurrency Scaling for Coimbatore Launch","total_count":1,"children":[]},{"name":"How Incoming Mobile Traffic is Managed:","total_count":1,"children":[]},{"name":"Traffic & Resource Benchmarks:","total_count":1,"children":[]},{"name":"\ud83c\udf10 SwifLoad \u2014 Azure Cloud Infrastructure Architecture Guide","total_count":1,"children":[]},{"name":"\ud83c\udfaf Summary Recommendation for Launch","total_count":1,"children":[]},{"name":"\ud83d\udcd1 Table of Contents","total_count":1,"children":[]}]},{"name":"capacitor.config.ts","total_count":1,"children":[{"name":"config","total_count":1,"children":[]}]},{"name":"Changes Required.txt","total_count":4,"children":[{"name":"Changes Required Specification","total_count":1,"children":[]},{"name":"Customer Tariff Distance Slabs","total_count":1,"children":[]},{"name":"Driver Mobile Workflow UX Refinements","total_count":1,"children":[]},{"name":"Driver Negative Balance Limit Rules","total_count":1,"children":[]}]},{"name":"CLAUDE.md","total_count":2,"children":[{"name":"Claude Development Guide","total_count":1,"children":[]},{"name":"Project CLI and Build Commands","total_count":1,"children":[]}]},{"name":"Deploy_chronological.txt","total_count":2,"children":[{"name":"Cloud Release Milestones and Task Order","total_count":1,"children":[]},{"name":"Deployment Chronological Execution Log","total_count":1,"children":[]}]},{"name":"DEPLOYMENT_GUIDE.md","total_count":5,"children":[{"name":"Azure App Service and Container Registry Architecture","total_count":1,"children":[]},{"name":"Capacitor Native Android Build Pipeline","total_count":1,"children":[]},{"name":"Multi-stage Production Next.js Docker Container","total_count":1,"children":[]},{"name":"Server-Sent Events Real-Time State Broadcast","total_count":1,"children":[]},{"name":"SwifLoad Cloud Deployment & Operations Manual","total_count":1,"children":[]}]},{"name":"docs","total_count":26,"children":[{"name":"App Initial cloud release tasks.txt","total_count":1,"children":[{"name":"Initial Cloud Release Task Checklist","total_count":1,"children":[]}]},{"name":"Archify_25Sep2026_Updated.txt","total_count":1,"children":[{"name":"Architecture Spec Update 25-Sep-2026","total_count":1,"children":[]}]},{"name":"Archify_26Sep2026_Updated.txt","total_count":1,"children":[{"name":"Architecture Spec Update 26-Sep-2026","total_count":1,"children":[]}]},{"name":"Archify_Initial_Output_23Sep2026.JPG","total_count":2,"children":[{"name":"Archify System Architecture Visual Snapshot","total_count":1,"children":[]},{"name":"Primary Shipper to Tracking Flow","total_count":1,"children":[]}]},{"name":"Deploying to Azure.txt","total_count":1,"children":[{"name":"Deploying to Azure App Service Guide","total_count":1,"children":[]}]},{"name":"SETUP_AND_HARDWARE_COST_BENGALURU.md","total_count":4,"children":[{"name":"Bengaluru AIS-140 Dedicated Fleet Hardware","total_count":1,"children":[]},{"name":"Bengaluru Legal and Aggregator Licensing","total_count":1,"children":[]},{"name":"Bengaluru Setup and Hardware Cost Guide","total_count":1,"children":[]},{"name":"Coimbatore vs Bengaluru CapEx and OpEx Variance Rationale","total_count":1,"children":[]}]},{"name":"SETUP_AND_HARDWARE_COST_COIMBATORE.md","total_count":3,"children":[{"name":"Coimbatore Launch Hub and Infrastructure","total_count":1,"children":[]},{"name":"Coimbatore Setup and Hardware Cost Guide","total_count":1,"children":[]},{"name":"Coimbatore Telemetry and Hardware Setup","total_count":1,"children":[]}]},{"name":"SOFTWARE_OUTSOURCING_COST_ESTIMATE.md","total_count":2,"children":[{"name":"Development Phases and Deliverables","total_count":1,"children":[]},{"name":"Software Outsourcing Cost Estimate","total_count":1,"children":[]}]},{"name":"swifload-architecture.html","total_count":3,"children":[{"name":"Client-Side Runtime & Admin Privilege Boundaries","total_count":1,"children":[]},{"name":"SwifLoad 12 Core Architectural Components","total_count":1,"children":[]},{"name":"SwifLoad Architecture Diagram","total_count":1,"children":[]}]},{"name":"swifload-booking-fulfillment-workflow.html","total_count":2,"children":[{"name":"Booking and Fulfillment Workflow Diagram","total_count":1,"children":[]},{"name":"End-to-End Shipper to Delivery Cycle","total_count":1,"children":[]}]},{"name":"swifload-telemetry-state-dataflow.html","total_count":2,"children":[{"name":"Real-Time Telemetry SSE Dataflow Engine","total_count":1,"children":[]},{"name":"Telemetry and Trip State Dataflow Diagram","total_count":1,"children":[]}]},{"name":"swifload-trip-dispatch-sequence.html","total_count":2,"children":[{"name":"Trip Dispatch and OTP Handshake Sequence Diagram","total_count":1,"children":[]},{"name":"Two-Way Pickup and Delivery OTP Verification","total_count":1,"children":[]}]},{"name":"swifload-trip-state-lifecycle.html","total_count":2,"children":[{"name":"Discrete Trip State Machine Transitions","total_count":1,"children":[]},{"name":"Trip State Machine Lifecycle Diagram","total_count":1,"children":[]}]}]},{"name":"Initial Requirements.txt","total_count":6,"children":[{"name":"Customer Logistics App Scope","total_count":1,"children":[]},{"name":"Driver Transparency Rationale","total_count":1,"children":[]},{"name":"Driver-Partner App Scope","total_count":1,"children":[]},{"name":"Initial Requirements Specification","total_count":1,"children":[]},{"name":"MVP Platform Essentials","total_count":1,"children":[]},{"name":"Operations Admin Portal Scope","total_count":1,"children":[]}]},{"name":"next.config.mjs","total_count":1,"children":[{"name":"nextConfig","total_count":1,"children":[]}]},{"name":"package.json","total_count":54,"children":[{"name":"@capacitor/android","total_count":1,"children":[]},{"name":"@capacitor/android","total_count":1,"children":[]},{"name":"@capacitor/cli","total_count":1,"children":[]},{"name":"@capacitor/cli","total_count":1,"children":[]},{"name":"@capacitor/core","total_count":1,"children":[]},{"name":"@capacitor/core","total_count":1,"children":[]},{"name":"@capacitor/ios","total_count":1,"children":[]},{"name":"@capacitor/ios","total_count":1,"children":[]},{"name":"@tailwindcss/postcss","total_count":1,"children":[]},{"name":"@tailwindcss/postcss","total_count":1,"children":[]},{"name":"@types/leaflet","total_count":1,"children":[]},{"name":"@types/leaflet","total_count":1,"children":[]},{"name":"@types/node","total_count":1,"children":[]},{"name":"@types/node","total_count":1,"children":[]},{"name":"@types/react","total_count":1,"children":[]},{"name":"@types/react","total_count":1,"children":[]},{"name":"@types/react-dom","total_count":1,"children":[]},{"name":"@types/react-dom","total_count":1,"children":[]},{"name":"autoprefixer","total_count":1,"children":[]},{"name":"autoprefixer","total_count":1,"children":[]},{"name":"build","total_count":1,"children":[]},{"name":"cap:android","total_count":1,"children":[]},{"name":"cap:ios","total_count":1,"children":[]},{"name":"cap:sync","total_count":1,"children":[]},{"name":"clsx","total_count":1,"children":[]},{"name":"clsx","total_count":1,"children":[]},{"name":"dependencies","total_count":1,"children":[]},{"name":"description","total_count":1,"children":[]},{"name":"dev","total_count":1,"children":[]},{"name":"devDependencies","total_count":1,"children":[]},{"name":"leaflet","total_count":1,"children":[]},{"name":"leaflet","total_count":1,"children":[]},{"name":"lint","total_count":1,"children":[]},{"name":"lucide-react","total_count":1,"children":[]},{"name":"lucide-react","total_count":1,"children":[]},{"name":"name","total_count":1,"children":[]},{"name":"next","total_count":1,"children":[]},{"name":"next","total_count":1,"children":[]},{"name":"postcss","total_count":1,"children":[]},{"name":"postcss","total_count":1,"children":[]},{"name":"private","total_count":1,"children":[]},{"name":"react","total_count":1,"children":[]},{"name":"react","total_count":1,"children":[]},{"name":"react-dom","total_count":1,"children":[]},{"name":"react-dom","total_count":1,"children":[]},{"name":"scripts","total_count":1,"children":[]},{"name":"start","total_count":1,"children":[]},{"name":"tailwind-merge","total_count":1,"children":[]},{"name":"tailwind-merge","total_count":1,"children":[]},{"name":"tailwindcss","total_count":1,"children":[]},{"name":"tailwindcss","total_count":1,"children":[]},{"name":"typescript","total_count":1,"children":[]},{"name":"typescript","total_count":1,"children":[]},{"name":"version","total_count":1,"children":[]}]},{"name":"public","total_count":13,"children":[{"name":"downloads","total_count":2,"children":[{"name":"README.txt","total_count":2,"children":[{"name":"Customer and Driver Mobile APK Distribution Packages","total_count":1,"children":[]},{"name":"Mobile Downloads Distribution Documentation","total_count":1,"children":[]}]}]},{"name":"manifest.json","total_count":10,"children":[{"name":"background_color","total_count":1,"children":[]},{"name":"description","total_count":1,"children":[]},{"name":"display","total_count":1,"children":[]},{"name":"icons","total_count":1,"children":[]},{"name":"name","total_count":1,"children":[]},{"name":"orientation","total_count":1,"children":[]},{"name":"short_name","total_count":1,"children":[]},{"name":"shortcuts","total_count":1,"children":[]},{"name":"start_url","total_count":1,"children":[]},{"name":"theme_color","total_count":1,"children":[]}]},{"name":"sw.js","total_count":1,"children":[]}]},{"name":"README.md","total_count":7,"children":[{"name":"Capacitor Mobile Deployment","total_count":1,"children":[]},{"name":"Driver-Partner Mobile App","total_count":1,"children":[]},{"name":"Dynamic Upfront Fare Engine","total_count":1,"children":[]},{"name":"Operations Command Center Portal","total_count":1,"children":[]},{"name":"Shipper Customer Mobile App","total_count":1,"children":[]},{"name":"SwifLoad Project Overview","total_count":1,"children":[]},{"name":"SwifLoad Web Platform","total_count":1,"children":[]}]},{"name":"scripts","total_count":12,"children":[{"name":"generate_instagram_promo.py","total_count":3,"children":[{"name":"create_video()","total_count":1,"children":[]},{"name":"draw_rounded_rect()","total_count":1,"children":[]},{"name":"get_font()","total_count":1,"children":[]}]},{"name":"generate_instagram_promo_v2.py","total_count":4,"children":[{"name":"draw_rounded_rect()","total_count":1,"children":[]},{"name":"generate_electronic_synth_beat()","total_count":1,"children":[]},{"name":"get_font()","total_count":1,"children":[]},{"name":"render_extended_promo_video()","total_count":1,"children":[]}]},{"name":"generate_real_screenshot_promo.py","total_count":4,"children":[{"name":"draw_rounded_rect()","total_count":1,"children":[]},{"name":"generate_electronic_synth_beat()","total_count":1,"children":[]},{"name":"get_font()","total_count":1,"children":[]},{"name":"render_real_screenshots_video()","total_count":1,"children":[]}]},{"name":"capture_real_screenshots.py","total_count":1,"children":[]}]},{"name":"SESSION_CHANGELOG.md","total_count":2,"children":[{"name":"Azure Cloud & Native Android Release Session","total_count":1,"children":[]},{"name":"SwifLoad Session Changelog History","total_count":1,"children":[]}]},{"name":"src","total_count":122,"children":[{"name":"app","total_count":29,"children":[{"name":"admin","total_count":1,"children":[{"name":"page.tsx","total_count":1,"children":[{"name":"AdminPage()","total_count":1,"children":[]}]}]},{"name":"api","total_count":21,"children":[{"name":"config","total_count":2,"children":[{"name":"route.ts","total_count":2,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"POST()","total_count":1,"children":[]}]}]},{"name":"drivers","total_count":6,"children":[{"name":"[id]","total_count":3,"children":[{"name":"route.ts","total_count":3,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"GET()","total_count":1,"children":[]},{"name":"PATCH()","total_count":1,"children":[]}]}]},{"name":"route.ts","total_count":3,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"GET()","total_count":1,"children":[]},{"name":"POST()","total_count":1,"children":[]}]}]},{"name":"events","total_count":2,"children":[{"name":"route.ts","total_count":2,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"GET()","total_count":1,"children":[]}]}]},{"name":"state","total_count":3,"children":[{"name":"route.ts","total_count":3,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"GET()","total_count":1,"children":[]},{"name":"POST()","total_count":1,"children":[]}]}]},{"name":"trips","total_count":6,"children":[{"name":"[id]","total_count":3,"children":[{"name":"route.ts","total_count":3,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"GET()","total_count":1,"children":[]},{"name":"PATCH()","total_count":1,"children":[]}]}]},{"name":"route.ts","total_count":3,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"GET()","total_count":1,"children":[]},{"name":"POST()","total_count":1,"children":[]}]}]},{"name":"wallets","total_count":2,"children":[{"name":"route.ts","total_count":2,"children":[{"name":"dynamic","total_count":1,"children":[]},{"name":"POST()","total_count":1,"children":[]}]}]}]},{"name":"customer","total_count":1,"children":[{"name":"page.tsx","total_count":1,"children":[{"name":"CustomerPage()","total_count":1,"children":[]}]}]},{"name":"downloads","total_count":1,"children":[{"name":"page.tsx","total_count":1,"children":[{"name":"DownloadsPage()","total_count":1,"children":[]}]}]},{"name":"driver","total_count":1,"children":[{"name":"page.tsx","total_count":1,"children":[{"name":"DriverPage()","total_count":1,"children":[]}]}]},{"name":"layout.tsx","total_count":3,"children":[{"name":"metadata","total_count":1,"children":[]},{"name":"RootLayout()","total_count":1,"children":[]},{"name":"viewport","total_count":1,"children":[]}]},{"name":"page.tsx","total_count":1,"children":[{"name":"Home()","total_count":1,"children":[]}]}]},{"name":"components","total_count":35,"children":[{"name":"Admin","total_count":2,"children":[{"name":"AdminPortal.tsx","total_count":2,"children":[{"name":"AdminPortal()","total_count":1,"children":[]},{"name":"LeafletMap","total_count":1,"children":[]}]}]},{"name":"Customer","total_count":2,"children":[{"name":"CustomerApp.tsx","total_count":2,"children":[{"name":"CustomerApp()","total_count":1,"children":[]},{"name":"LeafletMap","total_count":1,"children":[]}]}]},{"name":"Driver","total_count":2,"children":[{"name":"DriverApp.tsx","total_count":2,"children":[{"name":"DriverApp()","total_count":1,"children":[]},{"name":"LeafletMap","total_count":1,"children":[]}]}]},{"name":"Map","total_count":2,"children":[{"name":"LeafletMap.tsx","total_count":2,"children":[{"name":"LeafletMap()","total_count":1,"children":[]},{"name":"LeafletMapProps","total_count":1,"children":[]}]}]},{"name":"PwaRegister.tsx","total_count":1,"children":[{"name":"PwaRegister()","total_count":1,"children":[]}]},{"name":"Website","total_count":26,"children":[{"name":"BookingSuccessModal.tsx","total_count":2,"children":[{"name":"BookingSuccessModal()","total_count":1,"children":[]},{"name":"BookingSuccessModalProps","total_count":1,"children":[]}]},{"name":"CustomerReviewsSection.tsx","total_count":1,"children":[{"name":"CustomerReviewsSection()","total_count":1,"children":[]}]},{"name":"DriverPartnerSection.tsx","total_count":2,"children":[{"name":"DriverPartnerSection()","total_count":1,"children":[]},{"name":"DriverPartnerSectionProps","total_count":1,"children":[]}]},{"name":"EnterpriseSection.tsx","total_count":1,"children":[{"name":"EnterpriseSection()","total_count":1,"children":[]}]},{"name":"FleetComparison.tsx","total_count":2,"children":[{"name":"FleetComparison()","total_count":1,"children":[]},{"name":"FleetComparisonProps","total_count":1,"children":[]}]},{"name":"HeroBookingWidget.tsx","total_count":2,"children":[{"name":"HeroBookingWidget()","total_count":1,"children":[]},{"name":"HeroBookingWidgetProps","total_count":1,"children":[]}]},{"name":"LiveTrackingModal.tsx","total_count":2,"children":[{"name":"LiveTrackingModal()","total_count":1,"children":[]},{"name":"LiveTrackingModalProps","total_count":1,"children":[]}]},{"name":"PackersMoversSection.tsx","total_count":2,"children":[{"name":"PackersMoversSection()","total_count":1,"children":[]},{"name":"PackersMoversSectionProps","total_count":1,"children":[]}]},{"name":"ProhibitedGoodsModal.tsx","total_count":2,"children":[{"name":"ProhibitedGoodsModal()","total_count":1,"children":[]},{"name":"ProhibitedGoodsModalProps","total_count":1,"children":[]}]},{"name":"TrustAndSafetySection.tsx","total_count":2,"children":[{"name":"TrustAndSafetySection()","total_count":1,"children":[]},{"name":"TrustAndSafetySectionProps","total_count":1,"children":[]}]},{"name":"WebFaqSection.tsx","total_count":2,"children":[{"name":"WebFaqSection()","total_count":1,"children":[]},{"name":"WebFaqSectionProps","total_count":1,"children":[]}]},{"name":"WebFooter.tsx","total_count":2,"children":[{"name":"WebFooter()","total_count":1,"children":[]},{"name":"WebFooterProps","total_count":1,"children":[]}]},{"name":"WebNavbar.tsx","total_count":2,"children":[{"name":"WebNavbar()","total_count":1,"children":[]},{"name":"WebNavbarProps","total_count":1,"children":[]}]},{"name":"WebPlatform.tsx","total_count":2,"children":[{"name":"WebPlatform()","total_count":1,"children":[]},{"name":"WebPlatformProps","total_count":1,"children":[]}]}]}]},{"name":"context","total_count":6,"children":[{"name":"LogisticsContext.tsx","total_count":6,"children":[{"name":"CreateTripPayload","total_count":1,"children":[]},{"name":"INITIAL_CUSTOMER","total_count":1,"children":[]},{"name":"LogisticsContext","total_count":1,"children":[]},{"name":"LogisticsContextType","total_count":1,"children":[]},{"name":"LogisticsProvider()","total_count":1,"children":[]},{"name":"useLogistics()","total_count":1,"children":[]}]}]},{"name":"lib","total_count":28,"children":[{"name":"data.ts","total_count":10,"children":[{"name":"BANGALORE_LANDMARKS","total_count":1,"children":[]},{"name":"COIMBATORE_LANDMARKS","total_count":1,"children":[]},{"name":"DEFAULT_CUSTOMER_SLABS","total_count":1,"children":[]},{"name":"DEFAULT_REFERRAL_CONFIG","total_count":1,"children":[]},{"name":"DRIVER_GROUPS","total_count":1,"children":[]},{"name":"INITIAL_DRIVERS","total_count":1,"children":[]},{"name":"INITIAL_REFERRALS","total_count":1,"children":[]},{"name":"INITIAL_TRIPS","total_count":1,"children":[]},{"name":"SERVICE_ZONES","total_count":1,"children":[]},{"name":"VEHICLE_CONFIGS","total_count":1,"children":[]}]},{"name":"pricing.ts","total_count":8,"children":[{"name":"calculateCancellationFee()","total_count":1,"children":[]},{"name":"calculateCustomerQuotedSlabFare()","total_count":1,"children":[]},{"name":"calculateDistanceKm()","total_count":1,"children":[]},{"name":"calculateDriverTaskPayout()","total_count":1,"children":[]},{"name":"calculateFare()","total_count":1,"children":[]},{"name":"calculateSlabDistanceFare()","total_count":1,"children":[]},{"name":"detectZoneSurge()","total_count":1,"children":[]},{"name":"estimateDurationMins()","total_count":1,"children":[]}]},{"name":"server","total_count":10,"children":[{"name":"db.ts","total_count":6,"children":[{"name":"DatabaseSchema","total_count":1,"children":[]},{"name":"getDatabase()","total_count":1,"children":[]},{"name":"getDbPath()","total_count":1,"children":[]},{"name":"INITIAL_CUSTOMER","total_count":1,"children":[]},{"name":"resetDatabase()","total_count":1,"children":[]},{"name":"saveDatabase()","total_count":1,"children":[]}]},{"name":"events.ts","total_count":4,"children":[{"name":"broadcastEvent()","total_count":1,"children":[]},{"name":"eventBus","total_count":1,"children":[]},{"name":"EventType","total_count":1,"children":[]},{"name":"RealtimePayload","total_count":1,"children":[]}]}]}]},{"name":"types","total_count":24,"children":[{"name":"logistics.ts","total_count":24,"children":[{"name":"AdminRole","total_count":1,"children":[]},{"name":"CustomerType","total_count":1,"children":[]},{"name":"CustomerTypeSlabConfig","total_count":1,"children":[]},{"name":"CustomerUser","total_count":1,"children":[]},{"name":"DistanceSlab","total_count":1,"children":[]},{"name":"DriverGroup","total_count":1,"children":[]},{"name":"DriverKycDoc","total_count":1,"children":[]},{"name":"DriverPartner","total_count":1,"children":[]},{"name":"FareBreakdown","total_count":1,"children":[]},{"name":"GoodsCategory","total_count":1,"children":[]},{"name":"LocationPoint","total_count":1,"children":[]},{"name":"PaymentMethod","total_count":1,"children":[]},{"name":"ReferralProgramConfig","total_count":1,"children":[]},{"name":"ReferralRecord","total_count":1,"children":[]},{"name":"RegisterDriverPayload","total_count":1,"children":[]},{"name":"ServiceZone","total_count":1,"children":[]},{"name":"ShipmentDetails","total_count":1,"children":[]},{"name":"SlabBreakdownItem","total_count":1,"children":[]},{"name":"Trip","total_count":1,"children":[]},{"name":"TripStatus","total_count":1,"children":[]},{"name":"UserRole","total_count":1,"children":[]},{"name":"VehicleCategory","total_count":1,"children":[]},{"name":"VehicleConfig","total_count":1,"children":[]},{"name":"WalletTransaction","total_count":1,"children":[]}]}]}]},{"name":"tsconfig.json","total_count":18,"children":[{"name":"allowJs","total_count":1,"children":[]},{"name":"compilerOptions","total_count":1,"children":[]},{"name":"esModuleInterop","total_count":1,"children":[]},{"name":"exclude","total_count":1,"children":[]},{"name":"include","total_count":1,"children":[]},{"name":"incremental","total_count":1,"children":[]},{"name":"isolatedModules","total_count":1,"children":[]},{"name":"jsx","total_count":1,"children":[]},{"name":"lib","total_count":1,"children":[]},{"name":"module","total_count":1,"children":[]},{"name":"moduleResolution","total_count":1,"children":[]},{"name":"noEmit","total_count":1,"children":[]},{"name":"paths","total_count":1,"children":[]},{"name":"plugins","total_count":1,"children":[]},{"name":"resolveJsonModule","total_count":1,"children":[]},{"name":"skipLibCheck","total_count":1,"children":[]},{"name":"strict","total_count":1,"children":[]},{"name":"target","total_count":1,"children":[]}]},{"name":"postcss.config.js","total_count":1,"children":[]},{"name":"tailwind.config.js","total_count":1,"children":[]}]};
+
+    function transformData(jsonData) {
+        // Helper function to recursively build the children structure
+        function processNode(node, parentL1StageName) {
+            let displayName = node.name;
+            // Append total_count if it exists and is not already in the name
+            if (node.total_count !== undefined) {
+                if (!/\(Total Count: \d+\)$/.test(displayName)) {
+                    displayName += ` (Total Count: ${node.total_count})`;
+                }
+            }
+
+            const newNode = { name: displayName };
+
+            if (parentL1StageName === "Root") {
+                 newNode.originalStageName = node.name;
+            } else {
+                newNode.originalStageName = parentL1StageName;
+            }
+
+            if (node.children && node.children.length > 0) {
+                const stageNameToPass = (parentL1StageName === "Root") ? node.name : parentL1StageName;
+                newNode.children = node.children.map(child => processNode(child, stageNameToPass));
+            }
+
+            return newNode;
+        }
+
+        let rootDisplayName = jsonData.name;
+        if (jsonData.total_count !== undefined && !/\(Total Count: \d+\)$/.test(rootDisplayName)) {
+            rootDisplayName += ` (Total Count: ${jsonData.total_count})`;
+        }
+
+        return {
+            name: rootDisplayName,
+            originalStageName: "Root",
+            children: (jsonData.children || []).map(child => processNode(child, "Root"))
+        };
+    }
+
+    const treeData = transformData(initialJsonData);
+
+    // Auto-populated phaseColors: every depth-1 child of the root gets
+    // a stable colour from a bigger palette so all top-level dirs are
+    // distinguishable.
+    const PALETTE = [
+      ["#3498DB","#2980B9","#AED6F1"], ["#2ECC71","#27AE60","#A9DFBF"],
+      ["#E74C3C","#C0392B","#F5B7B1"], ["#9B59B6","#8E44AD","#D7BDE2"],
+      ["#F39C12","#D68910","#FAD7A0"], ["#1ABC9C","#117864","#A2D9CE"],
+      ["#34495E","#1B2631","#ABB2B9"], ["#E67E22","#BA4A00","#F5CBA7"],
+      ["#16A085","#0E6655","#A2D9CE"], ["#D35400","#A04000","#EDBB99"],
+      ["#7F8C8D","#566573","#D5DBDB"], ["#C0392B","#7B241C","#F5B7B1"],
+      ["#2E86C1","#1B4F72","#A9CCE3"], ["#28B463","#196F3D","#A9DFBF"],
+      ["#AF7AC5","#6C3483","#D2B4DE"],
+    ];
+    const phaseColors = { "Root": { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+                          "Default": { fill: "#BDC3C7", stroke: "#95A5A6", collapsedFill: "#ECF0F1" } };
+    (initialJsonData.children || []).forEach((c, i) => {
+      const pal = PALETTE[i % PALETTE.length];
+      phaseColors[c.name] = { fill: pal[0], stroke: pal[1], collapsedFill: pal[2] };
+    });
+
+    const levelSpecificPalettes = {
+      0: { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+      2: { fill: "#6ab04c", stroke: "#508a38", collapsedFill: "#a3d391" },
+      3: { fill: "#f0932b", stroke: "#d0730f", collapsedFill: "#f6c07e" },
+      4: { fill: "#be2edd", stroke: "#a01cb3", collapsedFill: "#e08bf2" },
+      5: { fill: "#00a8ff", stroke: "#007ac1", collapsedFill: "#74d2ff" },
+      6: { fill: "#e55039", stroke: "#c23620", collapsedFill: "#f09a8d" },
+      default: { fill: "#747d8c", stroke: "#57606f", collapsedFill: "#a4b0be" }
+    };
+
+    const svgElement = d3.select("#tree-svg");
+    const initialSvgWidth = +svgElement.attr("width");
+    const initialSvgHeight = +svgElement.attr("height");
+    const margin = { top: 40, right: 120, bottom: 80, left: 450 };
+    let width = initialSvgWidth - margin.left - margin.right;
+    let height = initialSvgHeight - margin.top - margin.bottom;
+    const duration = 500;
+    let nodeCounter = 0;
+    const g = svgElement.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const treemap = d3.tree().nodeSize([40, 0]);
+    let rootNode = d3.hierarchy(treeData, d => d.children);
+    rootNode.x0 = 0;
+    rootNode.y0 = 0;
+
+    if (rootNode.children) {
+      rootNode.children.forEach(d_child => {
+        if (d_child.children) { collapseBranch(d_child); }
+      });
+    }
+    updateTree(rootNode);
+
+    function collapseBranch(d) { if (d.children) { d._children = d.children; d._children.forEach(collapseBranch); d.children = null; } }
+    function expandBranch(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) { d.children.forEach(expandBranch); } }
+    window.expandAll = () => { expandBranch(rootNode); updateTree(rootNode); };
+    window.collapseAll = () => { if (rootNode.children) { rootNode.children.forEach(collapseBranch); } updateTree(rootNode); };
+    window.resetView = () => { if (rootNode.children) { rootNode.children.forEach(d_child => { if (d_child.children || d_child._children) { collapseBranch(d_child); } }); } if (rootNode._children && !rootNode.children) { rootNode.children = rootNode._children; rootNode._children = null; } updateTree(rootNode); };
+
+    function updateTree(source) {
+      const treeLayoutData = treemap(rootNode);
+      let nodes = treeLayoutData.descendants();
+      let links = treeLayoutData.descendants().slice(1);
+
+      let minX = 0;
+      let maxX = 0;
+      if (nodes.length > 0) {
+        minX = d3.min(nodes, d => d.x);
+        maxX = d3.max(nodes, d => d.x);
+      }
+
+      let neededHeight = Math.max(initialSvgHeight, maxX - minX + margin.top + margin.bottom + 100);
+      svgElement.transition().duration(duration / 2).attr("height", neededHeight);
+      g.transition().duration(duration / 2).attr("transform", `translate(${margin.left},${margin.top - minX + 40})`);
+
+      nodes.forEach(d => { d.y = d.depth * 400; }); // Adjust horizontal separation if needed
+
+      const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++nodeCounter));
+      const nodeEnter = node.enter().append('g')
+        .attr('class', d => "node" + (d.children || d._children ? " node--internal" : " node--leaf") + (d._children ? " _children" : ""))
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .on('click', (event, d) => { if (d.children) { d._children = d.children; d.children = null; } else if (d._children) { d.children = d._children; d._children = null; } updateTree(d); })
+        .style('cursor', d => (d.children || d._children) ? 'pointer' : 'default');
+
+      nodeEnter.append('circle').attr('r', 1e-6);
+
+      nodeEnter.append('text')
+        .attr('dy', '.35em')
+        .attr('x', d => d.children || d._children ? -14 : 14)
+        .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+        .style("fill-opacity", 1e-6)
+        .call(wrapText, 380);
+
+      const nodeUpdate = nodeEnter.merge(node);
+      nodeUpdate.transition().duration(duration)
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('class', d => "node" + (d.children ? " node--internal" : " node--leaf") + (d._children ? " node--internal _children" : ""));
+
+      nodeUpdate.select('circle').attr('r', 8.5)
+        .style('fill', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            if (d._children) return palette.collapsedFill;
+            if (d.children) return palette.fill;
+            return "#fff";
+        })
+        .style('stroke', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            return palette.stroke;
+        });
+      nodeUpdate.select('text').style("fill-opacity", 1).call(wrapText, 380);
+
+      const nodeExit = node.exit().transition().duration(duration).attr('transform', d => `translate(${source.y},${source.x})`).remove();
+      nodeExit.select('circle').attr('r', 1e-6);
+      nodeExit.select('text').style('fill-opacity', 1e-6);
+
+      const link = g.selectAll('path.link').data(links, d => d.id);
+      const linkEnter = link.enter().insert('path', "g").attr('class', 'link').attr('d', d => { const o = { x: source.x0, y: source.y0 }; return diagonal(o, o); });
+
+      linkEnter.merge(link).transition().duration(duration).attr('d', d => diagonal(d, d.parent))
+        .style('stroke', d => {
+            const sourceNode = d.parent;
+            if (!sourceNode) return phaseColors.Default.stroke;
+            const l1AncestorName = sourceNode.data.originalStageName;
+            const colorPalette = phaseColors[l1AncestorName] || phaseColors.Default;
+            return colorPalette.stroke;
+        });
+      link.exit().transition().duration(duration).attr('d', d => { const o = { x: source.x, y: source.y }; return diagonal(o, o); }).remove();
+      nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+    }
+
+    function diagonal(s, d) { return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`; }
+
+    function wrapText(textElements, maxWidth) {
+        const textPartColors = {
+            name: '#343a40',
+            count: '#0056b3'
+        };
+        const countRegex = /(\s\(Total Count: \d+\))$/;
+
+        textElements.each(function () {
+            const textD3 = d3.select(this);
+            const originalNodeText = textD3.datum().data.name;
+            const x = parseFloat(textD3.attr("x") || 0);
+            const initialDy = textD3.attr("dy");
+            const textAnchor = textD3.attr("text-anchor");
+            const lineHeight = 1.1;
+
+            textD3.text(null);
+
+            let namePart = originalNodeText;
+            let countPartText = "";
+
+            const countMatch = originalNodeText.match(countRegex);
+            if (countMatch && originalNodeText.endsWith(countMatch[0])) {
+                namePart = originalNodeText.substring(0, originalNodeText.length - countMatch[0].length).trim();
+                countPartText = countMatch[0].trim();
+            }
+
+            const tokens = [];
+            namePart.split(/\s+/).filter(Boolean).forEach(word => {
+                tokens.push({ text: word, type: 'name' });
+            });
+            if (countPartText) {
+                tokens.push({ text: countPartText, type: 'count' });
+            }
+
+            if (tokens.length === 0 && originalNodeText) {
+                tokens.push({ text: originalNodeText, type: 'name' });
+            }
+
+            let currentTspan = textD3.append("tspan").attr("x", x).attr("dy", initialDy);
+            if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+
+            let lineTokens = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenObj = tokens[i];
+
+                lineTokens.push(tokenObj);
+                currentTspan.text(lineTokens.map(t => t.text).join(" "));
+
+                if (currentTspan.node().getComputedTextLength() > maxWidth && lineTokens.length > 1) {
+                    lineTokens.pop();
+
+                    currentTspan.text(null);
+                    lineTokens.forEach((prevToken, idx) => {
+                        currentTspan.append("tspan")
+                            .text((idx > 0 ? " " : "") + prevToken.text)
+                            .style("fill", textPartColors[prevToken.type] || textPartColors.name)
+                            .style("font-weight", prevToken.type === 'count' ? "bold" : "normal");
+                    });
+
+                    lineTokens = [tokenObj];
+                    currentTspan = textD3.append("tspan").attr("x", x).attr("dy", lineHeight + "em");
+                    if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+                }
+            }
+
+            currentTspan.text(null);
+            lineTokens.forEach((token, idx) => {
+                currentTspan.append("tspan")
+                    .text((idx > 0 ? " " : "") + token.text)
+                    .style("fill", textPartColors[token.type] || textPartColors.name)
+                    .style("font-weight", token.type === 'count' ? "bold" : "normal");
+            });
+
+            if (textD3.selectAll("tspan > tspan").empty() && textD3.select("tspan").text().length === 0 && originalNodeText) {
+                let t = textD3.select("tspan");
+                let displayText = originalNodeText;
+                t.text(displayText).style("fill", textPartColors.name);
+                if (t.node() && t.node().getComputedTextLength() > maxWidth && displayText.length > 20) {
+                    let estimatedChars = Math.floor(maxWidth / (t.node().getComputedTextLength()/displayText.length) );
+                    displayText = displayText.substring(0, Math.max(0, estimatedChars - 3)) + "...";
+                    t.text(displayText);
+                }
+            }
+        });
+    }
+  </script>
+</body>
+</html>

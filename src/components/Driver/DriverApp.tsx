@@ -7,19 +7,13 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
-  DollarSign,
-  TrendingUp,
   MapPin,
   Navigation,
   Phone,
   MessageSquare,
-  Camera,
-  Upload,
   Clock,
   HelpCircle,
-  XCircle,
   Check,
-  ChevronRight,
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
@@ -29,13 +23,104 @@ import {
   Gift,
   Copy,
   Plus,
-  AlertCircle,
+  ArrowLeft,
+  Sparkles,
+  Trophy,
+  History,
+  TrendingUp,
+  AlertOctagon,
+  ChevronRight,
+  PhoneCall,
+  Flame,
+  Award,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import { VehicleCategory } from '@/types/logistics';
-import { calculateDriverTaskPayout } from '@/lib/pricing';
+import { calculateDriverTaskPayout, calculateDriverIncentives } from '@/lib/pricing';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
+
+/**
+ * Helper to compute greeting of the day (Changes Required Item 8)
+ */
+function getGreetingOfDay(): { greeting: string; icon: string; subtitle: string } {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) {
+    return {
+      greeting: 'Good Morning',
+      icon: '☀️',
+      subtitle: 'Ready to take on early morning freight runs across Coimbatore?',
+    };
+  } else if (hour >= 12 && hour < 17) {
+    return {
+      greeting: 'Good Afternoon',
+      icon: '🌤️',
+      subtitle: 'Peak industrial freight hours are active. High demand in peelamedu & ganapathy!',
+    };
+  } else if (hour >= 17 && hour < 21) {
+    return {
+      greeting: 'Good Evening',
+      icon: '🌆',
+      subtitle: 'Evening dispatch runs are live. Wrap up your milestone incentives today!',
+    };
+  } else {
+    return {
+      greeting: 'Good Night',
+      icon: '🌙',
+      subtitle: 'Night dispatch active. Drive safely and keep emergency SOS on standby.',
+    };
+  }
+}
+
+/**
+ * Sponsored Ads for Driver App displayed horizontally one below the other (Changes Required Item 15)
+ */
+const DRIVER_SPONSORED_ADS = [
+  {
+    id: 'ad_apollo',
+    brand: 'Apollo Tyres Commercial',
+    title: 'EnduMaxx LT Radial Truck Tyres - 20% Special Discount',
+    desc: 'Authorized Coimbatore Fleet Dealer at Singanallur. Free wheel balancing & nitrogen fill for SwifLoad drivers.',
+    cta: 'Call Dealer',
+    phone: '+919842211223',
+    badge: 'Sponsored • Fleet Tyres',
+    icon: '🛞',
+    gradient: 'from-amber-950/40 via-slate-900 to-slate-950 border-amber-500/30 text-amber-300',
+  },
+  {
+    id: 'ad_castrol',
+    brand: 'Castrol VECTON Long Drain',
+    title: 'Heavy Duty 15W-40 Synthetic Engine Oil (5L Pack)',
+    desc: 'Up to 100,000 km oil drain intervals with System Pro Technology. Buy 5L and get a free fuel filter coupon.',
+    cta: 'Locate Station',
+    phone: '+919842244556',
+    badge: 'Sponsored • Lubricants',
+    icon: '🛢️',
+    gradient: 'from-emerald-950/40 via-slate-900 to-slate-950 border-emerald-500/30 text-emerald-300',
+  },
+  {
+    id: 'ad_exide',
+    brand: 'Exide Commercial Truck Batteries',
+    title: 'Zero-Maintenance Commercial Battery with 36 Mo Warranty',
+    desc: 'Exchange old scrap battery for instant ₹1,200 cashback at Gandhipuram & Ukkadam Exide Hubs.',
+    cta: 'Claim Cashback',
+    phone: '+919842277889',
+    badge: 'Sponsored • Battery & Power',
+    icon: '⚡',
+    gradient: 'from-blue-950/40 via-slate-900 to-slate-950 border-blue-500/30 text-blue-300',
+  },
+  {
+    id: 'ad_fitness',
+    brand: 'Coimbatore Driver Wellness Hub',
+    title: 'Free Annual Driver Health & Eye Checkup Camp',
+    desc: 'Organized at Singanallur Transport Nagar. Free optical consultation & fitness certification assistance.',
+    cta: 'Book Checkup',
+    phone: '+919842299001',
+    badge: 'Sponsored • Welfare',
+    icon: '🩺',
+    gradient: 'from-purple-950/40 via-slate-900 to-slate-950 border-purple-500/30 text-purple-300',
+  },
+];
 
 export default function DriverApp() {
   const {
@@ -57,24 +142,33 @@ export default function DriverApp() {
     referralConfig,
     referrals,
     topUpDriverWallet,
+    incentiveSlabs,
+    dispatchTimeoutSecs,
   } = useLogistics();
 
+  // Navigation: 'home' = Driver Home, 'duty' = Dedicated Live Pickup Duty Page (Changes Required Item 16 & 19)
+  const [driverPage, setDriverPage] = useState<'home' | 'duty'>('home');
   const [activeDriverTab, setActiveDriverTab] = useState<'trips' | 'earnings' | 'referrals' | 'kyc' | 'support'>('trips');
+
+  // Trip execution inputs
   const [pickupOtpInput, setPickupOtpInput] = useState<string>('');
   const [deliveryOtpInput, setDeliveryOtpInput] = useState<string>('');
   const [podPhotoUrl, setPodPhotoUrl] = useState<string>('');
-  const [payoutAmount, setPayoutAmount] = useState<number>(500);
+
+  // Modals
   const [showPayoutModal, setShowPayoutModal] = useState<boolean>(false);
+  const [payoutAmount, setPayoutAmount] = useState<number>(100);
   const [showIncomingTripModal, setShowIncomingTripModal] = useState<boolean>(false);
   const [dismissedTripIds, setDismissedTripIds] = useState<string[]>([]);
-
-  // Driver Top-Up / Clear Dues Modal State
+  const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
+  const [showIncentivesModal, setShowIncentivesModal] = useState<boolean>(false);
   const [showDriverTopupModal, setShowDriverTopupModal] = useState<boolean>(false);
-  const [driverTopupAmt, setDriverTopupAmt] = useState<number>(500);
+  const [walletModalTab, setWalletModalTab] = useState<'recharge' | 'withdraw'>('recharge');
+  const [driverTopupAmt, setDriverTopupAmt] = useState<number>(200);
+
+  // Referrals & Onboarding
   const [driverReferralCopied, setDriverReferralCopied] = useState<boolean>(false);
   const [referredByDriverCode, setReferredByDriverCode] = useState<string>('');
-
-  // Driver Onboarding & Registration State
   const [showDriverRegModal, setShowDriverRegModal] = useState<boolean>(false);
   const [driverName, setDriverName] = useState<string>('');
   const [driverPhone, setDriverPhone] = useState<string>('');
@@ -94,6 +188,10 @@ export default function DriverApp() {
   // Current Driver
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
 
+  // Negative balance rule (Changes Required Item 11):
+  // If amount is more than minus Rs. 200 (i.e. balance <= -200), blocked from getting pickup calls.
+  const isDriverBlocked = currentDriver.wallet.balance <= -200;
+
   // Active assigned trip for this driver
   const assignedTrip = trips.find(
     (t) =>
@@ -108,15 +206,33 @@ export default function DriverApp() {
       t.currentDispatchGroupId === currentDriver.groupId
   );
 
-  // Active incoming task popup target
+  // Active incoming task popup target (blocked drivers do NOT receive pickup calls)
   const activeIncomingTrip =
-    !assignedTrip && currentDriver.isOnline
+    !isDriverBlocked && !assignedTrip && currentDriver.isOnline
       ? availableGroupTrips.find((t) => !dismissedTripIds.includes(t.id)) || null
       : null;
 
   // Completed trips by this driver
   const completedDriverTrips = trips.filter(
     (t) => t.driverId === currentDriver.id && t.status === 'DELIVERED'
+  );
+
+  // Incentives calculation based on completed calls and configured slabs (Changes Required Item 14)
+  const incentiveResult = calculateDriverIncentives(
+    completedDriverTrips.length,
+    incentiveSlabs || []
+  );
+
+  const greetingInfo = getGreetingOfDay();
+
+  // Reverse chronological transactions (Changes Required Item 13)
+  const reverseChronologicalTx = [...(currentDriver.wallet.transactions || [])].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  // Reverse chronological completed trips
+  const reverseChronologicalTrips = [...completedDriverTrips].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
   const handleAdvanceStatus = () => {
@@ -148,7 +264,7 @@ export default function DriverApp() {
 
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-100 pb-20 md:pb-6">
-      {/* Top Driver Bar */}
+      {/* ================= TOP DRIVER BAR ================= */}
       <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md space-y-2.5">
         {/* Row 1: Profile & Primary Online Switch */}
         <div className="flex items-center justify-between gap-3">
@@ -171,6 +287,11 @@ export default function DriverApp() {
                 <span className="text-[10px] bg-slate-800/90 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded font-mono font-bold whitespace-nowrap shrink-0 tracking-wider inline-block">
                   {currentDriver.vehicleNumber}
                 </span>
+                {isDriverBlocked && (
+                  <span className="text-[10px] bg-rose-950 text-rose-300 border border-rose-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Blocked
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-400 capitalize truncate mt-0.5">
                 {currentDriver.vehicleModel} • ⭐ {currentDriver.rating || 4.9} ({currentDriver.totalTrips} trips)
@@ -201,14 +322,14 @@ export default function DriverApp() {
           </button>
         </div>
 
-        {/* Row 2: Secondary Quick Bar (Register Driver, Wallet Chip, Referrals & Switch Profile) */}
+        {/* Row 2: Secondary Quick Bar (Switch Driver, Quick Navigation & Register Partner) */}
         <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs gap-2 flex-wrap sm:flex-nowrap">
           <div className="flex items-center space-x-1.5 min-w-0 flex-1">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">Switch:</span>
+            <span className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">Driver:</span>
             <select
               value={currentDriver.id}
               onChange={(e) => setSelectedDriverId(e.target.value)}
-              className="text-[11px] bg-slate-900 border border-slate-800 text-slate-300 rounded-lg px-2 py-1 focus:outline-none truncate max-w-[150px]"
+              className="text-[11px] bg-slate-900 border border-slate-800 text-slate-300 rounded-lg px-2 py-1 focus:outline-none truncate max-w-[170px]"
               title="Switch Driver Profile"
             >
               {drivers.map((d) => (
@@ -220,25 +341,12 @@ export default function DriverApp() {
           </div>
 
           <div className="flex items-center space-x-1.5 shrink-0">
-            {/* Quick Wallet Overdraft Chip */}
-            <button
-              onClick={() => setActiveDriverTab('earnings')}
-              className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center space-x-1 border transition-colors ${
-                currentDriver.wallet.balance < 0
-                  ? 'bg-rose-950/60 text-rose-300 border-rose-700/60'
-                  : 'bg-emerald-950/60 text-emerald-300 border-emerald-700/60'
-              }`}
-              title="Driver Wallet Balance & Overdraft"
-            >
-              <Wallet className="w-3 h-3" />
-              <span>
-                {currentDriver.wallet.balance < 0 ? `-₹${Math.abs(currentDriver.wallet.balance)}` : `₹${currentDriver.wallet.balance}`}
-              </span>
-            </button>
-
             {/* Refer & Earn Shortcut */}
             <button
-              onClick={() => setActiveDriverTab('referrals')}
+              onClick={() => {
+                setDriverPage('home');
+                setActiveDriverTab('referrals');
+              }}
               className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors flex items-center space-x-1"
               title="Refer Drivers or Customers"
             >
@@ -246,6 +354,7 @@ export default function DriverApp() {
               <span className="hidden sm:inline">Refer & Earn</span>
             </button>
 
+            {/* Register New Partner */}
             <button
               onClick={() => setShowDriverRegModal(true)}
               className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
@@ -268,7 +377,10 @@ export default function DriverApp() {
             </span>
           </div>
           <button
-            onClick={() => setActiveDriverTab('kyc')}
+            onClick={() => {
+              setDriverPage('home');
+              setActiveDriverTab('kyc');
+            }}
             className="text-[11px] underline font-semibold text-amber-200"
           >
             View Docs
@@ -276,27 +388,448 @@ export default function DriverApp() {
         </div>
       )}
 
-      {/* Main Container */}
-      <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4">
-        {/* ================= TAB 1: ACTIVE TRIPS & DISPATCH ================= */}
-        {activeDriverTab === 'trips' && (
-          <div className="space-y-4 max-w-xl mx-auto">
-            {/* If there is an active assigned trip */}
-            {assignedTrip ? (
-              <div className="bg-slate-950 rounded-2xl border border-slate-800 p-4 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                      Active Dispatch: {assignedTrip.bookingCode}
+      {/* ========================================================================= */}
+      {/* ========================= VIEW 1: DRIVER HOME PAGE ====================== */}
+      {/* ========================================================================= */}
+      {driverPage === 'home' && (
+        <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4 max-w-xl mx-auto w-full">
+          {/* Item 8: Greeting of the Day at the top of Home Page */}
+          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-4 rounded-3xl border border-slate-800 shadow-lg relative overflow-hidden">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">{greetingInfo.icon}</span>
+                  <h2 className="text-lg font-black text-white tracking-tight">
+                    {greetingInfo.greeting}, {currentDriver.name.split(' ')[0]}!
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 leading-snug">
+                  {greetingInfo.subtitle}
+                </p>
+              </div>
+              <span className="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded-xl font-mono shrink-0">
+                {new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          </div>
+
+          {/* ================= TOP METRIC BUTTON CARDS ================= */}
+          {/* Items 9, 10, 11, 12, 13, 14 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* 1. Today's Earnings Button (Item 12 & 13) */}
+            <div className="bg-slate-950 rounded-2xl p-3.5 border border-slate-800 shadow flex flex-col justify-between hover:border-emerald-500/50 transition-colors">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Today&apos;s Earnings
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                </div>
+                <div className="text-2xl font-black text-emerald-400 mt-1">
+                  ₹{currentDriver.wallet.todayEarnings}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {completedDriverTrips.length} Trip(s) Completed
+                </div>
+              </div>
+
+              {/* Item 13: View History option at bottom of today's earnings */}
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(true)}
+                className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-emerald-400 hover:text-emerald-300 group"
+              >
+                <span className="flex items-center space-x-1">
+                  <History className="w-3 h-3 text-emerald-400" />
+                  <span>View History</span>
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            </div>
+
+            {/* 2. Total Incentives Button (Item 14 - Slabs configurable on Admin Portal) */}
+            <button
+              type="button"
+              onClick={() => setShowIncentivesModal(true)}
+              className="bg-slate-950 rounded-2xl p-3.5 border border-slate-800 shadow text-left flex flex-col justify-between hover:border-amber-500/50 transition-colors group"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-1">
+                    <Trophy className="w-3 h-3 text-amber-400" />
+                    <span>Total Incentives</span>
+                  </span>
+                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-bold">
+                    Admin Slabs
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-amber-400 mt-1">
+                  ₹{incentiveResult.totalIncentive}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {incentiveResult.nextSlab ? (
+                    <span>
+                      {incentiveResult.tripsToNextSlab} more calls for{' '}
+                      <strong className="text-amber-300">₹{incentiveResult.nextSlab.incentiveAmount}</strong>
                     </span>
-                  </div>
-                  <span className="text-xs font-black text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-lg">
-                    Earnings: ₹{assignedTrip.fare.driverEarnings}
+                  ) : (
+                    <span className="text-emerald-400 font-bold">Top milestone achieved!</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-amber-400 group-hover:text-amber-300">
+                <span>View Incentive Slabs</span>
+                <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </button>
+
+            {/* 3. Overall Wallet Balance Button (Item 9, 10, 11 - Max Cap ₹200, Recharge & Withdraw) */}
+            <button
+              type="button"
+              onClick={() => {
+                setWalletModalTab('recharge');
+                setShowDriverTopupModal(true);
+              }}
+              className={`rounded-2xl p-3.5 border shadow text-left flex flex-col justify-between transition-colors group ${
+                isDriverBlocked
+                  ? 'bg-rose-950/40 border-rose-700/80 hover:border-rose-500'
+                  : currentDriver.wallet.balance < 0
+                  ? 'bg-amber-950/30 border-amber-800/60 hover:border-amber-500'
+                  : 'bg-slate-950 border-slate-800 hover:border-emerald-500/50'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1">
+                    <Wallet className="w-3 h-3 text-emerald-400" />
+                    <span>Wallet Balance</span>
+                  </span>
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                      isDriverBlocked
+                        ? 'bg-rose-500/30 text-rose-300'
+                        : currentDriver.wallet.balance < 0
+                        ? 'bg-amber-500/20 text-amber-300'
+                        : 'bg-emerald-500/20 text-emerald-300'
+                    }`}
+                  >
+                    {isDriverBlocked ? 'BLOCKED' : currentDriver.wallet.balance < 0 ? 'Dues' : 'Max Cap ₹200'}
                   </span>
                 </div>
 
-                {/* Map View with route */}
+                <div
+                  className={`text-2xl font-black mt-1 ${
+                    isDriverBlocked
+                      ? 'text-rose-400'
+                      : currentDriver.wallet.balance < 0
+                      ? 'text-amber-400'
+                      : 'text-white'
+                  }`}
+                >
+                  {currentDriver.wallet.balance < 0
+                    ? `-₹${Math.abs(currentDriver.wallet.balance)}`
+                    : `₹${currentDriver.wallet.balance}`}
+                </div>
+
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  Max Cap: ₹200 • {isDriverBlocked ? 'Exceeds -₹200 limit' : 'Active'}
+                </div>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-emerald-400 group-hover:text-emerald-300">
+                <span>Recharge / Withdraw</span>
+                <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </button>
+          </div>
+
+          {/* ================= ITEM 11: NEGATIVE BALANCE BLOCK BANNER ================= */}
+          {isDriverBlocked && (
+            <div className="bg-rose-950/80 border-2 border-rose-600 rounded-3xl p-4.5 space-y-3 shadow-2xl animate-pulse">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                  <AlertOctagon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-black text-rose-200 uppercase tracking-wide">
+                    🚨 Pickup Calls Blocked: Debt Exceeds -₹200
+                  </h4>
+                  <p className="text-xs text-rose-300 mt-1 leading-relaxed">
+                    Your current wallet balance is{' '}
+                    <strong className="text-white underline font-mono">
+                      -₹{Math.abs(currentDriver.wallet.balance)}
+                    </strong>
+                    . Per platform rules, when dues exceed -₹200, pickup calls are blocked until you recharge.
+                  </p>
+                  <p className="text-[11px] text-rose-200/90 mt-1">
+                    <strong>Rule:</strong> Minimal recharge is <strong>₹200</strong>. Example: If balance is -₹200 and you recharge ₹300, your new wallet value will be <strong>₹100</strong> (-200 + 300 = 100).
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDriverTopupAmt(200);
+                    setWalletModalTab('recharge');
+                    setShowDriverTopupModal(true);
+                  }}
+                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow-lg transition-transform active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Recharge Now (Min ₹200 to Unblock)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ================= ITEM 16 & 19: PROMINENT WELCOME BUTTON ================= */}
+          {/* Clicking on it will take the driver to a dedicated page for live pickup calls */}
+          <div className="bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-900 border-2 border-emerald-500/80 rounded-3xl p-5 shadow-2xl relative overflow-hidden space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                  Live Dispatch Terminal
+                </span>
+                <h3 className="text-lg font-black text-white">
+                  Welcome to Duty, Partner!
+                </h3>
+                <p className="text-xs text-slate-300 max-w-sm">
+                  Access the live Coimbatore dispatch map, interactive 10-second pickup pop-ups, and active trip GPS navigation.
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-2xl shrink-0">
+                🚀
+              </div>
+            </div>
+
+            {assignedTrip && (
+              <div className="p-3 bg-emerald-900/40 border border-emerald-600/50 rounded-2xl flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="font-bold text-white">Active Trip in Progress: {assignedTrip.bookingCode}</span>
+                </div>
+                <span className="text-emerald-300 font-black">₹{assignedTrip.fare.driverEarnings}</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setDriverPage('duty')}
+              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-sm shadow-xl flex items-center justify-center space-x-2 transition-transform active:scale-95 group"
+            >
+              <span>Welcome / Enter Live Pickup Calls Terminal</span>
+              <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
+
+          {/* Quick tab views (Referrals, KYC, Support) when selected from bottom nav */}
+          {activeDriverTab === 'referrals' && (
+            <div className="bg-slate-950 rounded-3xl p-5 border border-amber-500/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-white flex items-center space-x-2">
+                  <span>🎁 Driver Partner Refer & Earn</span>
+                </h4>
+                <button
+                  onClick={() => setActiveDriverTab('trips')}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="bg-slate-900 p-3 rounded-2xl border border-amber-500/30 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-amber-300 uppercase font-bold">Your Referral Code</div>
+                  <div className="font-mono text-lg font-black text-white">{currentDriver.referralCode || 'SWIF-DRV01-44'}</div>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(currentDriver.referralCode || 'SWIF-DRV01-44');
+                    setDriverReferralCopied(true);
+                    showToast('Driver referral code copied!');
+                    setTimeout(() => setDriverReferralCopied(false), 2500);
+                  }}
+                  className="px-3 py-1.5 bg-amber-500 text-slate-950 rounded-xl text-xs font-bold"
+                >
+                  {driverReferralCopied ? 'Copied!' : 'Copy Code'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeDriverTab === 'kyc' && (
+            <div className="bg-slate-950 rounded-3xl p-5 border border-slate-800 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-white">KYC & Vehicle Documents</h4>
+                <button onClick={() => setActiveDriverTab('trips')} className="text-slate-400">✕ Close</button>
+              </div>
+              <div className="space-y-2">
+                {currentDriver.kycDocuments.map((doc, idx) => (
+                  <div key={idx} className="p-3 bg-slate-900 rounded-xl flex items-center justify-between border border-slate-800">
+                    <div>
+                      <div className="font-semibold text-slate-200">{doc.docType.replace('_', ' ')}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">{doc.docNumber}</div>
+                    </div>
+                    <span className="text-[10px] text-emerald-400 font-bold">Verified</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeDriverTab === 'support' && (
+            <div className="bg-slate-950 rounded-3xl p-5 border border-slate-800 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-sm text-white">Driver Partner SOS</h4>
+                <button onClick={() => setActiveDriverTab('trips')} className="text-slate-400">✕ Close</button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href="tel:+918023456780"
+                  className="p-3 bg-rose-950/60 border border-rose-800 rounded-xl text-rose-300 text-center font-bold flex flex-col items-center space-y-1"
+                >
+                  <Phone className="w-5 h-5 text-rose-400" />
+                  <span>24/7 SOS Call</span>
+                </a>
+                <a
+                  href="https://wa.me/919845012345?text=Driver%20Partner%20Help%20Request"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-3 bg-teal-950/60 border border-teal-800 rounded-xl text-teal-300 text-center font-bold flex flex-col items-center space-y-1"
+                >
+                  <MessageSquare className="w-5 h-5 text-teal-400" />
+                  <span>WhatsApp Help</span>
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* ================= ITEM 15: SPONSORED ADS SECTION ================= */}
+          {/* Similar to Customer App, displayed horizontally one below the other at the bottom */}
+          <div className="pt-2 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center space-x-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                  Featured Partner Deals & Driver Benefits
+                </h4>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">Sponsored</span>
+            </div>
+
+            <div className="space-y-2.5">
+              {DRIVER_SPONSORED_ADS.map((ad) => (
+                <div
+                  key={ad.id}
+                  className={`bg-gradient-to-r ${ad.gradient} p-4 rounded-2xl border shadow-md flex items-start justify-between gap-3`}
+                >
+                  <div className="flex items-start space-x-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-xl shrink-0 shadow">
+                      {ad.icon}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center space-x-2 flex-wrap">
+                        <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.2 rounded bg-slate-900/80 text-slate-300 border border-slate-700">
+                          {ad.badge}
+                        </span>
+                        <span className="text-xs font-black text-white truncate">{ad.brand}</span>
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-200 leading-snug">
+                        {ad.title}
+                      </h5>
+                      <p className="text-[11px] text-slate-400 leading-tight">
+                        {ad.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href={`tel:${ad.phone}`}
+                    className="shrink-0 self-center px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 flex items-center space-x-1.5 transition-colors shadow"
+                  >
+                    <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="whitespace-nowrap">{ad.cta}</span>
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= VIEW 2: DEDICATED LIVE PICKUP DUTY PAGE =============== */}
+      {/* ================= Items 16, 19, 20, 21, 22, 23 ========================== */}
+      {/* ========================================================================= */}
+      {driverPage === 'duty' && (
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Duty Top Header with Back to Home Button */}
+          <div className="bg-slate-950 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shadow">
+            <button
+              type="button"
+              onClick={() => setDriverPage('home')}
+              className="flex items-center space-x-1.5 text-xs font-bold text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 text-emerald-400" />
+              <span>← Back to Dashboard</span>
+            </button>
+
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                Live Duty Terminal
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4 max-w-2xl mx-auto w-full">
+            {/* If driver is blocked due to negative balance (Item 11) */}
+            {isDriverBlocked && (
+              <div className="bg-rose-950 border-2 border-rose-600 rounded-3xl p-5 space-y-3 shadow-2xl text-center">
+                <AlertOctagon className="w-10 h-10 text-rose-400 mx-auto" />
+                <h3 className="text-base font-black text-rose-200 uppercase">
+                  Terminal Blocked: Dues Exceed -₹200
+                </h3>
+                <p className="text-xs text-rose-300 max-w-md mx-auto leading-relaxed">
+                  Your wallet is currently{' '}
+                  <strong className="text-white underline font-mono">
+                    -₹{Math.abs(currentDriver.wallet.balance)}
+                  </strong>
+                  . Live pickup calls are suspended until you perform a minimal recharge of ₹200.
+                </p>
+                <div className="pt-2 max-w-xs mx-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDriverTopupAmt(200);
+                      setWalletModalTab('recharge');
+                      setShowDriverTopupModal(true);
+                    }}
+                    className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                  >
+                    Recharge ₹200 Now to Resume
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Item 19: Maps moved from Home Page to this Duty Page */}
+            <div className="bg-slate-950 rounded-2xl border border-slate-800 p-2 shadow-xl space-y-2">
+              <div className="flex items-center justify-between px-2 pt-1 text-xs">
+                <div className="flex items-center space-x-1.5 font-bold text-slate-300">
+                  <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {assignedTrip ? `Route Navigation: ${assignedTrip.bookingCode}` : 'Coimbatore Live Dispatch Radar'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {currentDriver.groupName || 'Central Fleet'}
+                </span>
+              </div>
+
+              {assignedTrip ? (
                 <LeafletMap
                   pickup={{ lat: assignedTrip.pickup.lat, lng: assignedTrip.pickup.lng, label: 'Pickup' }}
                   drop={{ lat: assignedTrip.drop.lat, lng: assignedTrip.drop.lng, label: 'Drop' }}
@@ -306,8 +839,34 @@ export default function DriverApp() {
                     label: 'You (Driver)',
                   }}
                   targetDestination={assignedTrip.status === 'IN_TRANSIT' ? 'drop' : 'pickup'}
-                  className="h-44 w-full rounded-xl border border-slate-800"
+                  className="h-56 w-full rounded-xl border border-slate-800"
                 />
+              ) : (
+                <LeafletMap
+                  driver={{
+                    lat: currentDriver.currentLocation.lat,
+                    lng: currentDriver.currentLocation.lng,
+                    label: `${currentDriver.name} (Live)`,
+                  }}
+                  className="h-56 w-full rounded-xl border border-slate-800"
+                />
+              )}
+            </div>
+
+            {/* ================= ACTIVE ASSIGNED TRIP WORKFLOW ================= */}
+            {assignedTrip && (
+              <div className="bg-slate-950 rounded-3xl border border-emerald-500/80 p-5 space-y-4 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                      Active Trip: {assignedTrip.bookingCode}
+                    </span>
+                  </div>
+                  <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 border border-emerald-700 px-2.5 py-1 rounded-xl">
+                    Net Earnings: ₹{assignedTrip.fare.driverEarnings}
+                  </span>
+                </div>
 
                 {/* Deep link Google Maps Navigation button */}
                 <a
@@ -322,75 +881,110 @@ export default function DriverApp() {
                 >
                   <Navigation className="w-4 h-4" />
                   <span>
-                    Open In Google Maps Navigation (
+                    Open Google Maps GPS (
                     {assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT' ? 'To Drop' : 'To Pickup'}
                     )
                   </span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
 
-                {/* Locations */}
-                <div className="space-y-2 text-xs bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                  <div className="flex items-start space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold text-slate-200">Pickup ({assignedTrip.pickup.area})</div>
-                      <div className="text-[11px] text-slate-400">{assignedTrip.pickup.address}</div>
-                      <div className="text-[10px] text-slate-500">Contact: {assignedTrip.pickup.senderOrReceiverName || assignedTrip.customerName}</div>
+                {/* Multi-Pickup & Multi-Drop Locations (Items 17 & 21) */}
+                <div className="space-y-2 text-xs bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
+                  {/* Pickups */}
+                  {assignedTrip.pickups && assignedTrip.pickups.length > 1 ? (
+                    <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold text-emerald-400">
+                        Multi-Pickup Stops ({assignedTrip.pickups.length})
+                      </div>
+                      {assignedTrip.pickups.map((p, idx) => (
+                        <div key={idx} className="flex items-start space-x-2 pl-1 border-l-2 border-emerald-500">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-200">
+                              Stop #{idx + 1}: {p.area}
+                            </div>
+                            <div className="text-[11px] text-slate-400">{p.address}</div>
+                            {/* Item 21: Pickup contact number clickable */}
+                            <a
+                              href={`tel:${p.senderOrReceiverPhone || assignedTrip.customerPhone}`}
+                              className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                            >
+                              <Phone className="w-3 h-3 text-emerald-400" />
+                              <span>Call Contact: {p.senderOrReceiverPhone || assignedTrip.customerPhone}</span>
+                            </a>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-
-                  <div className="flex items-start space-x-2 pt-2 border-t border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <div className="font-semibold text-slate-200">Drop Destination ({assignedTrip.drop.area})</div>
-                      <div className="text-[11px] text-slate-400">{assignedTrip.drop.address}</div>
-                      <div className="text-[10px] text-slate-500">Contact: {assignedTrip.drop.senderOrReceiverName || 'Receiver'}</div>
+                  ) : (
+                    <div className="flex items-start space-x-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-200">Pickup ({assignedTrip.pickup.area})</div>
+                        <div className="text-[11px] text-slate-400">{assignedTrip.pickup.address}</div>
+                        {/* Item 21: Clickable contact number */}
+                        <a
+                          href={`tel:${assignedTrip.pickup.senderOrReceiverPhone || assignedTrip.customerPhone}`}
+                          className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                        >
+                          <Phone className="w-3 h-3 text-emerald-400" />
+                          <span>Call: {assignedTrip.pickup.senderOrReceiverPhone || assignedTrip.customerPhone} ({assignedTrip.pickup.senderOrReceiverName || assignedTrip.customerName})</span>
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Goods details */}
-                <div className="flex items-center justify-between text-xs bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
-                  <div>
-                    <span className="text-slate-400">Cargo:</span>{' '}
-                    <span className="font-semibold text-slate-200">{assignedTrip.shipment.goodsCategory} (~{assignedTrip.shipment.approxWeightKg}kg)</span>
-                  </div>
-                  {assignedTrip.shipment.hasHelperRequired && (
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded">
-                      Helper Assistance Req.
-                    </span>
                   )}
-                </div>
 
-                {/* Masked Call Customer */}
-                <div className="flex items-center space-x-2">
-                  <a
-                    href={`tel:${assignedTrip.customerPhone}`}
-                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors border border-slate-700"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Masked Call Customer</span>
-                  </a>
-                  <a
-                    href={`https://wa.me/919880199234?text=Hello%20Customer,%20I%20am%20your%20SwifLoad%20driver`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 bg-teal-900/50 hover:bg-teal-900 text-teal-300 rounded-xl border border-teal-700"
-                    title="WhatsApp"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </a>
+                  {/* Drops */}
+                  <div className="pt-2 border-t border-slate-800">
+                    {assignedTrip.drops && assignedTrip.drops.length > 1 ? (
+                      <div className="space-y-2">
+                        <div className="text-[10px] uppercase font-bold text-rose-400">
+                          Multi-Drop Stops ({assignedTrip.drops.length})
+                        </div>
+                        {assignedTrip.drops.map((d, idx) => (
+                          <div key={idx} className="flex items-start space-x-2 pl-1 border-l-2 border-rose-500">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-slate-200">
+                                Drop #{idx + 1}: {d.area}
+                              </div>
+                              <div className="text-[11px] text-slate-400">{d.address}</div>
+                              <a
+                                href={`tel:${d.senderOrReceiverPhone || '9842211990'}`}
+                                className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                              >
+                                <Phone className="w-3 h-3 text-rose-400" />
+                                <span>Call Drop Contact: {d.senderOrReceiverPhone || 'Receiver'}</span>
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-start space-x-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-200">Drop Destination ({assignedTrip.drop.area})</div>
+                          <div className="text-[11px] text-slate-400">{assignedTrip.drop.address}</div>
+                          <a
+                            href={`tel:${assignedTrip.drop.senderOrReceiverPhone || '9842211990'}`}
+                            className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                          >
+                            <Phone className="w-3 h-3 text-rose-400" />
+                            <span>Call Receiver: {assignedTrip.drop.senderOrReceiverPhone || 'Recipient'} ({assignedTrip.drop.senderOrReceiverName || 'Receiver'})</span>
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* TRIP EXECUTION ACTIONS BY STATUS */}
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-3">
+                <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Current Trip Stage</div>
 
                   {assignedTrip.status === 'DRIVER_ASSIGNED' && (
                     <button
                       onClick={handleAdvanceStatus}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                      className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
                     >
                       I Am En Route to Pickup Location ➔
                     </button>
@@ -399,7 +993,7 @@ export default function DriverApp() {
                   {assignedTrip.status === 'ARRIVING_PICKUP' && (
                     <button
                       onClick={handleAdvanceStatus}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                      className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
                     >
                       I Have Arrived at Pickup Point ➔
                     </button>
@@ -433,7 +1027,7 @@ export default function DriverApp() {
                   {assignedTrip.status === 'IN_TRANSIT' && (
                     <button
                       onClick={handleAdvanceStatus}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                      className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
                     >
                       I Have Reached Drop Destination ➔
                     </button>
@@ -442,7 +1036,7 @@ export default function DriverApp() {
                   {assignedTrip.status === 'ARRIVED_DESTINATION' && (
                     <div className="space-y-3">
                       <div className="text-xs text-amber-300 font-medium">
-                        Collect Drop OTP from recipient & optional delivery proof:
+                        Collect Drop OTP from recipient & confirm delivery:
                       </div>
 
                       <div className="flex items-center space-x-2">
@@ -462,7 +1056,6 @@ export default function DriverApp() {
                         </button>
                       </div>
 
-                      {/* Payment Collection notice if COD */}
                       {assignedTrip.paymentMethod === 'CASH_ON_DELIVERY' && (
                         <div className="p-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl text-xs text-amber-300 flex items-center justify-between">
                           <span>Collect Cash on Drop:</span>
@@ -475,571 +1068,256 @@ export default function DriverApp() {
                   )}
                 </div>
               </div>
-            ) : (
-              /* When driver has no active trip */
-              <div className="bg-slate-950 rounded-2xl border border-slate-800 p-6 text-center space-y-4 shadow-xl">
-                <div className="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 mx-auto flex items-center justify-center text-xl">
-                  {currentDriver.isOnline ? '📡' : '💤'}
-                </div>
-
-                <div>
-                  <h3 className="text-base font-bold text-white">
-                    {currentDriver.isOnline ? 'Searching for Nearby Bookings' : 'You are currently OFFLINE'}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                    {currentDriver.isOnline
-                      ? `Active in group: ${currentDriver.groupName || 'Central Fleet'}. Requests will pop up here.`
-                      : 'Toggle to ONLINE to start receiving freight booking offers for your group.'}
-                  </p>
-                </div>
-
-                {currentDriver.isOnline && availableGroupTrips.length === 0 && (
-                  <div className="text-[11px] text-slate-500 bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
-                    📡 Listening for new customer bookings nearest to {currentDriver.groupName || 'your zone'}...
-                  </div>
-                )}
-              </div>
             )}
 
-            {/* Available Orders For Your Group (Tasks offered to this group before cascading to next group) */}
-            {availableGroupTrips.length > 0 && !assignedTrip && (
-              <div className="bg-slate-950 rounded-2xl border border-amber-500/40 p-4 space-y-3 shadow-xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            {/* ================= ITEMS 20, 21, 22, 23: INCOMING ORDER POP-UPS ON DUTY PAGE ================= */}
+            {!assignedTrip && !isDriverBlocked && availableGroupTrips.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
                   <div className="flex items-center space-x-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-400">
-                      Available Orders for Your Group ({currentDriver.groupName})
-                    </span>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-400">
+                      Live Pickup Calls For Your Fleet Group ({availableGroupTrips.length})
+                    </h3>
                   </div>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-mono font-bold">
-                    {availableGroupTrips.length} Order(s)
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Timeframe: {dispatchTimeoutSecs}s
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                  Tasks not accepted immediately show here for your group before auto-cascading to the adjacent location group.
-                </p>
+                {availableGroupTrips.map((order) => {
+                  const payout = calculateDriverTaskPayout(
+                    currentDriver.currentLocation,
+                    order.pickup,
+                    order.distanceKm,
+                    order.customerType || 'regular',
+                    customerSlabConfigs
+                  );
 
-                <div className="space-y-3">
-                  {availableGroupTrips.map((order) => {
-                    const payout = calculateDriverTaskPayout(
-                      currentDriver.currentLocation,
-                      order.pickup,
-                      order.distanceKm,
-                      order.customerType || 'regular',
-                      customerSlabConfigs
-                    );
+                  const countdown = order.dispatchCountdownSecs ?? dispatchTimeoutSecs;
+                  const progressPct = Math.max(0, Math.min(100, (countdown / dispatchTimeoutSecs) * 100));
 
-                    return (
-                      <div
-                        key={order.id}
-                        className="bg-slate-900 rounded-xl p-3 border border-slate-800 space-y-2.5"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-white">{order.bookingCode}</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-emerald-400 font-black text-sm">
-                              ₹{payout.netEarnings} (Net Payout)
-                            </span>
-                            <span className="text-[10px] bg-slate-800 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold">
-                              {order.dispatchCountdownSecs ?? 15}s left
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Driver Approach + Trip Distance Breakdown */}
-                        <div className="p-2 bg-emerald-950/40 rounded-lg border border-emerald-900/40 flex items-center justify-between text-[10px] text-emerald-300">
-                          <span>
-                            📍 {payout.driverDistanceToPickupKm} km from you to pickup + {payout.tripDistanceKm} km trip
-                          </span>
-                          <span className="font-mono font-bold">
-                            = {payout.totalDistanceKm} km billable
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-slate-950 border-2 border-emerald-500/80 rounded-3xl p-5 space-y-4 shadow-2xl relative overflow-hidden"
+                    >
+                      {/* Item 22: Clearly visible 10-second countdown timer header */}
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-xs font-black text-white uppercase tracking-wider">
+                            Order {order.bookingCode}
                           </span>
                         </div>
 
-                        <div className="text-xs space-y-1 text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80">
-                          <div className="flex items-start space-x-2">
-                            <span className="text-emerald-400 mt-0.5">●</span>
-                            <div>
-                              <span className="font-semibold text-slate-200">Pickup: {order.pickup.area}</span>
-                              <div className="text-[11px] text-slate-400">{order.pickup.address}</div>
-                            </div>
+                        {/* Visible 10s Timer Badge */}
+                        <div className="flex items-center space-x-2">
+                          <div className="w-20 bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                            <div
+                              className="bg-amber-400 h-full transition-all duration-1000 rounded-full"
+                              style={{ width: `${progressPct}%` }}
+                            />
                           </div>
-                          <div className="flex items-start space-x-2 pt-1.5 border-t border-slate-800">
-                            <span className="text-rose-400 mt-0.5">■</span>
-                            <div>
-                              <span className="font-semibold text-slate-200">Drop: {order.drop.area} ({order.distanceKm} km)</span>
-                              <div className="text-[11px] text-slate-400">{order.drop.address}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-                          <span>Cargo: {order.shipment.goodsCategory} (~{order.shipment.approxWeightKg}kg)</span>
-                          <span>Task Charge (Gross): ₹{payout.grossFare}</span>
-                        </div>
-
-                        <div className="flex items-center space-x-2 pt-1 border-t border-slate-800">
-                          <button
-                            onClick={() => passTripToNextGroup(order.id)}
-                            className="flex-1 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
-                          >
-                            Pass to Next Group
-                          </button>
-                          <button
-                            onClick={() => acceptTripByDriver(order.id, currentDriver.id)}
-                            className="flex-1 py-2 text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg shadow transition-transform active:scale-95"
-                          >
-                            Accept Task (₹{payout.netEarnings})
-                          </button>
+                          <span className="text-xs font-mono font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full">
+                            ⏳ {countdown}s
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Item 20: Charges Applicable */}
+                      <div className="grid grid-cols-2 gap-2 text-center">
+                        <div className="bg-slate-900/90 p-2.5 rounded-2xl border border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400">Total Task Fare</div>
+                          <div className="text-xl font-black text-white mt-0.5">₹{payout.grossFare}</div>
+                        </div>
+                        <div className="bg-emerald-950/40 p-2.5 rounded-2xl border border-emerald-800/60">
+                          <div className="text-[10px] uppercase font-bold text-emerald-300">Net Take-Home</div>
+                          <div className="text-xl font-black text-emerald-400 mt-0.5">₹{payout.netEarnings}</div>
+                        </div>
+                      </div>
+
+                      {/* Items 20 & 21: Pickup & Drop Locations with Touchable Contact Numbers */}
+                      <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-3 text-xs">
+                        {/* Pickup Stop(s) */}
+                        {order.pickups && order.pickups.length > 1 ? (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase text-emerald-400">Multi-Pickup ({order.pickups.length} stops)</span>
+                            {order.pickups.map((p, idx) => (
+                              <div key={idx} className="pl-2 border-l-2 border-emerald-500 text-slate-300">
+                                <div className="font-bold text-white">Stop #{idx + 1}: {p.area}</div>
+                                <div className="text-[11px] text-slate-400">{p.address}</div>
+                                {/* Touch to call customer (Item 21) */}
+                                <a
+                                  href={`tel:${p.senderOrReceiverPhone || order.customerPhone}`}
+                                  className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                                >
+                                  <PhoneCall className="w-3 h-3" />
+                                  <span>Tap to Call: {p.senderOrReceiverPhone || order.customerPhone}</span>
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-start space-x-2.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-slate-200">Pickup: {order.pickup.area}</div>
+                              <div className="text-[11px] text-slate-400">{order.pickup.address}</div>
+                              {/* Item 21: Touch contact number to contact customer */}
+                              <a
+                                href={`tel:${order.pickup.senderOrReceiverPhone || order.customerPhone}`}
+                                className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                              >
+                                <PhoneCall className="w-3 h-3" />
+                                <span>Tap to Call Sender: {order.pickup.senderOrReceiverPhone || order.customerPhone}</span>
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Drop Stop(s) */}
+                        <div className="pt-2 border-t border-slate-800">
+                          {order.drops && order.drops.length > 1 ? (
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] font-bold uppercase text-rose-400">Multi-Drop ({order.drops.length} stops)</span>
+                              {order.drops.map((d, idx) => (
+                                <div key={idx} className="pl-2 border-l-2 border-rose-500 text-slate-300">
+                                  <div className="font-bold text-white">Drop #{idx + 1}: {d.area}</div>
+                                  <div className="text-[11px] text-slate-400">{d.address}</div>
+                                  <a
+                                    href={`tel:${d.senderOrReceiverPhone || '9842211990'}`}
+                                    className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                                  >
+                                    <PhoneCall className="w-3 h-3" />
+                                    <span>Tap to Call Recipient: {d.senderOrReceiverPhone || 'Receiver'}</span>
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex items-start space-x-2.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-400 mt-1 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-slate-200">Drop: {order.drop.area} ({order.distanceKm} km)</div>
+                                <div className="text-[11px] text-slate-400">{order.drop.address}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Cargo info */}
+                      <div className="text-[11px] text-slate-400 px-1 flex items-center justify-between">
+                        <span>Cargo: {order.shipment.goodsCategory} (~{order.shipment.approxWeightKg}kg)</span>
+                        <span>Approach: {payout.driverDistanceToPickupKm}km to pickup</span>
+                      </div>
+
+                      {/* Items 22 & 23: Skip Task & Accept Task Buttons */}
+                      <div className="flex items-center space-x-2 pt-1 border-t border-slate-800">
+                        {/* Item 23: Option to skip tasks */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            passTripToNextGroup(order.id);
+                            setDismissedTripIds((prev) => [...prev, order.id]);
+                            showToast(`Skipped task ${order.bookingCode}`);
+                          }}
+                          className="flex-1 py-3 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                        >
+                          Skip Task
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const res = acceptTripByDriver(order.id, currentDriver.id);
+                            if (res.success) {
+                              showToast(`Accepted task ${order.bookingCode}! Drive to pickup.`);
+                            }
+                          }}
+                          className="flex-1 py-3 text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl shadow-lg transition-transform active:scale-95"
+                        >
+                          Accept Task (₹{payout.netEarnings})
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Quick Earnings & Overdraft Bar */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                <div className="text-[10px] text-slate-400 font-bold uppercase">Today's Earnings</div>
-                <div className="text-lg font-black text-emerald-400 mt-0.5">₹{currentDriver.wallet.todayEarnings}</div>
-              </div>
-              <div className="bg-slate-950 rounded-xl p-3 border border-slate-800">
-                <div className="flex items-center justify-between">
-                  <div className="text-[10px] text-slate-400 font-bold uppercase">Wallet Balance</div>
-                  {currentDriver.wallet.balance < 0 && (
-                    <span className="text-[9px] bg-rose-500/20 text-rose-300 px-1.5 py-0.2 rounded font-bold">Overdraft</span>
-                  )}
-                </div>
-                <div className={`text-lg font-black mt-0.5 ${currentDriver.wallet.balance < 0 ? 'text-rose-400' : 'text-white'}`}>
-                  {currentDriver.wallet.balance < 0 ? `-₹${Math.abs(currentDriver.wallet.balance)}` : `₹${currentDriver.wallet.balance}`}
-                </div>
-                {currentDriver.wallet.balance < 0 && (
-                  <div className="text-[9px] text-slate-400 mt-0.5">
-                    Limit: -₹{currentDriver.wallet.negativeBalanceLimit || 1500}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ================= TAB 2: WALLET, OVERDRAFT & EARNINGS ================= */}
-        {activeDriverTab === 'earnings' && (
-          <div className="space-y-4 max-w-xl mx-auto">
-            {/* Wallet & Overdraft Hero Card */}
-            <div className={`rounded-3xl p-5 border shadow-xl space-y-4 relative overflow-hidden ${
-              currentDriver.wallet.balance < 0
-                ? 'bg-gradient-to-br from-rose-950 via-slate-950 to-slate-900 border-rose-800/60'
-                : 'bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-900 border-emerald-800/60'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                    currentDriver.wallet.balance < 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
-                  }`}>
-                    <Wallet className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-300 font-bold">Driver Partner Wallet</span>
-                    <div className="text-[10px] text-slate-400">Overdraft Facility Active</div>
-                  </div>
-                </div>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                  currentDriver.wallet.balance < 0
-                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                }`}>
-                  {currentDriver.wallet.balance < 0 ? 'OVERDRAFT IN USE' : 'GOOD STANDING'}
-                </span>
-              </div>
-
-              <div>
-                <div className="text-xs text-slate-400">Current Wallet Balance</div>
-                <div className={`text-3xl sm:text-4xl font-black mt-0.5 tracking-tight flex items-baseline space-x-1 ${
-                  currentDriver.wallet.balance < 0 ? 'text-rose-400' : 'text-white'
-                }`}>
-                  <span>{currentDriver.wallet.balance < 0 ? '-₹' : '₹'}</span>
-                  <span>{Math.abs(currentDriver.wallet.balance).toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-
-              {/* Overdraft Cushion Details Box */}
-              <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2 text-xs">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Approved Negative Limit:</span>
-                  <span className="font-extrabold text-white font-mono">-₹{currentDriver.wallet.negativeBalanceLimit || 1500}</span>
-                </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Remaining Credit Buffer:</span>
-                  <span className="font-extrabold text-emerald-400 font-mono">
-                    ₹{Math.max(0, (currentDriver.wallet.negativeBalanceLimit || 1500) + currentDriver.wallet.balance).toLocaleString('en-IN')}
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800 leading-snug">
-                  * Negative balances occur when platform commissions are deducted for Cash-on-Drop (COD) customer trips. Overdraft limit is pre-determined by Admin.
-                </p>
-              </div>
-
-              {/* Actions: Top-up / Clear Dues & Payout */}
-              <div className="flex items-center space-x-2 pt-1 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowDriverTopupModal(true)}
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{currentDriver.wallet.balance < 0 ? 'Clear Dues / Top Up' : 'Add Wallet Balance'}</span>
-                </button>
-
-                {currentDriver.wallet.balance > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPayoutModal(true)}
-                    className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5"
-                  >
-                    <span>Request Payout</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Wallet Transaction Ledger */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h4 className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Wallet Activity Ledger</h4>
-                <span className="text-[10px] text-slate-500 font-medium">
-                  {currentDriver.wallet.transactions?.length || 0} Transactions
-                </span>
-              </div>
-
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {currentDriver.wallet.transactions && currentDriver.wallet.transactions.length > 0 ? (
-                  currentDriver.wallet.transactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="p-3 bg-slate-900 rounded-xl border border-slate-800/80 flex items-center justify-between"
-                    >
-                      <div className="flex items-start space-x-2.5">
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center mt-0.5 ${
-                            tx.type === 'CREDIT'
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-rose-500/20 text-rose-400'
-                          }`}
-                        >
-                          {tx.type === 'CREDIT' ? (
-                            <ArrowDownLeft className="w-3.5 h-3.5" />
-                          ) : (
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-200 leading-tight">{tx.description}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">
-                            {new Date(tx.timestamp).toLocaleString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span
-                          className={`font-black text-xs ${
-                            tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'
-                          }`}
-                        >
-                          {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
-                        </span>
-                        <div className="text-[9px] text-slate-500">Bal: ₹{tx.balanceAfter}</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-slate-500 text-xs">
-                    No wallet transactions recorded yet.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bank details preview */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 text-xs space-y-2">
-              <div className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Registered Payout Account</div>
-              <div className="flex justify-between text-slate-400">
-                <span>Account Name</span>
-                <span className="text-white font-medium">{currentDriver.bankDetails.accountName}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Bank / IFSC</span>
-                <span className="text-white font-medium">{currentDriver.bankDetails.ifscCode}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Direct UPI ID</span>
-                <span className="text-emerald-400 font-mono font-medium">{currentDriver.bankDetails.upiId}</span>
-              </div>
-            </div>
-
-            {/* Trip Earnings History */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Completed Trips & Payouts</h4>
-              {completedDriverTrips.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">No completed trips today yet.</p>
-              ) : (
-                completedDriverTrips.map((tr) => (
-                  <div key={tr.id} className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-slate-200">{tr.bookingCode}</div>
-                      <div className="text-[11px] text-slate-400">{tr.pickup.area} ➔ {tr.drop.area} ({tr.distanceKm}km)</div>
-                      <div className="text-[10px] text-slate-500">{new Date(tr.createdAt).toLocaleTimeString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-black text-emerald-400 text-sm">+₹{tr.fare.driverEarnings}</div>
-                      <div className="text-[10px] text-slate-500">Gross: ₹{tr.fare.totalFare}</div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ================= TAB 3: REFER & EARN (DRIVER PROGRAM) ================= */}
-        {activeDriverTab === 'referrals' && (
-          <div className="space-y-4 max-w-xl mx-auto">
-            {/* Refer & Earn Hero */}
-            <div className="bg-gradient-to-br from-amber-950 via-slate-950 to-slate-900 text-white p-5 rounded-3xl shadow-xl space-y-4 border border-amber-800/40 relative overflow-hidden">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-sm">
-                  🎁
+            {/* When driver is online and idle with no orders */}
+            {!assignedTrip && !isDriverBlocked && availableGroupTrips.length === 0 && (
+              <div className="bg-slate-950 rounded-3xl border border-slate-800 p-8 text-center space-y-4 shadow-xl">
+                <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
+                  {currentDriver.isOnline ? '📡' : '💤'}
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-white">Driver Partner Refer & Earn</h3>
-                  <p className="text-[11px] text-amber-200">Earn direct wallet cash for expanding Coimbatore's fleet</p>
-                </div>
-              </div>
-
-              {/* Unique Code Card */}
-              <div className="bg-slate-900/90 p-4 rounded-2xl border border-amber-500/30 space-y-2">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-amber-300">Your Driver Referral Code</div>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xl font-black text-white tracking-widest">
-                    {currentDriver.referralCode || 'SWIF-DRV01-44'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentDriver.referralCode || 'SWIF-DRV01-44');
-                      setDriverReferralCopied(true);
-                      showToast('Driver referral code copied to clipboard!');
-                      setTimeout(() => setDriverReferralCopied(false), 2500);
-                    }}
-                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow"
-                  >
-                    {driverReferralCopied ? <Check className="w-3.5 h-3.5 text-slate-950" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{driverReferralCopied ? 'Copied!' : 'Copy Code'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Two Tracks Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                {/* Track 1: Driver referring Driver */}
-                <div className="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                  <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Track 1: Refer a Driver</div>
-                  <div className="text-xl font-black text-emerald-400">
-                    ₹{referralConfig?.driverToDriverBonus || 500}
-                  </div>
-                  <p className="text-[10px] text-slate-400 leading-snug">
-                    Refer tempo, pickup, or mini-truck drivers. Auto-credited to your wallet when their KYC is verified by Admin.
-                  </p>
-                </div>
-
-                {/* Track 2: Driver referring Customer */}
-                <div className="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                  <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Track 2: Refer a Customer</div>
-                  <div className="text-xl font-black text-emerald-400">
-                    ₹{referralConfig?.driverToCustomerBonus || 100}
-                  </div>
-                  <p className="text-[10px] text-slate-400 leading-snug">
-                    Tell shops, factories, and merchants to book via SwifLoad. Auto-credited when they complete their first trip.
+                  <h4 className="text-base font-bold text-white">
+                    {currentDriver.isOnline ? 'Radar Active & Listening for Bookings' : 'Duty Terminal Offline'}
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    {currentDriver.isOnline
+                      ? `Your vehicle is active in fleet zone ${currentDriver.groupName || 'Central Hub'}. Customer bookings in Coimbatore will pop up here with a ${dispatchTimeoutSecs}s countdown.`
+                      : 'Toggle your status to ONLINE at top right to start receiving freight calls.'}
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Driver Referral Activity Ledger */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h4 className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Your Referral Rewards</h4>
-                <span className="text-[10px] text-slate-500 font-medium">
-                  {referrals.filter((r) => r.referrerId === currentDriver.id).length} invites
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {referrals.filter((r) => r.referrerId === currentDriver.id).length > 0 ? (
-                  referrals
-                    .filter((r) => r.referrerId === currentDriver.id)
-                    .map((ref) => (
-                      <div key={ref.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-slate-200">{ref.refereeName} ({ref.refereePhone})</div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">{ref.notes}</div>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-black text-emerald-400 text-xs">+₹{ref.bonusAmount}</span>
-                          <div>
-                            <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded">
-                              {ref.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                ) : (
-                  <div className="text-center py-6 text-slate-500 text-xs">
-                    Share your driver referral code to start earning ₹500/driver and ₹100/customer!
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ================= TAB 3: KYC & VEHICLE DOCUMENTS ================= */}
-        {activeDriverTab === 'kyc' && (
-          <div className="space-y-4 max-w-xl mx-auto">
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-sm text-white">KYC Onboarding & Verification</h3>
-                  <p className="text-xs text-slate-400">Government compliance documents for commercial transport</p>
-                </div>
-                <span
-                  className={`text-xs font-extrabold px-2.5 py-1 rounded-full ${
-                    currentDriver.kycStatus === 'VERIFIED'
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                  }`}
-                >
-                  {currentDriver.kycStatus}
-                </span>
-              </div>
-
-              {/* Document checklist */}
-              <div className="space-y-2.5 pt-2 text-xs">
-                {currentDriver.kycDocuments.map((doc, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-200 flex items-center space-x-1.5">
-                        {doc.verified ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        ) : (
-                          <Clock className="w-4 h-4 text-amber-400" />
-                        )}
-                        <span>{doc.docType.replace('_', ' ')}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">{doc.docNumber}</div>
-                    </div>
-
-                    <a
-                      href={doc.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[11px] text-blue-400 hover:text-blue-300 font-medium underline"
-                    >
-                      View Doc
-                    </a>
-                  </div>
-                ))}
-              </div>
-
-              {/* Onboard Another Partner Action */}
-              <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
-                <span className="text-xs text-slate-400">Want to onboard another driver partner or vehicle?</span>
-                <button
-                  onClick={() => setShowDriverRegModal(true)}
-                  className="w-full sm:w-auto text-xs px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl flex items-center justify-center space-x-1 shadow"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>Register New Driver Partner</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ================= TAB 4: SUPPORT ================= */}
-        {activeDriverTab === 'support' && (
-          <div className="space-y-4 max-w-xl mx-auto">
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3 text-xs">
-              <h3 className="font-bold text-sm text-white">Driver Partner SOS & Support</h3>
-              <p className="text-slate-400">
-                In case of accident, dispute, fuel breakdown, or customer no-show:
-              </p>
-
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <a
-                  href="tel:+918023456780"
-                  className="p-3 bg-rose-900/30 border border-rose-800 rounded-xl text-rose-300 flex flex-col items-center text-center font-bold space-y-1"
-                >
-                  <Phone className="w-5 h-5 text-rose-400" />
-                  <span>24/7 Driver SOS</span>
-                </a>
-                <a
-                  href="https://wa.me/919845012345?text=Driver%20Partner%20Help%20Request"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-3 bg-teal-900/30 border border-teal-800 rounded-xl text-teal-300 flex flex-col items-center text-center font-bold space-y-1"
-                >
-                  <MessageSquare className="w-5 h-5 text-teal-400" />
-                  <span>WhatsApp Helpdesk</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Driver Bottom Nav */}
+      {/* ================= DRIVER BOTTOM NAVIGATION ================= */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex items-center justify-between z-30 shadow-2xl">
         <button
-          onClick={() => setActiveDriverTab('trips')}
+          onClick={() => setDriverPage('home')}
           className={`flex flex-col items-center space-y-0.5 ${
-            activeDriverTab === 'trips' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+            driverPage === 'home' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
           }`}
         >
-          <Navigation className="w-5 h-5" />
-          <span className="text-[10px]">Dispatch</span>
+          <Sparkles className="w-5 h-5" />
+          <span className="text-[10px]">Home</span>
         </button>
 
         <button
-          onClick={() => setActiveDriverTab('earnings')}
+          onClick={() => setDriverPage('duty')}
           className={`flex flex-col items-center space-y-0.5 relative ${
-            activeDriverTab === 'earnings' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+            driverPage === 'duty' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
           }`}
         >
-          <Wallet className="w-5 h-5" />
-          <span className="text-[10px]">Wallet</span>
-          {currentDriver.wallet.balance < 0 && (
-            <span className="absolute -top-0.5 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          <Navigation className="w-5 h-5" />
+          <span className="text-[10px]">Live Duty</span>
+          {availableGroupTrips.length > 0 && (
+            <span className="absolute -top-1 right-2 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
           )}
         </button>
 
         <button
-          onClick={() => setActiveDriverTab('referrals')}
+          onClick={() => {
+            setDriverPage('home');
+            setWalletModalTab('recharge');
+            setShowDriverTopupModal(true);
+          }}
+          className="flex flex-col items-center space-y-0.5 relative text-slate-500 font-medium hover:text-emerald-400"
+        >
+          <Wallet className="w-5 h-5" />
+          <span className="text-[10px]">Wallet</span>
+          {isDriverBlocked && (
+            <span className="absolute -top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setDriverPage('home');
+            setActiveDriverTab('referrals');
+          }}
           className={`flex flex-col items-center space-y-0.5 ${
-            activeDriverTab === 'referrals' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+            activeDriverTab === 'referrals' && driverPage === 'home'
+              ? 'text-emerald-400 font-bold'
+              : 'text-slate-500 font-medium'
           }`}
         >
           <Gift className="w-5 h-5" />
@@ -1047,181 +1325,400 @@ export default function DriverApp() {
         </button>
 
         <button
-          onClick={() => setActiveDriverTab('kyc')}
+          onClick={() => {
+            setDriverPage('home');
+            setActiveDriverTab('support');
+          }}
           className={`flex flex-col items-center space-y-0.5 ${
-            activeDriverTab === 'kyc' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
-          }`}
-        >
-          <ShieldCheck className="w-5 h-5" />
-          <span className="text-[10px]">KYC Docs</span>
-        </button>
-
-        <button
-          onClick={() => setActiveDriverTab('support')}
-          className={`flex flex-col items-center space-y-0.5 ${
-            activeDriverTab === 'support' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+            activeDriverTab === 'support' && driverPage === 'home'
+              ? 'text-emerald-400 font-bold'
+              : 'text-slate-500 font-medium'
           }`}
         >
           <HelpCircle className="w-5 h-5" />
-          <span className="text-[10px]">SOS Support</span>
+          <span className="text-[10px]">SOS</span>
         </button>
       </div>
 
-      {/* ================= MODAL: PAYOUT REQUEST ================= */}
-      {showPayoutModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl">
-            <h3 className="font-bold text-sm">Instant Bank IMPS Payout</h3>
-            <p className="text-xs text-slate-400">
-              Transfer your balance directly to your bank account ({currentDriver.bankDetails.accountName}):
-            </p>
+      {/* ========================================================================= */}
+      {/* ========================= MODALS & OVERLAYS ============================= */}
+      {/* ========================================================================= */}
 
-            <div>
-              <label className="text-[10px] text-slate-400 uppercase font-bold">Amount to Withdraw (₹)</label>
-              <input
-                type="number"
-                value={payoutAmount}
-                max={currentDriver.wallet.balance}
-                onChange={(e) => setPayoutAmount(Number(e.target.value))}
-                className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 font-black text-lg"
-              />
-              <div className="text-[10px] text-slate-500 mt-1">Available balance: ₹{currentDriver.wallet.balance}</div>
-            </div>
-
-            <div className="flex items-center space-x-2 pt-2">
-              <button
-                onClick={() => setShowPayoutModal(false)}
-                className="flex-1 py-2 text-xs font-semibold bg-slate-800 text-slate-300 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  requestDriverPayout(currentDriver.id, payoutAmount);
-                  setShowPayoutModal(false);
-                }}
-                className="flex-1 py-2 text-xs font-bold bg-emerald-500 text-slate-950 rounded-xl hover:bg-emerald-400"
-              >
-                Confirm Transfer
+      {/* Item 13: Reverse Chronological Transaction History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <History className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-sm text-white">Transaction History (Reverse Chronological)</h3>
+              </div>
+              <button onClick={() => setShowHistoryModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
               </button>
             </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                Wallet Ledger Entries ({reverseChronologicalTx.length})
+              </div>
+
+              {reverseChronologicalTx.length > 0 ? (
+                reverseChronologicalTx.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between"
+                  >
+                    <div className="flex items-start space-x-2.5">
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center mt-0.5 ${
+                          tx.type === 'CREDIT' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                        }`}
+                      >
+                        {tx.type === 'CREDIT' ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-200">{tx.description}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {new Date(tx.timestamp).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-black text-xs ${tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
+                      </span>
+                      <div className="text-[9px] text-slate-500">Bal: ₹{tx.balanceAfter}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-slate-500">No transactions recorded yet.</div>
+              )}
+
+              {/* Completed Trips in reverse chronological order */}
+              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider pt-3 border-t border-slate-800">
+                Completed Trips History ({reverseChronologicalTrips.length})
+              </div>
+
+              {reverseChronologicalTrips.length > 0 ? (
+                reverseChronologicalTrips.map((tr) => (
+                  <div key={tr.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-slate-200">{tr.bookingCode}</div>
+                      <div className="text-[11px] text-slate-400">
+                        {tr.pickup.area} ➔ {tr.drop.area} ({tr.distanceKm} km)
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {new Date(tr.createdAt).toLocaleString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-black text-emerald-400 text-sm">+₹{tr.fare.driverEarnings}</div>
+                      <div className="text-[10px] text-slate-500">Fare: ₹{tr.fare.totalFare}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-3 text-slate-500 text-[11px]">No completed trips yet.</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowHistoryModal(false)}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs"
+            >
+              Close History
+            </button>
           </div>
         </div>
       )}
 
-      {/* ================= MODAL: REAL-TIME CASCADING DISPATCH POPUP ================= */}
-      {(activeIncomingTrip || showIncomingTripModal) && (
-        (() => {
-          const tripToOffer = activeIncomingTrip || trips.find((t) => t.status === 'SEARCHING') || null;
-          if (!tripToOffer) return null;
+      {/* Item 14: Incentive Slabs Modal (Configurable on Admin Portal) */}
+      {showIncentivesModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Trophy className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm text-white">Daily Incentive Slabs</h3>
+              </div>
+              <button onClick={() => setShowIncentivesModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-          const payout = calculateDriverTaskPayout(
-            currentDriver.currentLocation,
-            tripToOffer.pickup,
-            tripToOffer.distanceKm,
-            tripToOffer.customerType || 'regular',
-            customerSlabConfigs
-          );
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-400 text-[11px]">
+                Incentives are configured dynamically by the Operations Admin. Reach trip milestones today to unlock direct wallet cash:
+              </p>
 
-          return (
-            <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-950 border-2 border-emerald-500 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="text-xs font-black uppercase text-emerald-400 tracking-wider">
-                      ⚡ Incoming Task ({currentDriver.groupName})
+              <div className="space-y-2">
+                {(incentiveSlabs || []).map((slab) => {
+                  const isAchieved = completedDriverTrips.length >= slab.minCompletedTrips;
+                  return (
+                    <div
+                      key={slab.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between ${
+                        isAchieved
+                          ? 'bg-amber-950/40 border-amber-500/60 text-amber-200'
+                          : 'bg-slate-900 border-slate-800 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <span className="text-base">{isAchieved ? '🏆' : '🎯'}</span>
+                        <div>
+                          <div className="font-bold text-white">
+                            {slab.minCompletedTrips} Calls / Trips
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {isAchieved ? 'Milestone Cleared' : `Need ${Math.max(0, slab.minCompletedTrips - completedDriverTrips.length)} more calls`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-black text-sm text-amber-400">
+                          ₹{slab.incentiveAmount}
+                        </span>
+                        <div>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                              isAchieved ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-500'
+                            }`}
+                          >
+                            {isAchieved ? 'Earned' : 'Pending'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400">Your Progress Today:</span>
+                <span className="font-bold text-white">
+                  {completedDriverTrips.length} Calls Completed • ₹{incentiveResult.totalIncentive} Earned
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowIncentivesModal(false)}
+              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs shadow"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Items 9, 10, 11: Driver Wallet Modal (Recharge & Withdraw, Max Cap ₹200, Minimal ₹200 Rule) */}
+      {showDriverTopupModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Driver Partner Wallet</h3>
+                  <p className="text-[11px] text-slate-400">
+                    Balance:{' '}
+                    <span className={currentDriver.wallet.balance < 0 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                      {currentDriver.wallet.balance < 0 ? `-₹${Math.abs(currentDriver.wallet.balance)}` : `₹${currentDriver.wallet.balance}`}
+                    </span>{' '}
+                    (Max Cap: ₹200)
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setShowDriverTopupModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Toggle Tab: Recharge vs Withdraw (Item 10) */}
+            <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setWalletModalTab('recharge')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${
+                  walletModalTab === 'recharge' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                + Recharge
+              </button>
+              <button
+                type="button"
+                onClick={() => setWalletModalTab('withdraw')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${
+                  walletModalTab === 'withdraw' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Withdraw Amount
+              </button>
+            </div>
+
+            {/* RECHARGE TAB */}
+            {walletModalTab === 'recharge' && (
+              <div className="space-y-3 text-xs">
+                {isDriverBlocked && (
+                  <div className="p-2.5 bg-rose-950/80 border border-rose-700/80 rounded-xl text-[11px] text-rose-300">
+                    ⚠️ Account is blocked from receiving calls. Minimal recharge required is <strong>₹200</strong>.
+                  </div>
+                )}
+
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">
+                    Recharge Amount (₹) {isDriverBlocked && <span className="text-rose-400">*Min ₹200</span>}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 font-bold text-emerald-400">₹</span>
+                    <input
+                      type="number"
+                      min={isDriverBlocked ? 200 : 50}
+                      step="50"
+                      value={driverTopupAmt}
+                      onChange={(e) => setDriverTopupAmt(Number(e.target.value))}
+                      className="w-full pl-8 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-xl font-bold text-lg text-emerald-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[200, 300, 500, 1000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setDriverTopupAmt(amt)}
+                      className="py-1.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-300 border border-slate-800"
+                    >
+                      +₹{amt}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Example math explanation (Item 11) */}
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div className="font-bold text-white">Wallet Calculation Preview:</div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Current Wallet:</span>
+                    <span className="font-mono">{currentDriver.wallet.balance}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Recharge Amount:</span>
+                    <span className="font-mono">+{driverTopupAmt}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-400 font-bold border-t border-slate-800 pt-1">
+                    <span>Resulting Balance:</span>
+                    <span className="font-mono">
+                      ₹{Math.min(200, currentDriver.wallet.balance + driverTopupAmt)}
                     </span>
                   </div>
-                  <span className="text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full">
-                    {tripToOffer.dispatchCountdownSecs ?? 15}s Left
-                  </span>
+                  <p className="text-[10px] text-slate-500 pt-1">
+                    * Maximum wallet balance cap is ₹200. Example: -₹200 + ₹300 = ₹100.
+                  </p>
                 </div>
 
-                {/* Driver task charges based on distance to pickup + drop based on slab rates */}
-                <div className="text-center py-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-1">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    Distance Slab Task Charge
-                  </div>
-                  <div className="text-3xl font-black text-emerald-400">
-                    ₹{payout.grossFare}
-                  </div>
-                  <div className="text-xs text-slate-300 font-semibold">
-                    Net Take-Home Payout: <span className="text-emerald-400 font-bold">₹{payout.netEarnings}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/80 px-2">
-                    {payout.driverDistanceToPickupKm} km (you to pickup) + {payout.tripDistanceKm} km (trip) = <strong className="text-slate-200">{payout.totalDistanceKm} km billable</strong>
-                  </div>
-                </div>
-
-                {/* Slabs breakdown pills */}
-                <div className="space-y-1.5 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-[10px]">
-                  <div className="flex justify-between text-slate-400 font-semibold border-b border-slate-800 pb-1">
-                    <span>Configured Distance Slabs</span>
-                    <span className="text-emerald-400">Total ₹{payout.grossFare}</span>
-                  </div>
-                  <div className="space-y-1 pt-0.5">
-                    {payout.slabBreakdown.map((s, idx) => (
-                      <div key={idx} className="flex justify-between text-slate-300">
-                        <span>{s.slabLabel} ({s.kmInSlab} km):</span>
-                        <span className="font-mono font-bold text-emerald-400">₹{s.cost}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2.5 text-xs bg-slate-900 p-3.5 rounded-2xl border border-slate-800">
-                  <div className="flex items-start space-x-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-200">Pickup: {tripToOffer.pickup.area}</div>
-                      <div className="text-[11px] text-slate-400">{tripToOffer.pickup.address}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2.5 pt-2 border-t border-slate-800">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 mt-1 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-200">Drop: {tripToOffer.drop.area}</div>
-                      <div className="text-[11px] text-slate-400">{tripToOffer.drop.address}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300 flex items-center justify-between">
-                  <span>📍 Cascades to adjacent group if unaccepted</span>
-                  <span className="font-mono font-bold">{tripToOffer.dispatchCountdownSecs ?? 15}s</span>
-                </div>
-
-                <div className="flex items-center space-x-2 pt-1">
+                <div className="flex items-center space-x-2 pt-2">
                   <button
-                    onClick={() => {
-                      passTripToNextGroup(tripToOffer.id);
-                      setDismissedTripIds((prev) => [...prev, tripToOffer.id]);
-                      setShowIncomingTripModal(false);
-                    }}
-                    className="flex-1 py-3 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                    type="button"
+                    onClick={() => setShowDriverTopupModal(false)}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold rounded-xl text-xs"
                   >
-                    Pass to Next Group
+                    Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
-                      const res = acceptTripByDriver(tripToOffer.id, currentDriver.id);
-                      if (res.success) {
-                        setShowIncomingTripModal(false);
+                      if (isDriverBlocked && driverTopupAmt < 200) {
+                        showToast('Minimal recharge must be at least ₹200 when blocked.');
+                        return;
                       }
+                      topUpDriverWallet(currentDriver.id, driverTopupAmt, 'Driver wallet self-recharge');
+                      setShowDriverTopupModal(false);
+                      showToast(`Recharged ₹${driverTopupAmt} to ${currentDriver.name}'s wallet!`);
                     }}
-                    className="flex-1 py-3 text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl shadow-lg transition-transform active:scale-95"
+                    className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow-lg"
                   >
-                    ACCEPT TASK
+                    Confirm Recharge ₹{driverTopupAmt}
                   </button>
                 </div>
               </div>
-            </div>
-          );
-        })()
+            )}
+
+            {/* WITHDRAW TAB (Item 10) */}
+            {walletModalTab === 'withdraw' && (
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-400 text-[11px]">
+                  Withdraw your available wallet balance directly to your bank account ({currentDriver.bankDetails.accountName}):
+                </p>
+
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Amount to Withdraw (₹)</label>
+                  <input
+                    type="number"
+                    value={payoutAmount}
+                    min={10}
+                    max={Math.max(0, currentDriver.wallet.balance)}
+                    onChange={(e) => setPayoutAmount(Number(e.target.value))}
+                    className="w-full p-2 bg-slate-900 border border-slate-700 rounded-xl text-emerald-400 font-black text-lg focus:outline-none"
+                  />
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    Available balance: ₹{Math.max(0, currentDriver.wallet.balance)}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1 text-[11px]">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Direct UPI:</span>
+                    <span className="text-white font-mono">{currentDriver.bankDetails.upiId}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>IFSC Code:</span>
+                    <span className="text-white font-mono">{currentDriver.bankDetails.ifscCode}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDriverTopupModal(false)}
+                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold rounded-xl text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={currentDriver.wallet.balance <= 0 || payoutAmount > currentDriver.wallet.balance}
+                    onClick={() => {
+                      requestDriverPayout(currentDriver.id, payoutAmount);
+                      setShowDriverTopupModal(false);
+                    }}
+                    className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs shadow-lg"
+                  >
+                    Confirm Transfer
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* ================= MODAL: DRIVER ONBOARDING & REGISTRATION ================= */}
+      {/* Driver Registration Modal */}
       {showDriverRegModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-lg w-full p-5 space-y-4 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1230,11 +1727,11 @@ export default function DriverApp() {
                 <h3 className="font-bold text-base text-white flex items-center space-x-2">
                   <span>⚡ Join SwifLoad Driver Fleet</span>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">
-                    Coimbatore Hub (TN-37/38/66)
+                    Coimbatore Hub
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Register your vehicle and submit KYC documents for fast platform activation in Coimbatore
+                  Register your vehicle and submit KYC documents for fast platform activation
                 </p>
               </div>
               <button onClick={() => setShowDriverRegModal(false)} className="text-slate-400 hover:text-white">
@@ -1269,11 +1766,11 @@ export default function DriverApp() {
                 });
 
                 setShowDriverRegModal(false);
+                setDriverPage('home');
                 setActiveDriverTab('kyc');
               }}
               className="space-y-4 text-xs"
             >
-              {/* 1. Personal Details */}
               <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                   1. Personal & Contact Details
@@ -1302,19 +1799,8 @@ export default function DriverApp() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-300">Email Address</label>
-                  <input
-                    type="email"
-                    placeholder="e.g. murugan.k@example.com"
-                    value={driverEmail}
-                    onChange={(e) => setDriverEmail(e.target.value)}
-                    className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
               </div>
 
-              {/* 2. Vehicle Details */}
               <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                   2. Vehicle Selection & Registration
@@ -1338,7 +1824,7 @@ export default function DriverApp() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Tata Ace Gold / Piaggio Ape"
+                      placeholder="e.g. Tata Ace Gold"
                       value={driverVehModel}
                       onChange={(e) => setDriverVehModel(e.target.value)}
                       className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
@@ -1358,231 +1844,13 @@ export default function DriverApp() {
                 </div>
               </div>
 
-              {/* 3. KYC Document Numbers */}
-              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                  3. Commercial KYC Verification Info
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="font-semibold text-slate-300">Commercial Driving Licence No</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. TN3820230099881"
-                      value={driverDL}
-                      onChange={(e) => setDriverDL(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-slate-300">Vehicle RC Certificate No</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. TN38AX4821"
-                      value={driverRC}
-                      onChange={(e) => setDriverRC(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="font-semibold text-slate-300">Insurance Policy No</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. ICICI-LOMB-7741"
-                      value={driverInsurance}
-                      onChange={(e) => setDriverInsurance(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-slate-300">Aadhaar Number (Last 4 digits)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. XXXX-XXXX-9023"
-                      value={driverAadhaar}
-                      onChange={(e) => setDriverAadhaar(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Bank & Payout Details */}
-              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                  4. Bank Account & UPI for Daily Payouts
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="font-semibold text-slate-300">Account Holder Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Anand Kumar V"
-                      value={bankAccName}
-                      onChange={(e) => setBankAccName(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-slate-300">Bank Account Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 50100982341098"
-                      value={bankAccNum}
-                      onChange={(e) => setBankAccNum(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
-                    <label className="font-semibold text-slate-300">IFSC Code</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. HDFC0000240"
-                      value={bankIFSC}
-                      onChange={(e) => setBankIFSC(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-slate-300">UPI ID for Instant Payout</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. anandkv@okaxis"
-                      value={driverUpi}
-                      onChange={(e) => setDriverUpi(e.target.value)}
-                      className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. Referral Code (Optional) */}
-              <div className="space-y-2 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                  5. Referral Code (Optional)
-                </div>
-                <div>
-                  <label className="font-semibold text-slate-300">Referred by Driver Code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. SWIF-DRV01-44"
-                    value={referredByDriverCode}
-                    onChange={(e) => setReferredByDriverCode(e.target.value.toUpperCase())}
-                    className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:border-emerald-500 focus:outline-none"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    If another driver partner referred you, enter their code here so they receive their ₹{referralConfig?.driverToDriverBonus || 500} bonus!
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-300 flex items-center space-x-2">
-                <span>🛡️</span>
-                <span>
-                  After submitting, your profile will be sent to the Operations Admin for review and KYC activation.
-                </span>
-              </div>
-
               <button
                 type="submit"
-                onClick={() => {}}
                 className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-xl transition-transform active:scale-95"
               >
                 Submit Driver Onboarding Application ➔
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: DRIVER WALLET RECHARGE / CLEAR DUES ================= */}
-      {showDriverTopupModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                  <Wallet className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-white">Recharge Driver Wallet</h3>
-                  <p className="text-[11px] text-slate-400">
-                    Current:{' '}
-                    <span className={currentDriver.wallet.balance < 0 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
-                      {currentDriver.wallet.balance < 0 ? `-₹${Math.abs(currentDriver.wallet.balance)}` : `₹${currentDriver.wallet.balance}`}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowDriverTopupModal(false)} className="text-slate-400 hover:text-white p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Top-Up Amount (₹)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 font-bold text-emerald-400">₹</span>
-                  <input
-                    type="number"
-                    min="50"
-                    step="50"
-                    value={driverTopupAmt}
-                    onChange={(e) => setDriverTopupAmt(Number(e.target.value))}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-xl font-bold text-lg text-emerald-400 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 gap-1.5">
-                {[200, 500, 1000, 2000].map((amt) => (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setDriverTopupAmt(amt)}
-                    className="py-1.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-300 border border-slate-800"
-                  >
-                    +₹{amt}
-                  </button>
-                ))}
-              </div>
-
-              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Approved Negative Limit:</span>
-                  <span className="font-bold text-white">-₹{currentDriver.wallet.negativeBalanceLimit || 1500}</span>
-                </div>
-                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
-                  Top-ups clear negative commission dues or deposit credit for future trips.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDriverTopupModal(false)}
-                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 font-bold rounded-xl text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  topUpDriverWallet(currentDriver.id, driverTopupAmt, 'Driver wallet self-recharge');
-                  setShowDriverTopupModal(false);
-                  showToast(`Recharged ₹${driverTopupAmt} to ${currentDriver.name}'s wallet!`);
-                }}
-                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow-lg"
-              >
-                Recharge ₹{driverTopupAmt}
-              </button>
-            </div>
           </div>
         </div>
       )}

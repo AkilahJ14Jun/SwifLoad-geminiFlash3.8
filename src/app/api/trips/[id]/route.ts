@@ -7,10 +7,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const db = getDatabase();
-  const trip = db.trips.find((t) => t.id === params.id);
+  const trip = db.trips.find((t) => t.id === id);
   if (!trip) {
     return NextResponse.json({ success: false, error: 'Trip not found' }, { status: 404 });
   }
@@ -19,12 +20,13 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const updates: Partial<Trip> = await req.json();
     const db = getDatabase();
-    const index = db.trips.findIndex((t) => t.id === params.id);
+    const index = db.trips.findIndex((t) => t.id === id);
 
     if (index === -1) {
       return NextResponse.json({ success: false, error: 'Trip not found' }, { status: 404 });

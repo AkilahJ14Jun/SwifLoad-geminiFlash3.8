@@ -21,6 +21,7 @@ import {
   ReferralProgramConfig,
   ReferralRecord,
   WalletTransaction,
+  IncentiveSlab,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -32,9 +33,12 @@ import {
   DEFAULT_CUSTOMER_SLABS,
   DEFAULT_REFERRAL_CONFIG,
   INITIAL_REFERRALS,
+  DEFAULT_INCENTIVE_SLABS,
+  DEFAULT_DISPATCH_TIMEOUT_SECS,
 } from '@/lib/data';
 import {
   calculateDistanceKm,
+  calculateMultiStopDistanceKm,
   calculateFare,
   calculateCancellationFee,
   estimateDurationMins,
@@ -45,6 +49,9 @@ import {
 interface CreateTripPayload {
   pickup: LocationPoint;
   drop: LocationPoint;
+  pickups?: LocationPoint[];
+  drops?: LocationPoint[];
+  stopType?: 'single' | 'multi_pickup' | 'multi_drop';
   vehicleCategory: VehicleCategory;
   goodsCategory: any;
   approxWeightKg: number;
@@ -81,6 +88,12 @@ interface LogisticsContextType {
   // Slab Distance Pricing
   customerSlabConfigs: CustomerTypeSlabConfig[];
   updateCustomerSlabConfig: (config: CustomerTypeSlabConfig) => void;
+
+  // Driver Incentives & Dispatch Timeout (Changes Required Items 14 & 16)
+  incentiveSlabs: IncentiveSlab[];
+  updateIncentiveSlabs: (slabs: IncentiveSlab[]) => void;
+  dispatchTimeoutSecs: number;
+  updateDispatchTimeoutSecs: (secs: number) => void;
 
   // Referral Programs
   referralConfig: ReferralProgramConfig;
@@ -142,6 +155,8 @@ const LOCAL_STORAGE_KEY_CUSTOMER = 'swifload_customer_v2_cbe';
 const LOCAL_STORAGE_KEY_SLABS = 'swifload_slabs_v2_cbe';
 const LOCAL_STORAGE_KEY_REFERRALS = 'swifload_referrals_v2_cbe';
 const LOCAL_STORAGE_KEY_REF_CONFIG = 'swifload_ref_config_v2_cbe';
+const LOCAL_STORAGE_KEY_INCENTIVE_SLABS = 'swifload_incentive_slabs_v2_cbe';
+const LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT = 'swifload_dispatch_timeout_v2_cbe';
 
 const INITIAL_CUSTOMER: CustomerUser = {
   id: 'cust_01',
@@ -195,6 +210,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [customerSlabConfigs, setCustomerSlabConfigs] = useState<CustomerTypeSlabConfig[]>(DEFAULT_CUSTOMER_SLABS);
   const [referralConfig, setReferralConfig] = useState<ReferralProgramConfig>(DEFAULT_REFERRAL_CONFIG);
   const [referrals, setReferrals] = useState<ReferralRecord[]>(INITIAL_REFERRALS);
+  const [incentiveSlabs, setIncentiveSlabs] = useState<IncentiveSlab[]>(DEFAULT_INCENTIVE_SLABS);
+  const [dispatchTimeoutSecs, setDispatchTimeoutSecs] = useState<number>(DEFAULT_DISPATCH_TIMEOUT_SECS);
 
   // Helpers for server DB synchronization
   const syncTripToServer = useCallback(async (trip: Trip) => {
@@ -264,6 +281,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const savedReferrals = localStorage.getItem(LOCAL_STORAGE_KEY_REFERRALS);
       if (savedReferrals) setReferrals(JSON.parse(savedReferrals));
+
+      const savedIncentives = localStorage.getItem(LOCAL_STORAGE_KEY_INCENTIVE_SLABS);
+      if (savedIncentives) setIncentiveSlabs(JSON.parse(savedIncentives));
+
+      const savedTimeout = localStorage.getItem(LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT);
+      if (savedTimeout) setDispatchTimeoutSecs(JSON.parse(savedTimeout));
     } catch {
       // fallback
     }
@@ -279,6 +302,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           if (data.customerSlabConfigs) setCustomerSlabConfigs(data.customerSlabConfigs);
           if (data.referralConfig) setReferralConfig(data.referralConfig);
           if (data.referrals) setReferrals(data.referrals);
+          if (data.incentiveSlabs) setIncentiveSlabs(data.incentiveSlabs);
+          if (data.dispatchTimeoutSecs) setDispatchTimeoutSecs(data.dispatchTimeoutSecs);
           if (data.customer) setCurrentCustomer(data.customer);
           if (data.vehicleConfigs) setVehicleConfigs(data.vehicleConfigs);
           if (data.serviceZones) setServiceZones(data.serviceZones);
@@ -325,6 +350,10 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           } else if (payload.type === 'CONFIG_UPDATED' && payload.data) {
             if (payload.data.type === 'slabs' && payload.data.slabs) {
               setCustomerSlabConfigs(payload.data.slabs);
+            } else if (payload.data.type === 'incentiveSlabs' && payload.data.incentiveSlabs) {
+              setIncentiveSlabs(payload.data.incentiveSlabs);
+            } else if (payload.data.type === 'dispatchSettings' && payload.data.dispatchTimeoutSecs) {
+              setDispatchTimeoutSecs(payload.data.dispatchTimeoutSecs);
             }
           } else if (payload.type === 'STATE_SYNC' || payload.type === 'SYSTEM_RESET') {
             if (payload.data) {
@@ -333,6 +362,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               if (payload.data.customerSlabConfigs) setCustomerSlabConfigs(payload.data.customerSlabConfigs);
               if (payload.data.referralConfig) setReferralConfig(payload.data.referralConfig);
               if (payload.data.referrals) setReferrals(payload.data.referrals);
+              if (payload.data.incentiveSlabs) setIncentiveSlabs(payload.data.incentiveSlabs);
+              if (payload.data.dispatchTimeoutSecs) setDispatchTimeoutSecs(payload.data.dispatchTimeoutSecs);
               if (payload.data.customer) setCurrentCustomer(payload.data.customer);
             }
           }
@@ -401,6 +432,41 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         prev.map((c) => (c.customerType === newConfig.customerType ? newConfig : c))
       );
       showToast(`Slab pricing matrix updated for ${newConfig.customerTypeName}`);
+    },
+    [showToast]
+  );
+
+  // Driver Incentive Slabs Update (Changes Required Item 14)
+  const updateIncentiveSlabs = useCallback(
+    async (newSlabs: IncentiveSlab[]) => {
+      setIncentiveSlabs(newSlabs);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_INCENTIVE_SLABS, JSON.stringify(newSlabs));
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'incentiveSlabs', incentiveSlabs: newSlabs }),
+        });
+      } catch {}
+      showToast('Driver incentive milestones updated successfully');
+    },
+    [showToast]
+  );
+
+  // Pickup Call Timeframe / Dispatch Timeout Update (Changes Required Item 16)
+  const updateDispatchTimeoutSecs = useCallback(
+    async (secs: number) => {
+      const validSecs = Math.max(3, Math.min(60, Number(secs) || 10));
+      setDispatchTimeoutSecs(validSecs);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT, JSON.stringify(validSecs));
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'dispatchSettings', dispatchTimeoutSecs: validSecs }),
+        });
+      } catch {}
+      showToast(`Driver pickup call timeframe set to ${validSecs} seconds`);
     },
     [showToast]
   );
@@ -695,14 +761,19 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [currentCustomer, syncWalletToServer, showToast]
   );
 
-  // Top up / recharge driver wallet (to clear negative balance or add funds)
+  // Top up / recharge driver wallet (Changes Required Items 9 & 11)
   const topUpDriverWallet = useCallback(
     (driverId: string, amount: number, note?: string) => {
       if (amount <= 0) return;
+      let effectiveNewBal = 0;
       setDrivers((prev) =>
         prev.map((d) => {
           if (d.id === driverId) {
-            const newBal = Math.round((d.wallet.balance + amount) * 10) / 10;
+            // Negative balance calculation: e.g. -200 + 300 = +100
+            // Balance can go up to a max of Rs.200
+            const calculatedBal = d.wallet.balance + amount;
+            const newBal = Math.min(200, Math.round(calculatedBal * 10) / 10);
+            effectiveNewBal = newBal;
             const tx: WalletTransaction = {
               id: `tx_d_${Date.now()}`,
               timestamp: new Date().toISOString(),
@@ -730,7 +801,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         amount,
         description: note || 'Driver Dues Clearance / Wallet Recharge via UPI',
       });
-      showToast(`Driver wallet recharged with ₹${amount}`);
+      showToast(`Driver wallet recharged with ₹${amount}. Current Balance: ₹${effectiveNewBal}`);
     },
     [syncWalletToServer, showToast]
   );
@@ -1102,13 +1173,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => clearInterval(timer);
   }, []);
 
-  // Cascading Dispatch Timer: If no driver in active group accepts within 20s, escalate to adjacent group
+  // Cascading Dispatch Timer: If no driver in active group accepts within timeframe (default 10s), escalate to adjacent group
   useEffect(() => {
     const timer = setInterval(() => {
       setTrips((prevTrips) =>
         prevTrips.map((trip) => {
           if (trip.status === 'SEARCHING') {
-            const currentSeconds = trip.dispatchCountdownSecs ?? 20;
+            const currentSeconds = trip.dispatchCountdownSecs ?? dispatchTimeoutSecs;
             if (currentSeconds > 1) {
               return {
                 ...trip,
@@ -1130,7 +1201,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 currentDispatchGroupIndex: nextIdx,
                 currentDispatchGroupId: nextGroupId,
                 currentDispatchGroupName: nextGroup?.name,
-                dispatchCountdownSecs: 20,
+                dispatchCountdownSecs: dispatchTimeoutSecs,
                 auditHistory: [
                   ...trip.auditHistory,
                   {
@@ -1148,12 +1219,31 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [dispatchTimeoutSecs]);
 
   // Create a new booking: dispatches to nearest driver group using slab distance rates
   const createBooking = useCallback(
     (payload: CreateTripPayload): string => {
-      const distanceKm = calculateDistanceKm(payload.pickup, payload.drop);
+      // Calculate distance based on multi-stop or single pickup-to-drop (Changes Required Item 17)
+      let distanceKm = 1.0;
+      const allWaypoints: LocationPoint[] = [];
+      if (payload.pickups && payload.pickups.length > 0) {
+        allWaypoints.push(...payload.pickups);
+      } else {
+        allWaypoints.push(payload.pickup);
+      }
+      if (payload.drops && payload.drops.length > 0) {
+        allWaypoints.push(...payload.drops);
+      } else {
+        allWaypoints.push(payload.drop);
+      }
+
+      if (allWaypoints.length >= 2) {
+        distanceKm = calculateMultiStopDistanceKm(allWaypoints);
+      } else {
+        distanceKm = calculateDistanceKm(payload.pickup, payload.drop);
+      }
+
       const durationMins = estimateDurationMins(distanceKm);
       const custType = payload.customerType || currentCustomer.customerType || 'regular';
 
@@ -1232,6 +1322,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         vehicleCategory: payload.vehicleCategory,
         pickup: payload.pickup,
         drop: payload.drop,
+        pickups: payload.pickups || [payload.pickup],
+        drops: payload.drops || [payload.drop],
+        stopType: payload.stopType || (payload.pickups && payload.pickups.length > 1 ? 'multi_pickup' : (payload.drops && payload.drops.length > 1 ? 'multi_drop' : 'single')),
         distanceKm,
         durationMins,
         shipment: {
@@ -1252,7 +1345,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         currentDispatchGroupName: nearestGroup.name,
         dispatchGroupSequence: sequence,
         currentDispatchGroupIndex: 0,
-        dispatchCountdownSecs: 20,
+        dispatchCountdownSecs: dispatchTimeoutSecs,
         auditHistory: [
           {
             timestamp: new Date().toISOString(),
@@ -1269,7 +1362,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast(`Trip ${bookingCode} created! Dispatched to ${nearestGroup.name}`);
       return tripId;
     },
-    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, syncTripToServer, showToast]
+    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, dispatchTimeoutSecs, syncTripToServer, showToast]
   );
 
   // Driver Accepts a pickup task: Task payout is calculated from this driver's specific distance to pickup + trip distance!
@@ -1277,6 +1370,15 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     (tripId: string, driverId: string): { success: boolean; message: string } => {
       const driver = drivers.find((d) => d.id === driverId);
       if (!driver) return { success: false, message: 'Driver profile not found' };
+
+      // Blocked if wallet balance <= -200 (Changes Required Item 11)
+      if (driver.wallet.balance <= -200) {
+        showToast(`Account blocked: Wallet balance is -₹${Math.abs(driver.wallet.balance)}. Recharge minimum ₹200 to receive and accept pickup calls.`);
+        return {
+          success: false,
+          message: `Wallet balance is below -₹200 limit. Please recharge minimum ₹200 to receive and accept pickup calls.`,
+        };
+      }
 
       let accepted = false;
       setTrips((prev) =>
@@ -1358,7 +1460,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               currentDispatchGroupIndex: nextIdx,
               currentDispatchGroupId: nextGroupId,
               currentDispatchGroupName: nextGroup?.name,
-              dispatchCountdownSecs: 20,
+              dispatchCountdownSecs: dispatchTimeoutSecs,
               auditHistory: [
                 ...t.auditHistory,
                 {
@@ -1373,7 +1475,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         })
       );
     },
-    [showToast]
+    [dispatchTimeoutSecs, showToast]
   );
 
   // Cancel Trip
@@ -1880,6 +1982,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.removeItem(LOCAL_STORAGE_KEY_SLABS);
     localStorage.removeItem(LOCAL_STORAGE_KEY_REFERRALS);
     localStorage.removeItem(LOCAL_STORAGE_KEY_REF_CONFIG);
+    localStorage.removeItem(LOCAL_STORAGE_KEY_INCENTIVE_SLABS);
+    localStorage.removeItem(LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT);
     setTrips(INITIAL_TRIPS);
     setDrivers(INITIAL_DRIVERS);
     setVehicleConfigs(VEHICLE_CONFIGS);
@@ -1888,6 +1992,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCustomerSlabConfigs(DEFAULT_CUSTOMER_SLABS);
     setReferralConfig(DEFAULT_REFERRAL_CONFIG);
     setReferrals(INITIAL_REFERRALS);
+    setIncentiveSlabs(DEFAULT_INCENTIVE_SLABS);
+    setDispatchTimeoutSecs(DEFAULT_DISPATCH_TIMEOUT_SECS);
     setActiveTripId('trip_cbe_1001');
 
     fetch('/api/state', {
@@ -1920,6 +2026,10 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         showToast,
         customerSlabConfigs,
         updateCustomerSlabConfig,
+        incentiveSlabs,
+        updateIncentiveSlabs,
+        dispatchTimeoutSecs,
+        updateDispatchTimeoutSecs,
         referralConfig,
         updateReferralConfig,
         referrals,

@@ -19,6 +19,10 @@ export async function POST(req: Request) {
       db.serviceZones = body.serviceZones;
     } else if (body.type === 'vehicleConfigs') {
       db.vehicleConfigs = body.vehicleConfigs;
+    } else if (body.type === 'incentiveSlabs') {
+      db.incentiveSlabs = body.incentiveSlabs;
+    } else if (body.type === 'dispatchSettings') {
+      db.dispatchTimeoutSecs = Number(body.dispatchTimeoutSecs) || 10;
     }
 
     saveDatabase(db);
