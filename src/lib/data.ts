@@ -12,6 +12,7 @@ import {
   ReferralRecord,
   WalletTransaction,
   IncentiveSlab,
+  DriverCancellationSlabConfig,
 } from '@/types/logistics';
 
 export const DRIVER_GROUPS: DriverGroup[] = [
@@ -1315,6 +1316,33 @@ export const INITIAL_DRIVER_NOTIFICATIONS: DriverNotification[] = [
     type: 'WALLET',
     timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
     read: false,
+  },
+];
+
+export const DEFAULT_DRIVER_CANCELLATION_SLABS: DriverCancellationSlabConfig[] = [
+  {
+    reason: 'Illness',
+    lockoutHours: 1,
+    description: 'Medical rest or physical unfitness required before resuming commercial freight handling.',
+    icon: '🤒',
+  },
+  {
+    reason: 'Vehicle breakdown',
+    lockoutHours: 2,
+    description: 'Mechanical repair, tyre puncture, engine diagnostics or roadside assistance buffer.',
+    icon: '🚛',
+  },
+  {
+    reason: 'Priority personal work',
+    lockoutHours: 4,
+    description: 'Personal urgent matters or family commitments requiring dedicated time off platform.',
+    icon: '💼',
+  },
+  {
+    reason: 'Emergency',
+    lockoutHours: 6,
+    description: 'Critical domestic or medical emergencies requiring comprehensive standby time.',
+    icon: '🚨',
   },
 ];
 

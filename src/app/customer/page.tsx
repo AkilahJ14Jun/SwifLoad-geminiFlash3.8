@@ -11,6 +11,10 @@ export default function CustomerPage() {
 
   useEffect(() => {
     setRole('customer');
+    const existingManifest = document.querySelector("link[rel='manifest']");
+    if (existingManifest) {
+      existingManifest.setAttribute('href', '/manifest-customer.json');
+    }
   }, [setRole]);
 
   return (

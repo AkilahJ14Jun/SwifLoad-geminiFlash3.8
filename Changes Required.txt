@@ -3,15 +3,14 @@ Go through output of graphify to understand this solution.
  
 Need the following features implemented in Driver App :
 
-If there are multiple pickups or drops for a booking then when each pickup or drop is complete the driver should get the popup with contact number and address details of the next pickup or drop.
-When the initial popup appears itself there should a clear indication to show that booking has multiple pickup or drop involved in it along with the charges.
-The app should have feature to allow the user in the user interface to start and complete each pickup or drop.
-Tracking of the following should happen for each pickup or drop. Time taken, distance covered and associated charge with QR code to pay to the company account.
-Noticeboard feature to display messages when the driver wallet balance is equal to or more than minus Rs.200, warning message asking him to recharge within 5 days, failing which his number will be blocked.
-Notification feature to display messages like the driver is on the way to pickup, pickup completed, drop completed, booking cancelled etc.,
-In the popups of different trips which are displayed for a countdown of upto 10 seconds. It should show the pickup locality name along with the distance from the driver's current location to the pickup point. This should be followed by the drop locality along with the distance from pickup location to the drop location. Both the pickup and drop locations should show the exact pickup and drop address to allow the driver to view it and decide whether to accept it or not.
-Once accepted the contact numbers should be displayed for the driver and the customer to contact each other.
-There should be a side navigation menu option to allow the user to see his earnings, ledger, payments, Notifications, Refer & Earn , Profile and Privacy Policy of the company
+The '+Driver' feature not required because already the app would be associated with a driver's mobile number.
+The 'Noticeboard' button overlapping at the right edge with 'Refer' button. Make some space between the two buttons.
+The driver name greeting band itself not required.
+The 'Cancel Trip / Unable to complete' button can be renamed as 'Cancel Order' alone.
+On 'Live Duty' menu option screen 'Cancel Accepted Orders / Unable to Complete' can be renamed as 'Cancel Accepted Order' alone.
+The 'Refer' menu option functionality can be moved to be accessible via 'Refer & Earn' left side menu bar.
+Need ability to switch between light and dark mode.
+ 
 
 
 

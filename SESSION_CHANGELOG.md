@@ -2,6 +2,174 @@
 
 This document tracks all technical updates, architectural additions, and feature implementations made in each development session across any LLM model.
 
+## 📅 Session: 2026-10-05 (Git Push Resolution — Purged Large File History & Ignored Zip Archives)
+
+### Objectives
+1. Resolve GitHub push rejection error preventing sync to remote repository `AkilahJ14Jun/SwifLoad-geminiFlash3.8`.
+2. Purge accidentally committed 148MB `.zip` archive from local Git history.
+3. Update `.gitignore` to safeguard against archiving binaries/caches.
+4. Verify build and sync changes to GitHub `master`.
+
+### Bullet-Point Changes
+- **Git History Hygiene:**
+  - Soft-reset 2 commits back to `origin/master` (`284d8bf`), cleanly excluding the 148MB `.zip` and deployment archives that caused GitHub's 100MB file limit rejection.
+  - Excluded tool cache (`graphify-out/`).
+- **Repository Configuration:**
+  - Added `*.zip` and `/graphify-out/` to `.gitignore`.
+- **Git Synchronization:**
+  - Unified deployment changes, APK updates, and UI adjustments into a clean commit and pushed to `origin/master`.
+
+### Verification Status
+- Production build: `npm run build` completed successfully (Exit code: 0, 8/8 static pages generated).
+- Git push: Successfully pushed to `origin/master`.
+
+## 📅 Session: 2026-10-05 (Azure Cloud Production Deployment — Live Portals, PWAs & APK Distribution)
+
+### Objectives
+1. Build and push production multi-stage Docker container image (`acrswifload.azurecr.io/swifload:latest`) to Azure Container Registry (`acrswifload`).
+2. Deploy the latest container image to Azure App Service (`swifload-cbe` in `centralindia`) on Linux B1 plan.
+3. Configure App Service settings (`WEBSITES_PORT=8080`, `NODE_ENV=production`, `PORT=8080`) and ACR credentials.
+4. Verify live operation across all routes: Platform Home (`/`), Customer Mobile PWA (`/customer`), Driver-Partner Cockpit PWA (`/driver`), Operations Admin Portal (`/admin`), Downloads (`/downloads`), and Centralized Telemetry DB (`/api/state`).
+5. Verify live distribution of updated signed Android APKs (`SwifLoad-Customer.apk` and `SwifLoad-Driver.apk`) and dedicated PWA manifests (`manifest-customer.json`, `manifest-driver.json`).
+
+### Bullet-Point Changes
+- **Azure Container Registry (ACR):**
+  - Executed cloud build `cu3` on `acrswifload.azurecr.io` packaging Next.js standalone runner, static assets, and newly signed APK binaries.
+  - Image `acrswifload.azurecr.io/swifload:latest` compiled and tagged with status `Succeeded`.
+- **Azure App Service (`swifload-cbe`):**
+  - Updated container registry credentials and linked to `acrswifload.azurecr.io/swifload:latest`.
+  - Configured `WEBSITES_PORT=8080`, `PORT=8080`, `NODE_ENV=production`, and `WEBSITES_ENABLE_APP_SERVICE_STORAGE=false`.
+  - Triggered container restart and verified initialization.
+- **Verification of Live Production Endpoints:**
+  - 🌐 `https://swifload-cbe.azurewebsites.net/`: `HTTP 200 OK` (94,804 bytes).
+  - 📱 `https://swifload-cbe.azurewebsites.net/customer`: `HTTP 200 OK` (39,807 bytes).
+  - 🚚 `https://swifload-cbe.azurewebsites.net/driver`: `HTTP 200 OK` (34,200 bytes) with light/dark toggle, removed +Driver button, no greeting band, and Refer modal.
+  - 🖥️ `https://swifload-cbe.azurewebsites.net/admin`: `HTTP 200 OK` (23,421 bytes).
+  - 📦 `https://swifload-cbe.azurewebsites.net/downloads`: `HTTP 200 OK` (23,145 bytes).
+  - ⚙️ `https://swifload-cbe.azurewebsites.net/api/state`: `HTTP 200 OK` (24,676 bytes).
+  - 📄 `https://swifload-cbe.azurewebsites.net/manifest-customer.json`: `HTTP 200 OK` (PWA).
+  - 📄 `https://swifload-cbe.azurewebsites.net/manifest-driver.json`: `HTTP 200 OK` (PWA).
+  - 📥 `https://swifload-cbe.azurewebsites.net/downloads/SwifLoad-Customer.apk`: `HTTP 200 OK` (3,297,516 bytes).
+  - 📥 `https://swifload-cbe.azurewebsites.net/downloads/SwifLoad-Driver.apk`: `HTTP 200 OK` (3,302,260 bytes).
+
+### Verification Status
+- Production deployment: Azure Web App `swifload-cbe` is live in `Running` state.
+- All 10 verification endpoints returned `HTTP 200 OK` with 0 failures.
+
+## 📅 Session: 2026-10-05 (Driver App Enhancements — Light/Dark Mode, Spacing, Labeling & Referral Navigation)
+
+### Objectives
+1. Remove `+Driver` button from Driver App top bar since the app is already associated with the driver's mobile number.
+2. Fix overlapping between the `Noticeboard` button and `Refer` button at the right edge of the top quick bar with proper spacing.
+3. Remove the driver name greeting band from the Driver Home screen.
+4. Rename `Cancel Trip / Unable to Complete` to `Cancel Order` on the home screen active trip card.
+5. Rename `Cancel Accepted Orders / Unable to Complete` to `Cancel Accepted Order` on the Live Duty screen.
+6. Move the `Refer` menu option functionality from the bottom navigation bar to be accessible via `Refer & Earn` in the left side drawer.
+7. Implement ability to switch between light and dark mode with persistent local storage.
+8. Synchronize native Android APKs with the updated driver templates and re-sign.
+
+### Bullet-Point Changes
+- `src/components/Driver/DriverApp.tsx`:
+  - Removed `+ Driver` registration button from top quick bar.
+  - Added clean spacing (`gap-3`) and separate button styling between `Noticeboard` and `Refer` buttons to eliminate right-edge button overlapping.
+  - Removed driver greeting band card (`Good Morning, Saravanan P!`) from the top of Driver Home screen.
+  - Renamed active trip card cancellation button from `Cancel Trip / Unable to Complete` to `Cancel Order`.
+  - Renamed live duty order cancellation button from `Cancel Accepted Order / Unable to Complete` to `Cancel Accepted Order`.
+  - Removed `Refer` option from the bottom navigation bar, leaving an evenly spaced 4-button menu: Home, Live Duty, Wallet, and SOS.
+  - Created dedicated `showReferModal` ("Driver Partner Refer & Earn") dialog featuring driver's referral code, 1-tap clipboard copy, WhatsApp invite sharing, and driver/shipper reward earning rules.
+  - Connected `Refer & Earn` in the left side navigation drawer and top quick bar to launch the new `showReferModal`.
+  - Implemented `darkMode` state with `localStorage` (`swifload_driver_theme`) persistence and toggle functionality.
+  - Added Sun/Moon theme switcher buttons in the top header and inside the left-side navigation drawer.
+  - Added adaptive light and dark theme styling across root container, metric cards, active trip cards, duty terminal, side drawer, and bottom navigation bar.
+- `scripts/rebuild_apks.py`:
+  - Removed greeting card element and guarded greeting logic in the driver APK HTML template.
+  - Renamed `Cancel Trip / Unable to Complete` button to `Cancel Order`.
+  - Configured dynamic `BASE_DIR` and graceful fallback when androguard is absent.
+  - Re-generated and re-signed `SwifLoad-Driver.apk` (3,302,260 bytes) and `SwifLoad-Customer.apk` (3,297,516 bytes).
+
+### Verification Status
+- Production build: `npm run build` executed successfully with **exit code 0** and **0 TypeScript / compilation errors**.
+- APK rebuild: Re-generated and signed `SwifLoad-Driver.apk` and `SwifLoad-Customer.apk` with exit code 0.
+
+## 📅 Session: 2026-10-05 (Driver Order Cancellation Standby Lockout & Admin Hour Slab Configuration)
+
+### Objectives
+1. Implement driver order cancellation flow: When a driver accepts an order and later cancels it without completing it, the app must require a cancellation reason categorized into:
+   - **Illness** (default 1 hour lockout)
+   - **Vehicle breakdown** (default 2 hours lockout)
+   - **Priority personal work** (default 4 hours lockout)
+   - **Emergency** (default 6 hours lockout)
+2. Enforce the lockout cooldown: While under cancellation lockout, the driver cannot take orders or go online.
+3. Make the hour slabs configurable on the Admin Portal, with options to edit penalty durations, reset to factory defaults, and monitor/waive active driver lockouts.
+4. Ensure the latest cancellation flow and standby banner are fully reflected in the downloadable `SwifLoad-Driver.apk`.
+
+### Bullet-Point Changes
+- `src/types/logistics.ts`:
+  - Added `DriverCancellationReason` type (`'Illness' | 'Vehicle breakdown' | 'Priority personal work' | 'Emergency'`).
+  - Added `DriverCancellationLockout` interface for tracking driver lockout state, timestamps, duration, and waiver status.
+  - Added `DriverCancellationSlabConfig` interface for configurable reason-hours mapping.
+- `src/lib/data.ts`:
+  - Defined `DEFAULT_DRIVER_CANCELLATION_SLABS` mapping Illness (1h), Vehicle breakdown (2h), Priority personal work (4h), and Emergency (6h).
+- `src/context/LogisticsContext.tsx`:
+  - Added `cancellationSlabConfigs` and `driverLockouts` state with persistent localStorage cache.
+  - Implemented `cancelTripByDriver` function enforcing cancellation reasons, calculating lockout expiration, setting driver offline, updating trip status, and dispatching driver notifications.
+  - Implemented `isDriverInLockout` returning live remaining hours, minutes, and seconds.
+  - Implemented `waiveDriverLockout` allowing Admins to lift restrictions.
+  - Implemented `updateCancellationSlabConfig` and `resetCancellationSlabsToDefault`.
+  - Updated `acceptTripByDriver` and `toggleDriverOnline` to block order taking and online status when under active lockout.
+- `src/components/Driver/DriverApp.tsx`:
+  - Added **"Cancel Accepted Order / Unable to Complete"** button on both the active trip card on Duty Page and Dashboard.
+  - Implemented **Cancellation Reason Modal (`showCancelReasonModal`)** displaying all 4 categories with real-time configured lockout durations and policy disclaimer.
+  - Implemented **Driver Cancellation Standby Lockout Banner** with live countdown timer ticking each second, unlock timestamp, reason icon, and demo reset button.
+  - Disabled incoming trip dispatch popups during active lockout periods.
+- `src/components/Admin/AdminPortal.tsx`:
+  - Added dedicated navigation tab: **"Cancellation Lockout Slabs"** with live active lockouts counter badge.
+  - Built **Lockout Duration Slabs Configuration Panel** allowing admins to adjust penalty hours for all 4 reasons with interactive stepper controls and factory reset.
+  - Built **Active Driver Standby / Lockouts Monitor** displaying currently suspended drivers, vehicle details, cancellation reason, lockout duration, remaining time, and a one-click **"Waive Lockout (Unlock)"** action.
+  - Added Cancellation Audit Trail log.
+- `scripts/rebuild_apks.py` & `package.json`:
+  - Updated Driver App HTML template with the cancellation reason modal, standby cooldown banner, live countdown, and lockout enforcement.
+  - Re-ran `npm run update-apks` to regenerate and re-sign `SwifLoad-Driver.apk` with the latest changes.
+
+### Verification Status
+- Production build: `npm run build` executed successfully with **exit code 0** and **0 TypeScript / compilation errors**.
+- APK rebuild: `npm run update-apks` executed successfully, generating valid signed binaries for `SwifLoad-Driver.apk` and `SwifLoad-Customer.apk`.
+- HTTP verification: Verified `200 OK` on `http://localhost:3000/driver`, `http://localhost:3000/admin`, `http://localhost:3000/customer`, and over local network `http://192.168.29.12:3000`.
+
+## 📅 Session: 2026-10-05 (Synchronize Downloadable Customer & Driver Apps with Latest Codebase)
+
+### Objectives
+1. Ensure all latest changes from the application codebase (multi-stop routing, 10-second countdown popups, noticeboard wallet warnings, company ICICI QR payments, earnings ledger, side navigation drawer) are fully reflected in all downloadable versions of the Customer App and Driver-Partner App.
+2. Provide direct, prominent download options for both apps through both the **'Get Mobile App'** button and the **'App Simulator'** button on the home screen.
+3. Configure dedicated Progressive Web App (PWA) manifests for Customer App (`/manifest-customer.json`) and Driver-Partner App (`/manifest-driver.json`) with direct `start_url` routing.
+4. Rebuild and re-sign native Android APKs (`SwifLoad-Customer.apk` and `SwifLoad-Driver.apk`) with offline-capable hybrid bundles and proper route mapping.
+
+### Bullet-Point Changes
+- `public/manifest-customer.json`:
+  - Created dedicated PWA manifest for Customer App with `start_url: "/customer"` and theme color `#2563eb`.
+- `public/manifest-driver.json`:
+  - Created dedicated PWA manifest for Driver-Partner App with `start_url: "/driver"` and theme color `#16a34a`.
+- `public/downloads/SwifLoad-Customer.apk`:
+  - Rebuilt and re-signed with valid Android v1 PKCS#7 signature.
+  - Bundled latest customer booking interface with multi-pickup / multi-drop selectors, vehicle options, live fare calculator, and active order tracking.
+- `public/downloads/SwifLoad-Driver.apk`:
+  - Rebuilt and re-signed with valid Android v1 PKCS#7 signature.
+  - Bundled latest driver cockpit interface with multi-stop task tracker, next-stop completion popup, 10s countdown alert with distances & exact addresses, noticeboard warning for debt $\le$ -₹200, company ICICI QR code modal, and side navigation drawer.
+- `src/components/Website/WebNavbar.tsx`:
+  - Added direct mobile app download section inside the **'App Simulator'** dropdown menu on the home screen, allowing one-click downloads for both Customer APK and Driver-Partner APK.
+- `src/app/page.tsx`:
+  - Added prominent download action bars directly above the simulator phone frames and in the top toolbar when testing in the simulator.
+- `src/app/downloads/page.tsx`:
+  - Updated Customer and Driver download cards with `v1.2.0 Latest` badges and detailed lists of latest feature additions.
+  - Wired PWA installation to load the app-specific manifests (`manifest-customer.json` and `manifest-driver.json`).
+- `src/app/customer/page.tsx` & `src/app/driver/page.tsx`:
+  - Added dynamic linking to their respective PWA manifests on component mount.
+
+### Verification Status
+- Production build: `npm run build` executed successfully with **exit code 0** and 0 errors across all routes.
+- APK validation: Verified using `androguard` that both `SwifLoad-Customer.apk` and `SwifLoad-Driver.apk` are valid and signed (`is_signed: True, is_signed_v1: True`).
+- HTTP endpoints: Verified `HTTP/1.1 200 OK` on `/`, `/customer`, `/driver`, `/downloads`, `/manifest-customer.json`, `/manifest-driver.json`, `/downloads/SwifLoad-Customer.apk`, and `/downloads/SwifLoad-Driver.apk`.
+
 ## 📅 Session: 2026-10-05 (Implementation of Changes Required.txt — Multi-Stop, Noticeboard, Company QR & Notifications)
 
 ### Objectives

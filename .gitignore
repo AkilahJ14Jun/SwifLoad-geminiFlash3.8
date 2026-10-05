@@ -38,3 +38,7 @@ next-env.d.ts
 
 # deployment log files
 /webapp-logs
+
+# archives & tool caches
+*.zip
+/graphify-out/

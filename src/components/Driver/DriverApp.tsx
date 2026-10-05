@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Power,
@@ -42,44 +42,14 @@ import {
   Share2,
   Layers,
   CheckCircle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
-import { VehicleCategory, TripStop, DriverNotification } from '@/types/logistics';
+import { VehicleCategory, TripStop, DriverNotification, DriverCancellationReason } from '@/types/logistics';
 import { calculateDriverTaskPayout, calculateDriverIncentives } from '@/lib/pricing';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
-
-/**
- * Helper to compute greeting of the day (Changes Required Item 8)
- */
-function getGreetingOfDay(): { greeting: string; icon: string; subtitle: string } {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) {
-    return {
-      greeting: 'Good Morning',
-      icon: '☀️',
-      subtitle: 'Ready to take on early morning freight runs across Coimbatore?',
-    };
-  } else if (hour >= 12 && hour < 17) {
-    return {
-      greeting: 'Good Afternoon',
-      icon: '🌤️',
-      subtitle: 'Peak industrial freight hours are active. High demand in peelamedu & ganapathy!',
-    };
-  } else if (hour >= 17 && hour < 21) {
-    return {
-      greeting: 'Good Evening',
-      icon: '🌆',
-      subtitle: 'Evening dispatch runs are live. Wrap up your milestone incentives today!',
-    };
-  } else {
-    return {
-      greeting: 'Good Night',
-      icon: '🌙',
-      subtitle: 'Night dispatch active. Drive safely and keep emergency SOS on standby.',
-    };
-  }
-}
 
 /**
  * Sponsored Ads for Driver App displayed horizontally one below the other (Changes Required Item 15)
@@ -159,7 +129,22 @@ export default function DriverApp() {
     clearDriverNotifications,
     startTripStop,
     completeTripStop,
+    cancellationSlabConfigs,
+    cancelTripByDriver,
+    waiveDriverLockout,
+    isDriverInLockout,
+    driverLockouts,
   } = useLogistics();
+
+  // Driver Cancellation & Lockout States
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState<boolean>(false);
+  const [selectedCancelReason, setSelectedCancelReason] = useState<DriverCancellationReason>('Illness');
+  const [now, setNow] = useState<number>(Date.now());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Navigation: 'home' = Driver Home, 'duty' = Dedicated Live Pickup Duty Page (Changes Required Item 16 & 19)
   const [driverPage, setDriverPage] = useState<'home' | 'duty'>('home');
@@ -181,7 +166,7 @@ export default function DriverApp() {
   const [walletModalTab, setWalletModalTab] = useState<'recharge' | 'withdraw'>('recharge');
   const [driverTopupAmt, setDriverTopupAmt] = useState<number>(200);
 
-  // New Features States (Changes Required Items 1, 4, 5, 6, 9)
+  // New Features States (Changes Required Items 1, 4, 5, 6, 9, 11, 12)
   const [showSideMenu, setShowSideMenu] = useState<boolean>(false);
   const [showNoticeboardModal, setShowNoticeboardModal] = useState<boolean>(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
@@ -189,6 +174,26 @@ export default function DriverApp() {
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [showEarningsModal, setShowEarningsModal] = useState<boolean>(false);
+  const [showReferModal, setShowReferModal] = useState<boolean>(false);
+
+  // Dark / Light Mode state for visual comfort (Changes Required Item 12)
+  const [darkMode, setDarkMode] = useState<boolean>(true);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('swifload_driver_theme');
+      if (saved) setDarkMode(saved === 'dark');
+    } catch {}
+  }, []);
+
+  const toggleTheme = () => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('swifload_driver_theme', next ? 'dark' : 'light');
+      } catch {}
+      return next;
+    });
+  };
 
   // Multi-stop Next Stop Popup (Changes Required Item 1 & 8)
   const [nextStopModalData, setNextStopModalData] = useState<{
@@ -235,6 +240,10 @@ export default function DriverApp() {
   // If amount is more than minus Rs. 200 (i.e. balance <= -200), blocked from getting pickup calls.
   const isDriverBlocked = currentDriver.wallet.balance <= -200;
 
+  // Cancellation Cooldown / Lockout Penalty (Illness: 1h, Breakdown: 2h, Personal: 4h, Emergency: 6h):
+  const lockoutInfo = isDriverInLockout(currentDriver.id);
+  const isDriverLockedOut = lockoutInfo.isLocked;
+
   // Active assigned trip for this driver
   const assignedTrip = trips.find(
     (t) =>
@@ -249,9 +258,9 @@ export default function DriverApp() {
       t.currentDispatchGroupId === currentDriver.groupId
   );
 
-  // Active incoming task popup target (blocked drivers do NOT receive pickup calls)
+  // Active incoming task popup target (blocked drivers and drivers on cancellation lockout do NOT receive pickup calls)
   const activeIncomingTrip =
-    !isDriverBlocked && !assignedTrip && currentDriver.isOnline
+    !isDriverBlocked && !isDriverLockedOut && !assignedTrip && currentDriver.isOnline
       ? availableGroupTrips.find((t) => !dismissedTripIds.includes(t.id)) || null
       : null;
 
@@ -265,8 +274,6 @@ export default function DriverApp() {
     completedDriverTrips.length,
     incentiveSlabs || []
   );
-
-  const greetingInfo = getGreetingOfDay();
 
   // Reverse chronological transactions (Changes Required Item 13)
   const reverseChronologicalTx = [...(currentDriver.wallet.transactions || [])].sort(
@@ -306,9 +313,11 @@ export default function DriverApp() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 text-slate-100 pb-20 md:pb-6">
+    <div className={`flex flex-col h-full pb-20 md:pb-6 transition-colors duration-200 ${
+      darkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-100 text-slate-900'
+    }`}>
       {/* ================= TOP DRIVER BAR ================= */}
-      <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md space-y-2.5">
+      <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md space-y-2.5 text-white">
         {/* Row 1: Menu, Profile, Notifications & Primary Online Switch */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center space-x-2.5 min-w-0 flex-1">
@@ -377,6 +386,16 @@ export default function DriverApp() {
               )}
             </button>
 
+            {/* Light / Dark Mode Toggle Button (Changes Required Item 12) */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors flex items-center justify-center"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode for visual comfort'}
+            >
+              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+            </button>
+
             {/* Primary Online/Offline Switch */}
             <button
               onClick={() => toggleDriverOnline(currentDriver.id)}
@@ -392,7 +411,7 @@ export default function DriverApp() {
           </div>
         </div>
 
-        {/* Row 2: Secondary Quick Bar (Switch Driver, Quick Navigation & Register Partner) */}
+        {/* Row 2: Secondary Quick Bar (Switch Driver, Noticeboard & Refer) */}
         <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs gap-2 flex-wrap sm:flex-nowrap">
           <div className="flex items-center space-x-1.5 min-w-0 flex-1">
             <span className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">Driver:</span>
@@ -410,42 +429,30 @@ export default function DriverApp() {
             </select>
           </div>
 
-          <div className="flex items-center space-x-1.5 shrink-0">
-            {/* Noticeboard Button (Changes Required Item 5) */}
+          {/* Noticeboard and Refer with spacing (Changes Required Item 6, 7 & 11) */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Noticeboard Button (Changes Required Item 5 & Item 7) */}
             <button
               onClick={() => setShowNoticeboardModal(true)}
-              className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors flex items-center space-x-1 ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors flex items-center space-x-1.5 ${
                 isDriverBlocked
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
                   : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
               }`}
               title="Open Noticeboard"
             >
-              <Pin className="w-3 h-3 text-amber-400" />
+              <Pin className="w-3.5 h-3.5 text-amber-400" />
               <span>Noticeboard</span>
             </button>
 
-            {/* Refer & Earn Shortcut */}
+            {/* Refer & Earn Shortcut (Changes Required Item 7 & Item 11) */}
             <button
-              onClick={() => {
-                setDriverPage('home');
-                setActiveDriverTab('referrals');
-              }}
-              className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors flex items-center space-x-1"
+              onClick={() => setShowReferModal(true)}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-colors flex items-center space-x-1.5"
               title="Refer Drivers or Customers"
             >
-              <Gift className="w-3 h-3" />
-              <span className="hidden sm:inline">Refer</span>
-            </button>
-
-            {/* Register New Partner */}
-            <button
-              onClick={() => setShowDriverRegModal(true)}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors"
-              title="Register as New Driver Partner"
-            >
-              <UserPlus className="w-3 h-3" />
-              <span className="whitespace-nowrap">+ Driver</span>
+              <Gift className="w-3.5 h-3.5 text-amber-400" />
+              <span>Refer</span>
             </button>
           </div>
         </div>
@@ -498,42 +505,30 @@ export default function DriverApp() {
       {/* ========================================================================= */}
       {driverPage === 'home' && (
         <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4 max-w-xl mx-auto w-full">
-          {/* Item 8: Greeting of the Day at the top of Home Page */}
-          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-4 rounded-3xl border border-slate-800 shadow-lg relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-2xl">{greetingInfo.icon}</span>
-                  <h2 className="text-lg font-black text-white tracking-tight">
-                    {greetingInfo.greeting}, {currentDriver.name.split(' ')[0]}!
-                  </h2>
-                </div>
-                <p className="text-xs text-slate-400 mt-1 leading-snug">
-                  {greetingInfo.subtitle}
-                </p>
-              </div>
-              <span className="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded-xl font-mono shrink-0">
-                {new Date().toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </span>
-            </div>
-          </div>
-
           {/* ================= TOP METRIC BUTTON CARDS ================= */}
           {/* Items 9, 10, 11, 12, 13, 14 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {/* 1. Today's Earnings Button (Item 12 & 13) */}
-            <div className="bg-slate-950 rounded-2xl p-3.5 border border-slate-800 shadow flex flex-col justify-between hover:border-emerald-500/50 transition-colors">
+            <div className={`rounded-2xl p-3.5 border shadow flex flex-col justify-between transition-colors ${
+              darkMode
+                ? 'bg-slate-950 border-slate-800 hover:border-emerald-500/50'
+                : 'bg-white border-slate-200 shadow-sm hover:border-emerald-500/50'
+            }`}>
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    darkMode ? 'text-slate-400' : 'text-slate-500'
+                  }`}>
                     Today&apos;s Earnings
                   </span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 </div>
-                <div className="text-2xl font-black text-emerald-400 mt-1">
+                <div className="text-2xl font-black text-emerald-500 mt-1">
                   ₹{currentDriver.wallet.todayEarnings}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
+                <div className={`text-[10px] mt-0.5 ${
+                  darkMode ? 'text-slate-400' : 'text-slate-500'
+                }`}>
                   {completedDriverTrips.length} Trip(s) Completed
                 </div>
               </div>
@@ -542,10 +537,12 @@ export default function DriverApp() {
               <button
                 type="button"
                 onClick={() => setShowHistoryModal(true)}
-                className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-emerald-400 hover:text-emerald-300 group"
+                className={`mt-3 pt-2 border-t flex items-center justify-between text-[11px] font-bold text-emerald-500 hover:text-emerald-400 group ${
+                  darkMode ? 'border-slate-800/80' : 'border-slate-100'
+                }`}
               >
                 <span className="flex items-center space-x-1">
-                  <History className="w-3 h-3 text-emerald-400" />
+                  <History className="w-3 h-3 text-emerald-500" />
                   <span>View History</span>
                 </span>
                 <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -556,34 +553,42 @@ export default function DriverApp() {
             <button
               type="button"
               onClick={() => setShowIncentivesModal(true)}
-              className="bg-slate-950 rounded-2xl p-3.5 border border-slate-800 shadow text-left flex flex-col justify-between hover:border-amber-500/50 transition-colors group"
+              className={`rounded-2xl p-3.5 border shadow text-left flex flex-col justify-between transition-colors group ${
+                darkMode
+                  ? 'bg-slate-950 border-slate-800 hover:border-amber-500/50'
+                  : 'bg-white border-slate-200 shadow-sm hover:border-amber-500/50'
+              }`}
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-1">
-                    <Trophy className="w-3 h-3 text-amber-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 flex items-center space-x-1">
+                    <Trophy className="w-3 h-3 text-amber-500" />
                     <span>Total Incentives</span>
                   </span>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-bold">
+                  <span className="text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.2 rounded font-bold">
                     Admin Slabs
                   </span>
                 </div>
-                <div className="text-2xl font-black text-amber-400 mt-1">
+                <div className="text-2xl font-black text-amber-500 mt-1">
                   ₹{incentiveResult.totalIncentive}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
+                <div className={`text-[10px] mt-0.5 ${
+                  darkMode ? 'text-slate-400' : 'text-slate-500'
+                }`}>
                   {incentiveResult.nextSlab ? (
                     <span>
                       {incentiveResult.tripsToNextSlab} more calls for{' '}
-                      <strong className="text-amber-300">₹{incentiveResult.nextSlab.incentiveAmount}</strong>
+                      <strong className="text-amber-500 font-bold">₹{incentiveResult.nextSlab.incentiveAmount}</strong>
                     </span>
                   ) : (
-                    <span className="text-emerald-400 font-bold">Top milestone achieved!</span>
+                    <span className="text-emerald-500 font-bold">Top milestone achieved!</span>
                   )}
                 </div>
               </div>
 
-              <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-amber-400 group-hover:text-amber-300">
+              <div className={`mt-3 pt-2 border-t flex items-center justify-between text-[11px] font-bold text-amber-500 group-hover:text-amber-400 ${
+                darkMode ? 'border-slate-800/80' : 'border-slate-100'
+              }`}>
                 <span>View Incentive Slabs</span>
                 <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </div>
@@ -600,14 +605,20 @@ export default function DriverApp() {
                 isDriverBlocked
                   ? 'bg-rose-950/40 border-rose-700/80 hover:border-rose-500'
                   : currentDriver.wallet.balance < 0
-                  ? 'bg-amber-950/30 border-amber-800/60 hover:border-amber-500'
-                  : 'bg-slate-950 border-slate-800 hover:border-emerald-500/50'
+                  ? darkMode
+                    ? 'bg-amber-950/30 border-amber-800/60 hover:border-amber-500'
+                    : 'bg-amber-50 border-amber-300 hover:border-amber-400'
+                  : darkMode
+                  ? 'bg-slate-950 border-slate-800 hover:border-emerald-500/50'
+                  : 'bg-white border-slate-200 shadow-sm hover:border-emerald-500/50'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1">
-                    <Wallet className="w-3 h-3 text-emerald-400" />
+                  <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center space-x-1 ${
+                    darkMode ? 'text-slate-400' : 'text-slate-500'
+                  }`}>
+                    <Wallet className="w-3 h-3 text-emerald-500" />
                     <span>Wallet Balance</span>
                   </span>
                   <span
@@ -615,8 +626,8 @@ export default function DriverApp() {
                       isDriverBlocked
                         ? 'bg-rose-500/30 text-rose-300'
                         : currentDriver.wallet.balance < 0
-                        ? 'bg-amber-500/20 text-amber-300'
-                        : 'bg-emerald-500/20 text-emerald-300'
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : 'bg-emerald-500/20 text-emerald-500'
                     }`}
                   >
                     {isDriverBlocked ? 'BLOCKED' : currentDriver.wallet.balance < 0 ? 'Dues' : 'Max Cap ₹200'}
@@ -628,8 +639,10 @@ export default function DriverApp() {
                     isDriverBlocked
                       ? 'text-rose-400'
                       : currentDriver.wallet.balance < 0
-                      ? 'text-amber-400'
-                      : 'text-white'
+                      ? 'text-amber-500'
+                      : darkMode
+                      ? 'text-white'
+                      : 'text-slate-900'
                   }`}
                 >
                   {currentDriver.wallet.balance < 0
@@ -637,12 +650,16 @@ export default function DriverApp() {
                     : `₹${currentDriver.wallet.balance}`}
                 </div>
 
-                <div className="text-[10px] text-slate-400 mt-0.5">
+                <div className={`text-[10px] mt-0.5 ${
+                  darkMode ? 'text-slate-400' : 'text-slate-500'
+                }`}>
                   Max Cap: ₹200 • {isDriverBlocked ? 'Exceeds -₹200 limit' : 'Active'}
                 </div>
               </div>
 
-              <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-emerald-400 group-hover:text-emerald-300">
+              <div className={`mt-3 pt-2 border-t flex items-center justify-between text-[11px] font-bold text-emerald-500 group-hover:text-emerald-400 ${
+                darkMode ? 'border-slate-800/80' : 'border-slate-100'
+              }`}>
                 <span>Recharge / Withdraw</span>
                 <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </div>
@@ -690,6 +707,74 @@ export default function DriverApp() {
             </div>
           )}
 
+          {/* ================= DRIVER CANCELLATION LOCKOUT / COOLDOWN BANNER ================= */}
+          {isDriverLockedOut && (
+            <div className="bg-gradient-to-r from-rose-950/90 via-slate-900 to-amber-950/80 border-2 border-rose-500/90 rounded-3xl p-4.5 space-y-3 shadow-2xl relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-xl shrink-0">
+                    {lockoutInfo.lockout?.reason === 'Illness'
+                      ? '🤒'
+                      : lockoutInfo.lockout?.reason === 'Vehicle breakdown'
+                      ? '🚛'
+                      : lockoutInfo.lockout?.reason === 'Priority personal work'
+                      ? '💼'
+                      : '🚨'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] bg-rose-500/30 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                        Order Taking Suspended
+                      </span>
+                      <span className="text-[10px] text-amber-300 font-mono font-bold">
+                        {lockoutInfo.lockout?.lockoutHours}h Penalty Cooldown
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-black text-white mt-1">
+                      Standby Active: {lockoutInfo.lockout?.reason}
+                    </h4>
+                    <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                      Order #{lockoutInfo.lockout?.bookingCode || 'SWF-CBE'} was cancelled. Per safety & fulfillment policy, order dispatch is on hold.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Countdown Box */}
+              <div className="bg-slate-950/90 border border-rose-800/60 rounded-2xl p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase font-bold flex items-center space-x-1">
+                    <Clock className="w-3 h-3 text-amber-400" />
+                    <span>Cooldown Remaining</span>
+                  </div>
+                  <div className="text-lg font-black text-amber-300 font-mono">
+                    {lockoutInfo.remainingHours}h {lockoutInfo.remainingMinutes % 60}m {lockoutInfo.remainingSeconds % 60}s
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-slate-400 uppercase font-bold">Unlocks At</div>
+                  <div className="text-xs font-bold text-white font-mono">
+                    {lockoutInfo.lockout?.lockedUntil
+                      ? new Date(lockoutInfo.lockout.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : 'Soon'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Testing / Admin Waive action */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] text-slate-400 italic">Slabs configurable on Admin Portal</span>
+                <button
+                  type="button"
+                  onClick={() => waiveDriverLockout(currentDriver.id)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[11px] font-bold border border-slate-700 transition-colors"
+                >
+                  Waive Lockout (Demo Reset)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ================= ITEM 16 & 19: PROMINENT WELCOME BUTTON ================= */}
           {/* Clicking on it will take the driver to a dedicated page for live pickup calls */}
           <div className="bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-900 border-2 border-emerald-500/80 rounded-3xl p-5 shadow-2xl relative overflow-hidden space-y-4">
@@ -711,12 +796,25 @@ export default function DriverApp() {
             </div>
 
             {assignedTrip && (
-              <div className="p-3 bg-emerald-900/40 border border-emerald-600/50 rounded-2xl flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="font-bold text-white">Active Trip in Progress: {assignedTrip.bookingCode}</span>
+              <div className="space-y-2">
+                <div className="p-3 bg-emerald-900/40 border border-emerald-600/50 rounded-2xl flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="font-bold text-white">Active Trip in Progress: {assignedTrip.bookingCode}</span>
+                  </div>
+                  <span className="text-emerald-300 font-black">₹{assignedTrip.fare.driverEarnings}</span>
                 </div>
-                <span className="text-emerald-300 font-black">₹{assignedTrip.fare.driverEarnings}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCancelReason('Illness');
+                    setShowCancelReasonModal(true);
+                  }}
+                  className="w-full py-1.5 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 border border-rose-800/60 rounded-xl text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                >
+                  <AlertTriangle className="w-3 h-3 text-rose-400" />
+                  <span>Cancel Order</span>
+                </button>
               </div>
             )}
 
@@ -920,6 +1018,70 @@ export default function DriverApp() {
               </div>
             )}
 
+            {/* Lockout / Cooldown Banner on Duty Page */}
+            {isDriverLockedOut && (
+              <div className="bg-gradient-to-r from-rose-950/90 via-slate-900 to-amber-950/80 border-2 border-rose-500/90 rounded-3xl p-4.5 space-y-3 shadow-2xl">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-xl shrink-0">
+                    {lockoutInfo.lockout?.reason === 'Illness'
+                      ? '🤒'
+                      : lockoutInfo.lockout?.reason === 'Vehicle breakdown'
+                      ? '🚛'
+                      : lockoutInfo.lockout?.reason === 'Priority personal work'
+                      ? '💼'
+                      : '🚨'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] bg-rose-500/30 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                        Order Taking Suspended
+                      </span>
+                      <span className="text-[10px] text-amber-300 font-mono font-bold">
+                        {lockoutInfo.lockout?.lockoutHours}h Standby
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-black text-white mt-1">
+                      Duty Cooldown: {lockoutInfo.lockout?.reason}
+                    </h4>
+                    <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                      You are temporarily restricted from receiving or accepting orders. Time remaining:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/90 border border-rose-800/60 rounded-2xl p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-slate-400 uppercase font-bold flex items-center space-x-1">
+                      <Clock className="w-3 h-3 text-amber-400" />
+                      <span>Remaining</span>
+                    </div>
+                    <div className="text-lg font-black text-amber-300 font-mono">
+                      {lockoutInfo.remainingHours}h {lockoutInfo.remainingMinutes % 60}m {lockoutInfo.remainingSeconds % 60}s
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-400 uppercase font-bold">Unlocks At</div>
+                    <div className="text-xs font-bold text-white font-mono">
+                      {lockoutInfo.lockout?.lockedUntil
+                        ? new Date(lockoutInfo.lockout.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : 'Soon'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-slate-400 italic">Order dispatch locked during cooldown</span>
+                  <button
+                    type="button"
+                    onClick={() => waiveDriverLockout(currentDriver.id)}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[11px] font-bold border border-slate-700 transition-colors"
+                  >
+                    Waive Lockout (Demo Reset)
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Item 19: Maps moved from Home Page to this Duty Page */}
             <div className="bg-slate-950 rounded-2xl border border-slate-800 p-2 shadow-xl space-y-2">
               <div className="flex items-center justify-between px-2 pt-1 text-xs">
@@ -1086,6 +1248,19 @@ export default function DriverApp() {
                     </span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
+
+                  {/* Cancel Order Action */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCancelReason('Illness');
+                      setShowCancelReasonModal(true);
+                    }}
+                    className="w-full py-2 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/80 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Cancel Accepted Order</span>
+                  </button>
 
                   {/* ================= ITEMS 1, 3 & 4: MULTI-STOP TRACKER WITH START, COMPLETE & COMPANY QR ================= */}
                   <div className="space-y-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
@@ -1638,11 +1813,13 @@ export default function DriverApp() {
       )}
 
       {/* ================= DRIVER BOTTOM NAVIGATION ================= */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex items-center justify-between z-30 shadow-2xl">
+      <div className={`fixed bottom-0 left-0 right-0 max-w-md mx-auto backdrop-blur-md border-t px-4 py-2 flex items-center justify-around z-30 shadow-2xl transition-colors ${
+        darkMode ? 'bg-slate-950/95 border-slate-800' : 'bg-white/95 border-slate-200'
+      }`}>
         <button
           onClick={() => setDriverPage('home')}
           className={`flex flex-col items-center space-y-0.5 ${
-            driverPage === 'home' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+            driverPage === 'home' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400 font-medium' : 'text-slate-500 font-medium'
           }`}
         >
           <Sparkles className="w-5 h-5" />
@@ -1652,7 +1829,7 @@ export default function DriverApp() {
         <button
           onClick={() => setDriverPage('duty')}
           className={`flex flex-col items-center space-y-0.5 relative ${
-            driverPage === 'duty' ? 'text-emerald-400 font-bold' : 'text-slate-500 font-medium'
+            driverPage === 'duty' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400 font-medium' : 'text-slate-500 font-medium'
           }`}
         >
           <Navigation className="w-5 h-5" />
@@ -1668,7 +1845,9 @@ export default function DriverApp() {
             setWalletModalTab('recharge');
             setShowDriverTopupModal(true);
           }}
-          className="flex flex-col items-center space-y-0.5 relative text-slate-500 font-medium hover:text-emerald-400"
+          className={`flex flex-col items-center space-y-0.5 relative font-medium hover:text-emerald-500 ${
+            darkMode ? 'text-slate-400' : 'text-slate-500'
+          }`}
         >
           <Wallet className="w-5 h-5" />
           <span className="text-[10px]">Wallet</span>
@@ -1680,27 +1859,12 @@ export default function DriverApp() {
         <button
           onClick={() => {
             setDriverPage('home');
-            setActiveDriverTab('referrals');
-          }}
-          className={`flex flex-col items-center space-y-0.5 ${
-            activeDriverTab === 'referrals' && driverPage === 'home'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-500 font-medium'
-          }`}
-        >
-          <Gift className="w-5 h-5" />
-          <span className="text-[10px]">Refer</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setDriverPage('home');
             setActiveDriverTab('support');
           }}
           className={`flex flex-col items-center space-y-0.5 ${
             activeDriverTab === 'support' && driverPage === 'home'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-500 font-medium'
+              ? 'text-emerald-500 font-bold'
+              : darkMode ? 'text-slate-400 font-medium' : 'text-slate-500 font-medium'
           }`}
         >
           <HelpCircle className="w-5 h-5" />
@@ -2086,6 +2250,131 @@ export default function DriverApp() {
         </div>
       )}
 
+      {/* ================= CANCELLATION REASON MODAL ================= */}
+      {showCancelReasonModal && assignedTrip && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-lg">
+                  ⚠️
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white">Cancel Accepted Order</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">Trip #{assignedTrip.bookingCode}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCancelReasonModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-amber-950/30 border border-amber-600/40 rounded-2xl text-xs text-amber-200 leading-relaxed">
+              <strong>SwifLoad Operating Policy:</strong> Cancelling an order after acceptance disrupts customer operations. Selecting a reason below will temporarily suspend your order dispatch for the mandated safety cooldown period.
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Select Cancellation Reason:
+              </div>
+
+              {([
+                {
+                  reason: 'Illness' as const,
+                  icon: '🤒',
+                  title: 'Illness',
+                  desc: 'Medical unfitness or rest needed before driving.',
+                  defaultHours: 1,
+                },
+                {
+                  reason: 'Vehicle breakdown' as const,
+                  icon: '🚛',
+                  title: 'Vehicle breakdown',
+                  desc: 'Mechanical failure, flat tyre, or engine defect.',
+                  defaultHours: 2,
+                },
+                {
+                  reason: 'Priority personal work' as const,
+                  icon: '💼',
+                  title: 'Priority personal work',
+                  desc: 'Urgent family matter or priority domestic commitment.',
+                  defaultHours: 4,
+                },
+                {
+                  reason: 'Emergency' as const,
+                  icon: '🚨',
+                  title: 'Emergency',
+                  desc: 'Critical domestic or medical emergency.',
+                  defaultHours: 6,
+                },
+              ]).map((item) => {
+                const slabConfig = cancellationSlabConfigs.find((s) => s.reason === item.reason);
+                const lockoutHours = slabConfig ? slabConfig.lockoutHours : item.defaultHours;
+                const isSelected = selectedCancelReason === item.reason;
+
+                return (
+                  <button
+                    key={item.reason}
+                    type="button"
+                    onClick={() => setSelectedCancelReason(item.reason)}
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-start space-x-3 ${
+                      isSelected
+                        ? 'bg-rose-950/40 border-rose-500 shadow-md ring-2 ring-rose-500/30'
+                        : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="text-2xl mt-0.5">{item.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-black ${isSelected ? 'text-rose-200' : 'text-white'}`}>
+                          {item.title}
+                        </span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                            isSelected ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'
+                          }`}
+                        >
+                          {lockoutHours} Hour{lockoutHours !== 1 ? 's' : ''} Standby
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{item.desc}</p>
+                      <div className="text-[10px] text-amber-400/90 font-medium mt-1">
+                        ⏳ Standby rule: You will not be allowed to take orders for the next {lockoutHours} hr{lockoutHours !== 1 ? 's' : ''}.
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Action buttons */}
+            <div className="pt-2 flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowCancelReasonModal(false)}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors"
+              >
+                Keep Trip & Continue
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  cancelTripByDriver(assignedTrip.id, currentDriver.id, selectedCancelReason);
+                  setShowCancelReasonModal(false);
+                }}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Driver Registration Modal */}
       {showDriverRegModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -2235,9 +2524,13 @@ export default function DriverApp() {
           />
 
           {/* Drawer Body */}
-          <div className="relative w-80 max-w-[85vw] bg-slate-950 border-r border-slate-800 h-full flex flex-col z-10 shadow-2xl overflow-y-auto">
+          <div className={`relative w-80 max-w-[85vw] border-r h-full flex flex-col z-10 shadow-2xl overflow-y-auto transition-colors ${
+            darkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
             {/* Header Profile Section */}
-            <div className="p-4 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800 space-y-3">
+            <div className={`p-4 border-b space-y-3 ${
+              darkMode ? 'bg-gradient-to-b from-slate-900 to-slate-950 border-slate-800' : 'bg-gradient-to-b from-slate-50 to-white border-slate-200'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2.5 min-w-0">
                   <div className="relative">
@@ -2247,20 +2540,22 @@ export default function DriverApp() {
                       className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500"
                     />
                     <span
-                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-950 ${
-                        currentDriver.isOnline ? 'bg-emerald-500' : 'bg-slate-500'
-                      }`}
+                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 ${
+                        darkMode ? 'border-slate-950' : 'border-white'
+                      } ${currentDriver.isOnline ? 'bg-emerald-500' : 'bg-slate-500'}`}
                     />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-extrabold text-white text-sm truncate">{currentDriver.name}</div>
-                    <div className="text-[11px] text-emerald-400 font-mono font-bold">{currentDriver.vehicleNumber}</div>
-                    <div className="text-[10px] text-slate-400 truncate">⭐ {currentDriver.rating || 4.9} • {currentDriver.vehicleModel}</div>
+                    <div className={`font-extrabold text-sm truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>{currentDriver.name}</div>
+                    <div className="text-[11px] text-emerald-500 font-mono font-bold">{currentDriver.vehicleNumber}</div>
+                    <div className={`text-[10px] truncate ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>⭐ {currentDriver.rating || 4.9} • {currentDriver.vehicleModel}</div>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowSideMenu(false)}
-                  className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white"
+                  className={`p-1.5 rounded-xl transition-colors ${
+                    darkMode ? 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900'
+                  }`}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -2276,16 +2571,18 @@ export default function DriverApp() {
                 className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
                   isDriverBlocked
                     ? 'bg-rose-950/40 border-rose-500/50 hover:bg-rose-900/40'
-                    : 'bg-slate-900/80 border-slate-800 hover:bg-slate-800/80'
+                    : darkMode
+                    ? 'bg-slate-900/80 border-slate-800 hover:bg-slate-800/80'
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Wallet className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs text-slate-300 font-semibold">Wallet Balance</span>
+                  <Wallet className="w-4 h-4 text-emerald-500" />
+                  <span className={`text-xs font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Wallet Balance</span>
                 </div>
                 <span
                   className={`font-black text-xs font-mono ${
-                    currentDriver.wallet.balance < 0 ? 'text-rose-400' : 'text-emerald-400'
+                    currentDriver.wallet.balance < 0 ? 'text-rose-400' : 'text-emerald-500'
                   }`}
                 >
                   {currentDriver.wallet.balance < 0 ? `-₹${Math.abs(currentDriver.wallet.balance)}` : `₹${currentDriver.wallet.balance}`}
@@ -2293,7 +2590,7 @@ export default function DriverApp() {
               </div>
             </div>
 
-            {/* Menu Links (Changes Required Item 9) */}
+            {/* Menu Links (Changes Required Item 9, 11, 12) */}
             <div className="p-3 space-y-1 text-xs flex-1">
               {/* Earnings */}
               <button
@@ -2301,13 +2598,15 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowEarningsModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
-                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
                   <span className="font-semibold">Earnings</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
               </button>
 
               {/* Ledger */}
@@ -2316,13 +2615,15 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowLedgerModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
-                  <FileText className="w-4 h-4 text-blue-400" />
+                  <FileText className="w-4 h-4 text-blue-500" />
                   <span className="font-semibold">Ledger & Statement</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
               </button>
 
               {/* Payments */}
@@ -2331,13 +2632,15 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowDriverTopupModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
-                  <Wallet className="w-4 h-4 text-amber-400" />
+                  <Wallet className="w-4 h-4 text-amber-500" />
                   <span className="font-semibold">Payments & Wallet</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
               </button>
 
               {/* Notifications */}
@@ -2346,7 +2649,9 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowNotificationsModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
                   <Bell className="w-4 h-4 text-rose-400" />
@@ -2357,24 +2662,25 @@ export default function DriverApp() {
                     {driverNotifications.filter((n) => !n.read).length}
                   </span>
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                  <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
                 )}
               </button>
 
-              {/* Refer & Earn */}
+              {/* Refer & Earn (Changes Required Item 11) */}
               <button
                 onClick={() => {
                   setShowSideMenu(false);
-                  setDriverPage('home');
-                  setActiveDriverTab('referrals');
+                  setShowReferModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
                   <Gift className="w-4 h-4 text-purple-400" />
                   <span className="font-semibold">Refer & Earn</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
               </button>
 
               {/* Noticeboard */}
@@ -2383,7 +2689,9 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowNoticeboardModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
                   <Pin className="w-4 h-4 text-amber-400" />
@@ -2402,13 +2710,15 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowProfileModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
                   <User className="w-4 h-4 text-cyan-400" />
                   <span className="font-semibold">Profile & KYC Docs</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
               </button>
 
               {/* Privacy Policy */}
@@ -2417,22 +2727,145 @@ export default function DriverApp() {
                   setShowSideMenu(false);
                   setShowPrivacyModal(true);
                 }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
               >
                 <div className="flex items-center space-x-3">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   <span className="font-semibold">Company Privacy Policy</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-600" />
+                <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} />
+              </button>
+
+              {/* Theme Switcher (Light / Dark Mode - Changes Required Item 12) */}
+              <button
+                onClick={toggleTheme}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'hover:bg-slate-900 text-slate-200 hover:text-white' : 'hover:bg-slate-100 text-slate-800 hover:text-slate-950'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+                  <span className="font-semibold">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                  darkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                }`}>
+                  {darkMode ? '🌙 Dark' : '☀️ Light'}
+                </span>
               </button>
             </div>
 
             {/* Bottom Footer Info */}
-            <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500 space-y-1">
-              <div className="font-bold text-slate-400">SwifLoad Logistics Pvt. Ltd.</div>
+            <div className={`p-4 border-t text-[11px] space-y-1 ${
+              darkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-500'
+            }`}>
+              <div className={`font-bold ${darkMode ? 'text-slate-400' : 'text-slate-700'}`}>SwifLoad Logistics Pvt. Ltd.</div>
               <div>Coimbatore Freight Hub v3.8.2</div>
-              <div className="text-[10px] text-slate-600">All driver operations logged securely</div>
+              <div className={`text-[10px] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>All driver operations logged securely</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 11: REFER & EARN MODAL =========================== */}
+      {/* ========================================================================= */}
+      {showReferModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`border rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col transition-colors ${
+            darkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className={`flex items-center justify-between border-b pb-3 ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <div className="flex items-center space-x-2">
+                <Gift className="w-5 h-5 text-purple-400" />
+                <h3 className="font-bold text-sm">Driver Partner Refer & Earn</h3>
+              </div>
+              <button
+                onClick={() => setShowReferModal(false)}
+                className={`p-1 transition-colors ${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
+              {/* Referral Code Box */}
+              <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-900 border-amber-500/40' : 'bg-amber-50 border-amber-300'}`}>
+                <div className="text-[10px] text-amber-500 uppercase font-extrabold tracking-wider">
+                  Your Unique Referral Code
+                </div>
+                <div className="flex items-center justify-between mt-2 gap-2">
+                  <div className={`font-mono text-xl font-black tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {currentDriver.referralCode || 'SWIF-DRV01-44'}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentDriver.referralCode || 'SWIF-DRV01-44');
+                      setDriverReferralCopied(true);
+                      showToast('Driver referral code copied to clipboard!');
+                      setTimeout(() => setDriverReferralCopied(false), 2500);
+                    }}
+                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow shrink-0 transition-transform active:scale-95"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{driverReferralCopied ? 'Copied!' : 'Copy Code'}</span>
+                  </button>
+                </div>
+                <p className={`text-[11px] mt-2 leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Share your code with fellow commercial drivers or business shippers across Coimbatore.
+                </p>
+              </div>
+
+              {/* Share via WhatsApp */}
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Join SwifLoad as a Driver Partner using my referral code: ${currentDriver.referralCode || 'SWIF-DRV01-44'} and get an instant onboarding bonus! Sign up here: https://swifload-cbe.azurewebsites.net/driver`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center space-x-2 shadow transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share via WhatsApp</span>
+              </a>
+
+              {/* How it Works */}
+              <div className="space-y-2">
+                <h4 className="font-extrabold text-xs uppercase tracking-wider text-amber-500">
+                  Referral Rewards Policy
+                </h4>
+                <div className={`p-3 rounded-2xl border space-y-1 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-500">🚚 Refer a Commercial Driver</span>
+                    <span className="font-black text-amber-500 text-sm">+₹200</span>
+                  </div>
+                  <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Earn ₹200 credited directly to your SwifLoad wallet when your referred driver partner completes their first 5 trips in Coimbatore.
+                  </p>
+                </div>
+
+                <div className={`p-3 rounded-2xl border space-y-1 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-blue-500">📦 Refer a Shipper Customer</span>
+                    <span className="font-black text-amber-500 text-sm">+₹50</span>
+                  </div>
+                  <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Earn ₹50 wallet cash reward when a shopkeeper or enterprise books their first delivery with your code.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowReferModal(false)}
+              className={`w-full py-2.5 font-bold rounded-xl text-xs transition-colors ${
+                darkMode ? 'bg-slate-900 hover:bg-slate-800 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

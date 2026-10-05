@@ -72,7 +72,7 @@ export default function DownloadsPage() {
       if (action === 'apk') {
         triggerApkDownload(app);
       } else {
-        handleInstallPwa();
+        handleInstallPwa(app);
       }
       return;
     }
@@ -142,7 +142,7 @@ export default function DownloadsPage() {
       }, 300);
     } else if (pendingAction === 'pwa') {
       setTimeout(() => {
-        handleInstallPwa();
+        handleInstallPwa(currentApp);
       }, 300);
     }
   };
@@ -156,7 +156,14 @@ export default function DownloadsPage() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  const handleInstallPwa = async () => {
+  const handleInstallPwa = async (app?: 'customer' | 'driver') => {
+    if (app) {
+      const manifestUrl = app === 'driver' ? '/manifest-driver.json' : '/manifest-customer.json';
+      const existing = document.querySelector("link[rel='manifest']");
+      if (existing) {
+        existing.setAttribute('href', manifestUrl);
+      }
+    }
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
@@ -165,10 +172,14 @@ export default function DownloadsPage() {
       }
       setDeferredPrompt(null);
     } else {
+      const targetPage = app === 'driver' ? '/driver' : '/customer';
+      const appName = app === 'driver' ? 'Driver-Partner App' : 'Customer App';
       alert(
-        'To install this app on your mobile device:\n\n' +
-        '• Android (Chrome): Tap the three-dot menu ⋮ at top right and choose "Add to Home screen" or "Install app".\n' +
-        '• iOS (Safari): Tap the Share button at bottom and tap "Add to Home Screen".'
+        `SwifLoad ${appName} (v1.2.0 Latest):\n\n` +
+        `• Direct Mobile Web: Open ${targetPage} in Chrome/Safari\n` +
+        `• Android (Chrome): Tap browser menu ⋮ ➔ "Add to Home screen" or "Install App"\n` +
+        `• iOS (Safari): Tap Share button ➔ "Add to Home Screen"\n` +
+        `• Direct APK: Use the "Download Android APK (Direct)" button above to install the native app.`
       );
     }
   };
@@ -231,17 +242,26 @@ export default function DownloadsPage() {
                 <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30">
                   <Smartphone className="w-7 h-7" />
                 </div>
-                <span className="bg-blue-950 text-blue-400 border border-blue-800/60 text-xs px-3 py-1 rounded-full font-semibold">
-                  Customer Mobile Edition
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] px-2.5 py-0.5 rounded-full font-bold">
+                    v1.2.0 Latest
+                  </span>
+                  <span className="bg-blue-950 text-blue-400 border border-blue-800/60 text-xs px-3 py-1 rounded-full font-semibold">
+                    Customer Mobile Edition
+                  </span>
+                </div>
               </div>
 
               <h2 className="text-2xl font-bold text-white mb-2">Customer Booking App</h2>
               <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mb-6">
-                Instant truck booking, live GPS driver tracking, slab distance estimates, in-app wallet, and referral rewards for Coimbatore.
+                Instant truck booking, multi-pickup & multi-drop delivery, live GPS driver tracking, slab distance estimates, in-app wallet, and referral rewards for Coimbatore.
               </p>
 
               <div className="space-y-2.5 mb-6 text-xs text-slate-300">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span><strong>Multi-Stop Routing:</strong> 1 Pick ➔ 1 Drop, Multi-Pickup & Multi-Drop with live fare</span>
+                </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span>Real-time trip updates linked to cloud database</span>
@@ -324,28 +344,41 @@ export default function DownloadsPage() {
                 <div className="w-14 h-14 rounded-2xl bg-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-600/30">
                   <Truck className="w-7 h-7" />
                 </div>
-                <span className="bg-amber-950 text-amber-400 border border-amber-800/60 text-xs px-3 py-1 rounded-full font-semibold">
-                  Driver Partner Edition
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] px-2.5 py-0.5 rounded-full font-bold">
+                    v1.2.0 Latest
+                  </span>
+                  <span className="bg-amber-950 text-amber-400 border border-amber-800/60 text-xs px-3 py-1 rounded-full font-semibold">
+                    Driver Partner Edition
+                  </span>
+                </div>
               </div>
 
               <h2 className="text-2xl font-bold text-white mb-2">Driver-Partner App</h2>
               <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mb-6">
-                Instant dispatch alerts, trip acceptance, OTP verification, photo cargo proof, wallet earnings, and KYC verification.
+                Instant dispatch alerts, multi-stop tracking, 10s countdown alerts, noticeboard balance warnings, company QR payments, and earnings ledger.
               </p>
 
               <div className="space-y-2.5 mb-6 text-xs text-slate-300">
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>Immediate broadcast alert on customer trip requests</span>
+                  <span><strong>Multi-Stop Tracker:</strong> Popups with next stop address & contact number upon completion</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>Negative balance tolerance & daily payout clearance</span>
+                  <span><strong>10s Countdown Dispatch:</strong> Locality name, distance to pickup/drop & exact addresses</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span>Coimbatore driver group radius filtering</span>
+                  <span><strong>Noticeboard Warning:</strong> Negative balance alert (debt &le; -₹200) with 5-day recharge rule</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span><strong>Company Payment QR:</strong> Dynamic UPI ICICI QR code (swifload.ops@icici) per stop</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span><strong>Side Navigation Menu:</strong> Earnings, Ledger, Payments, Profile & Notifications</span>
                 </div>
               </div>
             </div>

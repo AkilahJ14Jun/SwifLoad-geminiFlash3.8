@@ -353,3 +353,30 @@ export interface RegisterDriverPayload {
   referredByCode?: string;
 }
 
+export type DriverCancellationReason =
+  | 'Illness'
+  | 'Vehicle breakdown'
+  | 'Priority personal work'
+  | 'Emergency';
+
+export interface DriverCancellationLockout {
+  driverId: string;
+  driverName?: string;
+  tripId: string;
+  bookingCode?: string;
+  reason: DriverCancellationReason;
+  lockoutHours: number;
+  lockedAt: string;
+  lockedUntil: string;
+  isWaived?: boolean;
+  waivedAt?: string;
+  waivedBy?: string;
+}
+
+export interface DriverCancellationSlabConfig {
+  reason: DriverCancellationReason;
+  lockoutHours: number;
+  description: string;
+  icon: string;
+}
+

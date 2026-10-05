@@ -11,6 +11,10 @@ export default function DriverPage() {
 
   useEffect(() => {
     setRole('driver');
+    const existingManifest = document.querySelector("link[rel='manifest']");
+    if (existingManifest) {
+      existingManifest.setAttribute('href', '/manifest-driver.json');
+    }
   }, [setRole]);
 
   return (

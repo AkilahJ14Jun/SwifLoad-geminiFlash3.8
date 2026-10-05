@@ -45,11 +45,59 @@ export default function Home() {
 
             <Link
               href="/downloads"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/30"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all border border-slate-700"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Mobile Apps</span>
+              <Download className="w-3.5 h-3.5 text-slate-400" />
+              <span>Downloads Hub</span>
             </Link>
+
+            {/* Direct 1-Click APK Download for Currently Active Simulator */}
+            {viewMode === 'customer' && (
+              <a
+                href="/downloads/SwifLoad-Customer.apk"
+                download="SwifLoad-Customer.apk"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/30 animate-pulse"
+                title="Download latest SwifLoad Customer APK"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Customer App (.apk)</span>
+                <span className="text-[10px] bg-emerald-800/80 px-1 rounded font-mono">v1.2.0</span>
+              </a>
+            )}
+
+            {viewMode === 'driver' && (
+              <a
+                href="/downloads/SwifLoad-Driver.apk"
+                download="SwifLoad-Driver.apk"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 animate-pulse"
+                title="Download latest SwifLoad Driver-Partner APK"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Driver App (.apk)</span>
+                <span className="text-[10px] bg-blue-800/80 px-1 rounded font-mono">v1.2.0</span>
+              </a>
+            )}
+
+            {viewMode === 'dual' && (
+              <div className="flex items-center space-x-2">
+                <a
+                  href="/downloads/SwifLoad-Customer.apk"
+                  download="SwifLoad-Customer.apk"
+                  className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Customer (.apk)</span>
+                </a>
+                <a
+                  href="/downloads/SwifLoad-Driver.apk"
+                  download="SwifLoad-Driver.apk"
+                  className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Driver (.apk)</span>
+                </a>
+              </div>
+            )}
 
             <div className="hidden sm:flex items-center space-x-2 border-l border-slate-800 pl-3">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
@@ -160,45 +208,85 @@ export default function Home() {
       {viewMode !== 'website' && (
         <main className="flex-1 flex items-center justify-center p-0 md:p-6 overflow-hidden">
           {/* 1. CUSTOMER APP VIEW */}
-          {viewMode === 'customer' &&
-            (isFramed ? (
-              <div className="w-full max-w-[420px] h-[92vh] max-h-[880px] bg-slate-900 rounded-[44px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] border-[6px] border-slate-800 flex flex-col relative">
-                {/* Phone Speaker & Dynamic Island */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-4 bg-slate-950 rounded-full z-40 flex items-center justify-center">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-900 mr-2" />
-                  <span className="w-2 h-2 rounded-full bg-emerald-500/40" />
-                </div>
+          {viewMode === 'customer' && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-4 py-1.5 rounded-full text-xs shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-slate-300 font-bold">Customer App Simulator</span>
+                <span className="text-slate-500">|</span>
+                <a
+                  href="/downloads/SwifLoad-Customer.apk"
+                  download="SwifLoad-Customer.apk"
+                  className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold hover:underline"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download APK (v1.2.0)</span>
+                </a>
+                <span className="text-slate-500">|</span>
+                <Link href="/downloads" className="text-blue-400 hover:text-blue-300 font-medium">
+                  Install PWA ➔
+                </Link>
+              </div>
 
-                {/* Status Bar */}
-                <div className="h-6 px-6 pt-1 flex items-center justify-between text-[11px] text-slate-300 font-semibold z-30 select-none">
-                  <span>09:41</span>
-                  <div className="flex items-center space-x-1.5">
-                    <Signal className="w-3 h-3" />
-                    <Wifi className="w-3 h-3" />
-                    <Battery className="w-3.5 h-3.5" />
+              {isFramed ? (
+                <div className="w-full max-w-[420px] h-[88vh] max-h-[850px] bg-slate-900 rounded-[44px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] border-[6px] border-slate-800 flex flex-col relative">
+                  {/* Phone Speaker & Dynamic Island */}
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-4 bg-slate-950 rounded-full z-40 flex items-center justify-center">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-900 mr-2" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/40" />
+                  </div>
+
+                  {/* Status Bar */}
+                  <div className="h-6 px-6 pt-1 flex items-center justify-between text-[11px] text-slate-300 font-semibold z-30 select-none">
+                    <span>09:41</span>
+                    <div className="flex items-center space-x-1.5">
+                      <Signal className="w-3 h-3" />
+                      <Wifi className="w-3 h-3" />
+                      <Battery className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+
+                  {/* Inner App Container */}
+                  <div className="flex-1 rounded-[34px] overflow-hidden bg-slate-50 relative flex flex-col">
+                    <CustomerApp />
+                  </div>
+
+                  {/* Bottom Home Indicator */}
+                  <div className="h-4 flex items-center justify-center">
+                    <div className="w-32 h-1 bg-slate-600 rounded-full" />
                   </div>
                 </div>
-
-                {/* Inner App Container */}
-                <div className="flex-1 rounded-[34px] overflow-hidden bg-slate-50 relative flex flex-col">
+              ) : (
+                <div className="w-full h-full min-h-[90vh] bg-slate-50 rounded-2xl shadow-xl overflow-hidden flex flex-col">
                   <CustomerApp />
                 </div>
-
-                {/* Bottom Home Indicator */}
-                <div className="h-4 flex items-center justify-center">
-                  <div className="w-32 h-1 bg-slate-600 rounded-full" />
-                </div>
-              </div>
-            ) : (
-              <div className="w-full h-full min-h-[90vh] bg-slate-50 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-                <CustomerApp />
-              </div>
-            ))}
+              )}
+            </div>
+          )}
 
           {/* 2. DRIVER-PARTNER APP VIEW */}
-          {viewMode === 'driver' &&
-            (isFramed ? (
-              <div className="w-full max-w-[420px] h-[92vh] max-h-[880px] bg-slate-900 rounded-[44px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] border-[6px] border-slate-800 flex flex-col relative">
+          {viewMode === 'driver' && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-4 py-1.5 rounded-full text-xs shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                <span className="text-slate-300 font-bold">Driver-Partner App Simulator</span>
+                <span className="text-slate-500">|</span>
+                <a
+                  href="/downloads/SwifLoad-Driver.apk"
+                  download="SwifLoad-Driver.apk"
+                  className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold hover:underline"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download APK (v1.2.0)</span>
+                </a>
+                <span className="text-slate-500">|</span>
+                <Link href="/downloads" className="text-amber-400 hover:text-amber-300 font-medium">
+                  Install PWA ➔
+                </Link>
+              </div>
+
+              {isFramed ? (
+                <div className="w-full max-w-[420px] h-[88vh] max-h-[850px] bg-slate-900 rounded-[44px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] border-[6px] border-slate-800 flex flex-col relative">
                 {/* Phone Speaker & Dynamic Island */}
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-4 bg-slate-950 rounded-full z-40 flex items-center justify-center">
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-900 mr-2" />
@@ -229,7 +317,9 @@ export default function Home() {
               <div className="w-full h-full min-h-[90vh] bg-slate-900 rounded-2xl shadow-xl overflow-hidden flex flex-col">
                 <DriverApp />
               </div>
-            ))}
+            )}
+            </div>
+          )}
 
           {/* 3. OPERATIONS ADMIN PORTAL */}
           {viewMode === 'admin' && (

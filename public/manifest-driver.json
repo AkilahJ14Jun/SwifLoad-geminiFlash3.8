@@ -1,0 +1,34 @@
+{
+  "name": "SwifLoad Driver Partner",
+  "short_name": "Driver App",
+  "description": "Captain cockpit, multi-stop delivery, live dispatch & wallet for SwifLoad drivers",
+  "start_url": "/driver",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#16a34a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Duty",
+      "short_name": "Duty",
+      "description": "Enter live dispatch terminal",
+      "url": "/driver",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Driver Wallet",
+      "short_name": "Wallet",
+      "description": "Check balance and recharge ledger",
+      "url": "/driver",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    }
+  ]
+}

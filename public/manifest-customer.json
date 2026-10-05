@@ -1,0 +1,34 @@
+{
+  "name": "SwifLoad Customer",
+  "short_name": "Customer App",
+  "description": "On-demand city logistics goods booking for Coimbatore",
+  "start_url": "/customer",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book Truck",
+      "short_name": "Book Truck",
+      "description": "Book a mini-truck or delivery in Coimbatore",
+      "url": "/customer",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Track Orders",
+      "short_name": "Track",
+      "description": "Track active deliveries in real-time",
+      "url": "/customer",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    }
+  ]
+}

@@ -24,6 +24,9 @@ import {
   IncentiveSlab,
   TripStop,
   DriverNotification,
+  DriverCancellationReason,
+  DriverCancellationLockout,
+  DriverCancellationSlabConfig,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -38,6 +41,7 @@ import {
   DEFAULT_INCENTIVE_SLABS,
   DEFAULT_DISPATCH_TIMEOUT_SECS,
   INITIAL_DRIVER_NOTIFICATIONS,
+  DEFAULT_DRIVER_CANCELLATION_SLABS,
 } from '@/lib/data';
 import {
   calculateDistanceKm,
@@ -154,6 +158,15 @@ interface LogisticsContextType {
   addAdminNote: (tripId: string, note: string) => void;
   exportCsvData: (type: 'trips' | 'drivers' | 'finance' | 'referrals' | 'wallets') => void;
   resetToDemoData: () => void;
+
+  // Driver Cancellation Penalties & Hour Slabs
+  cancellationSlabConfigs: DriverCancellationSlabConfig[];
+  updateCancellationSlabConfig: (reason: DriverCancellationReason, hours: number) => void;
+  resetCancellationSlabsToDefault: () => void;
+  driverLockouts: DriverCancellationLockout[];
+  cancelTripByDriver: (tripId: string, driverId: string, reason: DriverCancellationReason) => { success: boolean; lockoutHours: number; lockedUntil: string };
+  waiveDriverLockout: (driverId: string) => void;
+  isDriverInLockout: (driverId: string) => { isLocked: boolean; lockout?: DriverCancellationLockout; remainingMinutes: number; remainingHours: number; remainingSeconds: number };
 }
 
 const LogisticsContext = createContext<LogisticsContextType | undefined>(undefined);
@@ -169,6 +182,8 @@ const LOCAL_STORAGE_KEY_REF_CONFIG = 'swifload_ref_config_v2_cbe';
 const LOCAL_STORAGE_KEY_INCENTIVE_SLABS = 'swifload_incentive_slabs_v2_cbe';
 const LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT = 'swifload_dispatch_timeout_v2_cbe';
 const LOCAL_STORAGE_KEY_NOTIFICATIONS = 'swifload_driver_notifs_v2_cbe';
+const LOCAL_STORAGE_KEY_CANCELLATION_SLABS = 'swifload_driver_cancel_slabs_v2_cbe';
+const LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS = 'swifload_driver_lockouts_v2_cbe';
 
 const INITIAL_CUSTOMER: CustomerUser = {
   id: 'cust_01',
@@ -225,6 +240,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [incentiveSlabs, setIncentiveSlabs] = useState<IncentiveSlab[]>(DEFAULT_INCENTIVE_SLABS);
   const [dispatchTimeoutSecs, setDispatchTimeoutSecs] = useState<number>(DEFAULT_DISPATCH_TIMEOUT_SECS);
   const [driverNotifications, setDriverNotifications] = useState<DriverNotification[]>(INITIAL_DRIVER_NOTIFICATIONS);
+  const [cancellationSlabConfigs, setCancellationSlabConfigs] = useState<DriverCancellationSlabConfig[]>(DEFAULT_DRIVER_CANCELLATION_SLABS);
+  const [driverLockouts, setDriverLockouts] = useState<DriverCancellationLockout[]>([]);
 
   // Helpers for server DB synchronization
   const syncTripToServer = useCallback(async (trip: Trip) => {
@@ -303,6 +320,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const savedNotifs = localStorage.getItem(LOCAL_STORAGE_KEY_NOTIFICATIONS);
       if (savedNotifs) setDriverNotifications(JSON.parse(savedNotifs));
+
+      const savedCancelSlabs = localStorage.getItem(LOCAL_STORAGE_KEY_CANCELLATION_SLABS);
+      if (savedCancelSlabs) setCancellationSlabConfigs(JSON.parse(savedCancelSlabs));
+
+      const savedLockouts = localStorage.getItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS);
+      if (savedLockouts) setDriverLockouts(JSON.parse(savedLockouts));
     } catch {
       // fallback
     }
@@ -1506,6 +1529,22 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
       }
 
+      // Check cancellation lockout (cooldown penalty)
+      const activeLockout = driverLockouts.find(
+        (l) => l.driverId === driverId && !l.isWaived && new Date(l.lockedUntil).getTime() > Date.now()
+      );
+      if (activeLockout) {
+        const remainingMs = new Date(activeLockout.lockedUntil).getTime() - Date.now();
+        const remHrs = Math.floor(remainingMs / (3600 * 1000));
+        const remMins = Math.ceil((remainingMs % (3600 * 1000)) / 60000);
+        const remStr = remHrs > 0 ? `${remHrs}h ${remMins}m` : `${remMins}m`;
+        showToast(`Cannot accept: Order taking suspended (${activeLockout.reason}) for next ${remStr}.`);
+        return {
+          success: false,
+          message: `Order taking is suspended due to previous trip cancellation (${activeLockout.reason}). Available again in ${remStr}.`,
+        };
+      }
+
       let accepted = false;
       setTrips((prev) =>
         prev.map((t) => {
@@ -1562,7 +1601,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return { success: false, message: 'Trip is no longer available in this group' };
     },
-    [drivers, customerSlabConfigs, updateTripOnServer, updateDriverOnServer, showToast]
+    [drivers, driverLockouts, customerSlabConfigs, updateTripOnServer, updateDriverOnServer, showToast]
   );
 
   // Pass trip to adjacent group manually (if driver passes or tests escalation)
@@ -1641,6 +1680,180 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast('Trip cancelled');
     },
     [updateTripOnServer, updateDriverOnServer, showToast]
+  );
+
+  // Driver Cancels Accepted Trip with Configurable Lockout Penalty
+  const cancelTripByDriver = useCallback(
+    (tripId: string, driverId: string, reason: DriverCancellationReason) => {
+      const driver = drivers.find((d) => d.id === driverId);
+      const trip = trips.find((t) => t.id === tripId);
+      if (!trip) return { success: false, lockoutHours: 0, lockedUntil: '' };
+
+      const slab = cancellationSlabConfigs.find((s) => s.reason === reason);
+      const lockoutHours = slab
+        ? slab.lockoutHours
+        : reason === 'Illness'
+        ? 1
+        : reason === 'Vehicle breakdown'
+        ? 2
+        : reason === 'Priority personal work'
+        ? 4
+        : 6;
+      const lockedAt = new Date().toISOString();
+      const lockedUntil = new Date(Date.now() + lockoutHours * 3600 * 1000).toISOString();
+
+      const newLockout: DriverCancellationLockout = {
+        driverId,
+        driverName: driver?.name || 'Driver',
+        tripId,
+        bookingCode: trip.bookingCode,
+        reason,
+        lockoutHours,
+        lockedAt,
+        lockedUntil,
+      };
+
+      setDriverLockouts((prev) => {
+        const updated = [newLockout, ...prev.filter((l) => !(l.driverId === driverId && !l.isWaived))];
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      // Update driver to OFFLINE
+      setDrivers((prev) =>
+        prev.map((d) => {
+          if (d.id === driverId) {
+            const updated = {
+              ...d,
+              isOnline: false,
+              currentStatus: 'OFFLINE' as const,
+            };
+            updateDriverOnServer(driverId, updated);
+            return updated;
+          }
+          return d;
+        })
+      );
+
+      // Cancel the trip
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.id === tripId) {
+            const charge = calculateCancellationFee(t.status, t.vehicleCategory);
+            const updated = {
+              ...t,
+              status: 'CANCELLED' as TripStatus,
+              cancellationReason: `Driver Cancelled: ${reason} (${lockoutHours}h lockout penalty)`,
+              cancellationCharge: charge,
+              auditHistory: [
+                ...t.auditHistory,
+                {
+                  timestamp: new Date().toISOString(),
+                  event: `Trip cancelled by Driver (${driver?.name || driverId}). Reason: ${reason}. Cooldown penalty: ${lockoutHours} hour(s) until ${new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+                  actor: 'Driver',
+                },
+              ],
+            };
+            updateTripOnServer(tripId, updated);
+            return updated;
+          }
+          return t;
+        })
+      );
+
+      // Add driver notification
+      setDriverNotifications((prev) => {
+        const notif: DriverNotification = {
+          id: `notif_${Date.now()}_cancel`,
+          driverId,
+          tripId,
+          title: `Duty Suspended: ${reason}`,
+          message: `Booking #${trip.bookingCode} cancelled. You are on mandatory standby for ${lockoutHours} hr(s) until ${new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+          type: 'CANCELLATION',
+          timestamp: new Date().toISOString(),
+          read: false,
+        };
+        const updatedNotifs = [notif, ...prev];
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updatedNotifs));
+        } catch {}
+        return updatedNotifs;
+      });
+
+      showToast(`Trip cancelled. Order taking suspended for ${lockoutHours} hr(s) (${reason}).`);
+      return { success: true, lockoutHours, lockedUntil };
+    },
+    [drivers, trips, cancellationSlabConfigs, updateDriverOnServer, updateTripOnServer, showToast]
+  );
+
+  // Waive Driver Lockout (Admin Action)
+  const waiveDriverLockout = useCallback(
+    (driverId: string) => {
+      setDriverLockouts((prev) => {
+        const updated = prev.map((l) =>
+          l.driverId === driverId && !l.isWaived
+            ? { ...l, isWaived: true, waivedAt: new Date().toISOString(), waivedBy: 'Admin' }
+            : l
+        );
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+      showToast('Driver cancellation lockout waived by Admin!');
+    },
+    [showToast]
+  );
+
+  // Update Cancellation Hour Slabs (Configurable from Admin Portal)
+  const updateCancellationSlabConfig = useCallback(
+    (reason: DriverCancellationReason, hours: number) => {
+      const sanitized = Math.max(0.5, Math.min(72, Number(hours)));
+      setCancellationSlabConfigs((prev) => {
+        const updated = prev.map((s) => (s.reason === reason ? { ...s, lockoutHours: sanitized } : s));
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY_CANCELLATION_SLABS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+      showToast(`Lockout penalty for '${reason}' updated to ${sanitized} hour(s)`);
+    },
+    [showToast]
+  );
+
+  // Reset Cancellation Slabs to Factory Defaults
+  const resetCancellationSlabsToDefault = useCallback(() => {
+    setCancellationSlabConfigs(DEFAULT_DRIVER_CANCELLATION_SLABS);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_CANCELLATION_SLABS, JSON.stringify(DEFAULT_DRIVER_CANCELLATION_SLABS));
+    } catch {}
+    showToast('Reset cancellation slabs to defaults (1, 2, 4, 6 hrs)');
+  }, [showToast]);
+
+  // Check if Driver is Currently Locked Out
+  const isDriverInLockout = useCallback(
+    (driverId: string) => {
+      const active = driverLockouts.find(
+        (l) => l.driverId === driverId && !l.isWaived && new Date(l.lockedUntil).getTime() > Date.now()
+      );
+      if (!active) {
+        return { isLocked: false, remainingMinutes: 0, remainingHours: 0, remainingSeconds: 0 };
+      }
+      const remainingMs = Math.max(0, new Date(active.lockedUntil).getTime() - Date.now());
+      const remainingSeconds = Math.floor(remainingMs / 1000);
+      const remainingMinutes = Math.floor(remainingSeconds / 60);
+      const remainingHours = Math.floor(remainingMinutes / 60);
+      return {
+        isLocked: true,
+        lockout: active,
+        remainingMinutes,
+        remainingHours,
+        remainingSeconds,
+      };
+    },
+    [driverLockouts]
   );
 
   // Assign or Reassign Driver (from Admin or Dispatch)
@@ -2158,6 +2371,19 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         prev.map((d) => {
           if (d.id === driverId) {
             const nextOnline = !d.isOnline;
+            if (nextOnline) {
+              const activeLockout = driverLockouts.find(
+                (l) => l.driverId === driverId && !l.isWaived && new Date(l.lockedUntil).getTime() > Date.now()
+              );
+              if (activeLockout) {
+                const remainingMs = new Date(activeLockout.lockedUntil).getTime() - Date.now();
+                const remHrs = Math.floor(remainingMs / (3600 * 1000));
+                const remMins = Math.ceil((remainingMs % (3600 * 1000)) / 60000);
+                const remStr = remHrs > 0 ? `${remHrs}h ${remMins}m` : `${remMins}m`;
+                showToast(`Duty suspended: Cannot go Online until ${new Date(activeLockout.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${activeLockout.reason}, ${remStr} left).`);
+                return d;
+              }
+            }
             showToast(`Driver is now ${nextOnline ? 'ONLINE' : 'OFFLINE'}`);
             const updated = {
               ...d,
@@ -2171,7 +2397,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         })
       );
     },
-    [updateDriverOnServer, showToast]
+    [driverLockouts, updateDriverOnServer, showToast]
   );
 
   // Approve Driver KYC
@@ -2428,6 +2654,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addAdminNote,
         exportCsvData,
         resetToDemoData,
+        cancellationSlabConfigs,
+        updateCancellationSlabConfig,
+        resetCancellationSlabsToDefault,
+        driverLockouts,
+        cancelTripByDriver,
+        waiveDriverLockout,
+        isDriverInLockout,
       }}
     >
       {children}

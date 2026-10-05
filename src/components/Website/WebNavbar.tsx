@@ -331,6 +331,58 @@ export default function WebNavbar({
                     <div className="text-[10px] text-teal-300">Customer + Driver side by side</div>
                   </div>
                 </button>
+
+                {/* Direct Mobile App Downloads Section */}
+                <div className="pt-2 mt-1 border-t border-slate-800 space-y-1">
+                  <div className="px-3 py-1 text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Download Mobile Apps</span>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">v1.2.0</span>
+                  </div>
+
+                  <a
+                    href="/downloads/SwifLoad-Customer.apk"
+                    download="SwifLoad-Customer.apk"
+                    onClick={() => setIsSimDropdownOpen(false)}
+                    className="w-full text-left p-2 rounded-xl hover:bg-slate-800 flex items-center justify-between transition-colors group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Download className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-100">Customer App (.apk)</div>
+                        <div className="text-[10px] text-slate-400">Direct Android package</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950 border border-emerald-800/50 px-2 py-0.5 rounded">
+                      Latest
+                    </span>
+                  </a>
+
+                  <a
+                    href="/downloads/SwifLoad-Driver.apk"
+                    download="SwifLoad-Driver.apk"
+                    onClick={() => setIsSimDropdownOpen(false)}
+                    className="w-full text-left p-2 rounded-xl hover:bg-slate-800 flex items-center justify-between transition-colors group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Download className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-100">Driver App (.apk)</div>
+                        <div className="text-[10px] text-slate-400">Direct Android package</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-blue-400 font-bold bg-blue-950 border border-blue-800/50 px-2 py-0.5 rounded">
+                      Latest
+                    </span>
+                  </a>
+
+                  <Link
+                    href="/downloads"
+                    onClick={() => setIsSimDropdownOpen(false)}
+                    className="w-full text-center block py-1.5 text-[11px] font-semibold text-slate-400 hover:text-white transition-colors"
+                  >
+                    All Download Options (PWA & APK) ➔
+                  </Link>
+                </div>
               </div>
             )}
           </div>

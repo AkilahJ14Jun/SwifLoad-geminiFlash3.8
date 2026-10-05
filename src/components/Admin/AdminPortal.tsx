@@ -36,6 +36,8 @@ import {
   UserCheck,
   Award,
   Timer,
+  AlertOctagon,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import {
@@ -50,6 +52,7 @@ import {
   ReferralRecord,
   WalletTransaction,
   IncentiveSlab,
+  DriverCancellationReason,
 } from '@/types/logistics';
 import { calculateSlabDistanceFare } from '@/lib/pricing';
 
@@ -88,6 +91,12 @@ export default function AdminPortal() {
     updateIncentiveSlabs,
     dispatchTimeoutSecs,
     updateDispatchTimeoutSecs,
+    cancellationSlabConfigs,
+    updateCancellationSlabConfig,
+    resetCancellationSlabsToDefault,
+    driverLockouts,
+    waiveDriverLockout,
+    cancelTripByDriver,
   } = useLogistics();
 
   // Admin Navigation Tab
@@ -99,6 +108,7 @@ export default function AdminPortal() {
     | 'customer-categories'
     | 'slab-rates'
     | 'driver-incentives'
+    | 'driver-cancellations'
     | 'referrals'
     | 'wallets'
     | 'pricing-zones'
@@ -278,6 +288,8 @@ export default function AdminPortal() {
   const totalCommission = trips.reduce((acc, t) => acc + (t.status === 'DELIVERED' ? t.fare.platformCommission : 0), 0);
   const onlineDrivers = drivers.filter((d) => d.isOnline).length;
   const pendingKyc = drivers.filter((d) => d.kycStatus === 'PENDING').length;
+  const activeLockouts = driverLockouts.filter((l) => !l.isWaived && new Date(l.lockedUntil).getTime() > Date.now());
+  const activeLockoutsCount = activeLockouts.length;
 
   const currentTripModal = trips.find((t) => t.id === selectedTripId);
 
@@ -355,6 +367,7 @@ export default function AdminPortal() {
           { id: 'customer-categories', label: 'Customer Categories', icon: UserCheck },
           { id: 'slab-rates', label: 'Distance Slab Rates', icon: Calculator },
           { id: 'driver-incentives', label: 'Driver Incentives & Dispatch Timeout', icon: Award },
+          { id: 'driver-cancellations', label: 'Cancellation Lockout Slabs', icon: AlertOctagon, badge: activeLockoutsCount > 0 ? activeLockoutsCount : undefined },
           { id: 'referrals', label: 'Referral Programs', icon: Gift },
           { id: 'wallets', label: 'Driver & Customer Wallets', icon: Wallet },
           { id: 'pricing-zones', label: 'Vehicle Matrix & Zones', icon: Settings },
@@ -1550,6 +1563,261 @@ export default function AdminPortal() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ================= 5C. DRIVER CANCELLATION LOCKOUT SLABS (CONFIGURABLE ON ADMIN PORTAL) ================= */}
+        {adminTab === 'driver-cancellations' && (
+          <div className="space-y-6">
+            {/* Header / Intro Card */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <AlertOctagon className="w-5 h-5 text-rose-600" />
+                    <span>Driver Cancellation Penalty & Standby Slabs (Coimbatore Rules)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure mandatory order dispatch lockouts enforced when a driver partner accepts and later cancels an order.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={resetCancellationSlabsToDefault}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center space-x-1.5 transition-colors border border-slate-300"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset Factory Slabs (1, 2, 4, 6 hrs)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Policy Highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900">
+                  <div className="font-extrabold text-amber-800 flex items-center space-x-1">
+                    <span>🤒 Illness</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-amber-700">Immediate driver recovery buffer before handling freight.</div>
+                </div>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900">
+                  <div className="font-extrabold text-blue-800 flex items-center space-x-1">
+                    <span>🚛 Breakdown</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-blue-700">Mechanical, puncture, or towing triage period.</div>
+                </div>
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-purple-900">
+                  <div className="font-extrabold text-purple-800 flex items-center space-x-1">
+                    <span>💼 Priority Work</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-purple-700">Urgent family / domestic commitment window.</div>
+                </div>
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900">
+                  <div className="font-extrabold text-rose-800 flex items-center space-x-1">
+                    <span>🚨 Emergency</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-rose-700">Critical domestic, police or medical emergency window.</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Configurable Hour Slabs Grid */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="border-b pb-3">
+                <h4 className="font-extrabold text-sm text-slate-900">Lockout Duration Slabs Configuration</h4>
+                <p className="text-xs text-slate-500">Edit the lockout penalty hours for each cancellation reason below. Changes apply instantly across Driver Apps.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {cancellationSlabConfigs.map((slab) => (
+                  <div
+                    key={slab.reason}
+                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-3 flex flex-col justify-between hover:border-slate-300 transition-all shadow-xs"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl">{slab.icon}</span>
+                        <span className="text-xs font-mono font-black px-2 py-0.5 rounded-full bg-slate-200 text-slate-800">
+                          {slab.lockoutHours} Hour{slab.lockoutHours !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <h5 className="font-black text-sm text-slate-900 mt-2">{slab.reason}</h5>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-snug">{slab.description}</p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 space-y-2">
+                      <label className="text-[11px] font-bold text-slate-600 block">Lockout Penalty (Hours):</label>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => updateCancellationSlabConfig(slab.reason, Math.max(0.5, slab.lockoutHours - 0.5))}
+                          className="w-8 h-8 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                          title="Decrease hours"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          max="72"
+                          value={slab.lockoutHours}
+                          onChange={(e) => updateCancellationSlabConfig(slab.reason, parseFloat(e.target.value) || 1)}
+                          className="flex-1 py-1.5 px-2 bg-white border border-slate-300 rounded-lg text-center font-mono font-bold text-sm text-slate-900 focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateCancellationSlabConfig(slab.reason, Math.min(72, slab.lockoutHours + 0.5))}
+                          className="w-8 h-8 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                          title="Increase hours"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-slate-400 text-center">
+                        Active restriction: <strong>{slab.lockoutHours} hr(s)</strong> standby
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Driver Lockouts Monitor */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                    {activeLockoutsCount}
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-slate-900">Active Driver Standby / Lockouts</h4>
+                    <p className="text-xs text-slate-500">Drivers currently suspended from receiving or accepting orders due to unfulfilled trips</p>
+                  </div>
+                </div>
+              </div>
+
+              {activeLockouts.length === 0 ? (
+                <div className="py-8 text-center text-slate-500 space-y-2">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                  <div className="font-bold text-slate-700 text-sm">No Active Driver Lockouts</div>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    All registered driver partners in Coimbatore are currently eligible for live freight dispatch.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b">
+                      <tr>
+                        <th className="py-2.5 px-3">Driver Partner</th>
+                        <th className="py-2.5 px-3">Cancelled Trip</th>
+                        <th className="py-2.5 px-3">Reason Category</th>
+                        <th className="py-2.5 px-3">Penalty Duration</th>
+                        <th className="py-2.5 px-3">Suspended Until</th>
+                        <th className="py-2.5 px-3 text-right">Admin Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {activeLockouts.map((lockout) => {
+                        const drv = drivers.find((d) => d.id === lockout.driverId);
+                        const msLeft = Math.max(0, new Date(lockout.lockedUntil).getTime() - Date.now());
+                        const hrsLeft = Math.floor(msLeft / 3600000);
+                        const minsLeft = Math.ceil((msLeft % 3600000) / 60000);
+
+                        return (
+                          <tr key={`${lockout.driverId}_${lockout.lockedAt}`} className="hover:bg-slate-50/60">
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-slate-800">{lockout.driverName || drv?.name || lockout.driverId}</div>
+                              <div className="text-[11px] text-slate-500 font-mono">{drv?.phone || 'Phone'} • {drv?.vehicleModel || 'Tata Ace'}</div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="font-mono font-bold text-slate-700">#{lockout.bookingCode || lockout.tripId}</span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full font-bold text-[11px] ${
+                                lockout.reason === 'Illness'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : lockout.reason === 'Vehicle breakdown'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : lockout.reason === 'Priority personal work'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-rose-100 text-rose-800'
+                              }`}>
+                                <span>{lockout.reason === 'Illness' ? '🤒' : lockout.reason === 'Vehicle breakdown' ? '🚛' : lockout.reason === 'Priority personal work' ? '💼' : '🚨'}</span>
+                                <span>{lockout.reason}</span>
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 font-semibold text-slate-700">
+                              {lockout.lockoutHours} hour{lockout.lockoutHours !== 1 ? 's' : ''}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-slate-800">
+                                {new Date(lockout.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              <div className="text-[11px] text-rose-600 font-semibold font-mono">
+                                ⏳ {hrsLeft > 0 ? `${hrsLeft}h ${minsLeft}m` : `${minsLeft}m`} remaining
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => waiveDriverLockout(lockout.driverId)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition-colors cursor-pointer"
+                              >
+                                Waive Lockout (Unlock)
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Cancellation History Audit Log */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b pb-2">
+                <div>
+                  <h4 className="font-extrabold text-sm text-slate-900">Cancellation Audit Trail</h4>
+                  <p className="text-xs text-slate-500">Historical record of driver and order cancellations across Coimbatore fleet</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {trips
+                  .filter((t) => t.status === 'CANCELLED')
+                  .slice(0, 5)
+                  .map((t) => (
+                    <div key={t.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-slate-900 font-mono">#{t.bookingCode}</span>
+                          <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full uppercase">
+                            Cancelled
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 mt-1">
+                          <strong>Reason:</strong> {t.cancellationReason || 'Cancelled without completion'}
+                        </div>
+                      </div>
+                      <div className="text-right text-[11px] text-slate-500 font-mono">
+                        {t.auditHistory && t.auditHistory.length > 0
+                          ? new Date(t.auditHistory[t.auditHistory.length - 1].timestamp).toLocaleDateString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : 'Logged'}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
 
