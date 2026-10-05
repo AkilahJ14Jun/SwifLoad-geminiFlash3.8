@@ -470,13 +470,13 @@
       "degree": 18
     },
     {
-      "id": "src_context_logisticscontext_logisticscontexttype",
-      "label": "LogisticsContextType",
+      "id": "src_components_website_webplatform_webplatform",
+      "label": "WebPlatform()",
       "degree": 16
     },
     {
-      "id": "src_components_website_webplatform_webplatform",
-      "label": "WebPlatform()",
+      "id": "src_context_logisticscontext_logisticscontexttype",
+      "label": "LogisticsContextType",
       "degree": 16
     },
     {
@@ -491,7 +491,7 @@
     },
     {
       "id": "azure_infrastructure_architecture_swifload_azure_cloud_infrastructure_architecture_guide",
-      "label": "🌐 SwifLoad — Azure Cloud Infrastructure Architecture Guide",
+      "label": "\ud83c\udf10 SwifLoad \u2014 Azure Cloud Infrastructure Architecture Guide",
       "degree": 13
     },
     {
@@ -500,8 +500,8 @@
       "degree": 12
     },
     {
-      "id": "src_lib_server_db_databaseschema",
-      "label": "DatabaseSchema",
+      "id": "src_lib_pricing_calculatedistancekm",
+      "label": "calculateDistanceKm()",
       "degree": 11
     }
   ],
@@ -515,7 +515,7 @@
       ],
       "confidence": "INFERRED",
       "relation": "implements",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; bridges separate communities; peripheral node `Customer Tariff Distance Slabs` unexpectedly reaches hub `calculateCustomerQuotedSlabFare()`"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; bridges separate communities; peripheral node `Customer Tariff Distance Slabs` unexpectedly reaches hub `calculateCustomerQuotedSlabFare()`"
     },
     {
       "source": "End-to-End Shipper to Delivery Cycle",
@@ -526,7 +526,29 @@
       ],
       "confidence": "INFERRED",
       "relation": "implements",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (code ↔ doc); connects across different repos/directories; peripheral node `End-to-End Shipper to Delivery Cycle` unexpectedly reaches hub `CreateTripPayload`"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; peripheral node `End-to-End Shipper to Delivery Cycle` unexpectedly reaches hub `CreateTripPayload`"
+    },
+    {
+      "source": "Deploying to Azure App Service Guide",
+      "target": "Azure App Service and Container Registry Architecture",
+      "source_files": [
+        "docs/Deploying to Azure.txt",
+        "DEPLOYMENT_GUIDE.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Claude Development Guide",
+      "target": "SwifLoad Agent Mandatory Rules",
+      "source_files": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
     },
     {
       "source": "Shipper Customer Mobile App",
@@ -538,65 +560,10 @@
       "confidence": "INFERRED",
       "relation": "semantically_similar_to",
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
-    },
-    {
-      "source": "Driver-Partner Mobile App",
-      "target": "Driver-Partner App Scope",
-      "source_files": [
-        "README.md",
-        "Initial Requirements.txt"
-      ],
-      "confidence": "INFERRED",
-      "relation": "semantically_similar_to",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
-    },
-    {
-      "source": "Operations Command Center Portal",
-      "target": "Operations Admin Portal Scope",
-      "source_files": [
-        "README.md",
-        "Initial Requirements.txt"
-      ],
-      "confidence": "INFERRED",
-      "relation": "semantically_similar_to",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
     }
   ],
-  "questions": [
-    {
-      "type": "bridge_node",
-      "question": "Why does `Next.js and Leaflet Project Conventions` connect `SwifLoad Cloud Deployment & Operations Manual` to `LogisticsContext.tsx`?",
-      "why": "High betweenness centrality (0.033) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `useLogistics()` connect `useLogistics` to `LogisticsContext.tsx`, `pricing.ts`?",
-      "why": "High betweenness centrality (0.028) - this node is a cross-community bridge."
-    },
-    {
-      "type": "isolated_nodes",
-      "question": "What connects `BookingSuccessModalProps`, `DriverPartnerSectionProps`, `PackersMoversSectionProps` to the rest of the system?",
-      "why": "138 weakly-connected nodes found - possible documentation gaps or missing edges."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `useLogistics` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.06531986531986532 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `LogisticsContext.tsx` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.1427061310782241 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `getDatabase` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.11219512195121951 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `pricing.ts` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.14623655913978495 - nodes in this community are weakly interconnected."
-    }
-  ]
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
 }

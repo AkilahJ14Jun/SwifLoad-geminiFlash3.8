@@ -33,9 +33,18 @@ import {
   PhoneCall,
   Flame,
   Award,
+  Menu,
+  Bell,
+  QrCode,
+  FileText,
+  Pin,
+  User,
+  Share2,
+  Layers,
+  CheckCircle,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
-import { VehicleCategory } from '@/types/logistics';
+import { VehicleCategory, TripStop, DriverNotification } from '@/types/logistics';
 import { calculateDriverTaskPayout, calculateDriverIncentives } from '@/lib/pricing';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
@@ -144,6 +153,12 @@ export default function DriverApp() {
     topUpDriverWallet,
     incentiveSlabs,
     dispatchTimeoutSecs,
+    driverNotifications,
+    addDriverNotification,
+    markDriverNotificationRead,
+    clearDriverNotifications,
+    startTripStop,
+    completeTripStop,
   } = useLogistics();
 
   // Navigation: 'home' = Driver Home, 'duty' = Dedicated Live Pickup Duty Page (Changes Required Item 16 & 19)
@@ -155,7 +170,7 @@ export default function DriverApp() {
   const [deliveryOtpInput, setDeliveryOtpInput] = useState<string>('');
   const [podPhotoUrl, setPodPhotoUrl] = useState<string>('');
 
-  // Modals
+  // Modals & Drawers (Changes Required)
   const [showPayoutModal, setShowPayoutModal] = useState<boolean>(false);
   const [payoutAmount, setPayoutAmount] = useState<number>(100);
   const [showIncomingTripModal, setShowIncomingTripModal] = useState<boolean>(false);
@@ -165,6 +180,34 @@ export default function DriverApp() {
   const [showDriverTopupModal, setShowDriverTopupModal] = useState<boolean>(false);
   const [walletModalTab, setWalletModalTab] = useState<'recharge' | 'withdraw'>('recharge');
   const [driverTopupAmt, setDriverTopupAmt] = useState<number>(200);
+
+  // New Features States (Changes Required Items 1, 4, 5, 6, 9)
+  const [showSideMenu, setShowSideMenu] = useState<boolean>(false);
+  const [showNoticeboardModal, setShowNoticeboardModal] = useState<boolean>(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
+  const [showLedgerModal, setShowLedgerModal] = useState<boolean>(false);
+  const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
+  const [showEarningsModal, setShowEarningsModal] = useState<boolean>(false);
+
+  // Multi-stop Next Stop Popup (Changes Required Item 1 & 8)
+  const [nextStopModalData, setNextStopModalData] = useState<{
+    completedStop: TripStop;
+    nextStop: TripStop;
+    tripId: string;
+  } | null>(null);
+
+  // QR Payment Modal (Changes Required Item 4)
+  const [activeQrModalStop, setActiveQrModalStop] = useState<{
+    stop: TripStop;
+    bookingCode: string;
+  } | null>(null);
+
+  // Stop OTP inputs (Changes Required Item 3)
+  const [stopOtpInputs, setStopOtpInputs] = useState<{ [stopId: string]: string }>({});
+
+  // Notifications filter tab (Changes Required Item 6)
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
 
   // Referrals & Onboarding
   const [driverReferralCopied, setDriverReferralCopied] = useState<boolean>(false);
@@ -188,7 +231,7 @@ export default function DriverApp() {
   // Current Driver
   const currentDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
 
-  // Negative balance rule (Changes Required Item 11):
+  // Negative balance rule (Changes Required Item 5 / 11):
   // If amount is more than minus Rs. 200 (i.e. balance <= -200), blocked from getting pickup calls.
   const isDriverBlocked = currentDriver.wallet.balance <= -200;
 
@@ -266,9 +309,19 @@ export default function DriverApp() {
     <div className="flex flex-col h-full bg-slate-900 text-slate-100 pb-20 md:pb-6">
       {/* ================= TOP DRIVER BAR ================= */}
       <div className="bg-slate-950 border-b border-slate-800 px-4 py-3 shadow-md space-y-2.5">
-        {/* Row 1: Profile & Primary Online Switch */}
+        {/* Row 1: Menu, Profile, Notifications & Primary Online Switch */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+            {/* Hamburger Side Navigation Menu Button (Changes Required Item 9) */}
+            <button
+              type="button"
+              onClick={() => setShowSideMenu(true)}
+              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors shrink-0 shadow-sm"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-5 h-5 text-emerald-400" />
+            </button>
+
             <div className="relative shrink-0">
               <img
                 src={currentDriver.avatar}
@@ -288,7 +341,7 @@ export default function DriverApp() {
                   {currentDriver.vehicleNumber}
                 </span>
                 {isDriverBlocked && (
-                  <span className="text-[10px] bg-rose-950 text-rose-300 border border-rose-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                  <span className="text-[10px] bg-rose-950 text-rose-300 border border-rose-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse">
                     Blocked
                   </span>
                 )}
@@ -308,18 +361,35 @@ export default function DriverApp() {
             </div>
           </div>
 
-          {/* Primary Online/Offline Switch */}
-          <button
-            onClick={() => toggleDriverOnline(currentDriver.id)}
-            className={`shrink-0 flex items-center space-x-1.5 px-3.5 py-2 rounded-full text-xs font-black shadow-lg transition-all ${
-              currentDriver.isOnline
-                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 ring-2 ring-emerald-400/40'
-                : 'bg-rose-950/80 text-rose-300 border border-rose-700 hover:bg-rose-900'
-            }`}
-          >
-            <Power className="w-3.5 h-3.5" />
-            <span className="whitespace-nowrap">{currentDriver.isOnline ? 'ONLINE' : 'OFFLINE'}</span>
-          </button>
+          <div className="flex items-center space-x-2 shrink-0">
+            {/* Notification Center Bell (Changes Required Item 6) */}
+            <button
+              type="button"
+              onClick={() => setShowNotificationsModal(true)}
+              className="relative p-2.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4 text-emerald-400" />
+              {driverNotifications.filter((n) => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-slate-950 animate-pulse">
+                  {driverNotifications.filter((n) => !n.read).length}
+                </span>
+              )}
+            </button>
+
+            {/* Primary Online/Offline Switch */}
+            <button
+              onClick={() => toggleDriverOnline(currentDriver.id)}
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-full text-xs font-black shadow-lg transition-all ${
+                currentDriver.isOnline
+                  ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 ring-2 ring-emerald-400/40'
+                  : 'bg-rose-950/80 text-rose-300 border border-rose-700 hover:bg-rose-900'
+              }`}
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span className="whitespace-nowrap">{currentDriver.isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Row 2: Secondary Quick Bar (Switch Driver, Quick Navigation & Register Partner) */}
@@ -341,6 +411,20 @@ export default function DriverApp() {
           </div>
 
           <div className="flex items-center space-x-1.5 shrink-0">
+            {/* Noticeboard Button (Changes Required Item 5) */}
+            <button
+              onClick={() => setShowNoticeboardModal(true)}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors flex items-center space-x-1 ${
+                isDriverBlocked
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+              }`}
+              title="Open Noticeboard"
+            >
+              <Pin className="w-3 h-3 text-amber-400" />
+              <span>Noticeboard</span>
+            </button>
+
             {/* Refer & Earn Shortcut */}
             <button
               onClick={() => {
@@ -351,7 +435,7 @@ export default function DriverApp() {
               title="Refer Drivers or Customers"
             >
               <Gift className="w-3 h-3" />
-              <span className="hidden sm:inline">Refer & Earn</span>
+              <span className="hidden sm:inline">Refer</span>
             </button>
 
             {/* Register New Partner */}
@@ -366,6 +450,27 @@ export default function DriverApp() {
           </div>
         </div>
       </div>
+
+      {/* Item 5 & 11: Negative Balance Noticeboard Warning Banner (Recharge within 5 days or mobile number blocked) */}
+      {isDriverBlocked && (
+        <div className="bg-rose-950/95 border-b-2 border-rose-600 px-4 py-2.5 flex items-center justify-between text-rose-200 text-xs shadow-lg">
+          <div className="flex items-center space-x-2 min-w-0 flex-1">
+            <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0 animate-bounce" />
+            <div className="min-w-0 flex-1 text-[11px] leading-tight">
+              <span className="font-extrabold text-white">⚠️ NEGATIVE BALANCE ACTION REQUIRED: </span>
+              <span>
+                Wallet is -₹{Math.abs(currentDriver.wallet.balance)} (≤ -₹200). Recharge within 5 days, failing which your mobile number ({currentDriver.phone}) will be blocked from receiving calls.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowNoticeboardModal(true)}
+            className="ml-3 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-[11px] whitespace-nowrap shrink-0 shadow transition-all hover:scale-105"
+          >
+            Open Noticeboard ➔
+          </button>
+        </div>
+      )}
 
       {/* KYC Warning Banner if not verified */}
       {currentDriver.kycStatus !== 'VERIFIED' && (
@@ -854,223 +959,434 @@ export default function DriverApp() {
             </div>
 
             {/* ================= ACTIVE ASSIGNED TRIP WORKFLOW ================= */}
-            {assignedTrip && (
-              <div className="bg-slate-950 rounded-3xl border border-emerald-500/80 p-5 space-y-4 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                      Active Trip: {assignedTrip.bookingCode}
+            {assignedTrip && (() => {
+              const tripStops: TripStop[] = assignedTrip.stops && assignedTrip.stops.length > 0
+                ? assignedTrip.stops
+                  : [
+                    {
+                      id: `stop_${assignedTrip.id}_p1`,
+                      sequence: 1,
+                      type: 'PICKUP',
+                      label: 'Pickup 1',
+                      area: assignedTrip.pickup.area,
+                      address: assignedTrip.pickup.address,
+                      lat: assignedTrip.pickup.lat,
+                      lng: assignedTrip.pickup.lng,
+                      contactName: assignedTrip.pickup.senderOrReceiverName || assignedTrip.customerName,
+                      contactPhone: assignedTrip.pickup.senderOrReceiverPhone || assignedTrip.customerPhone,
+                      associatedCharge: Math.round(assignedTrip.fare.totalFare * 0.4),
+                      distanceCoveredKm: Math.round((assignedTrip.distanceKm * 0.4) * 10) / 10,
+                      status: ['ARRIVING_PICKUP', 'AT_PICKUP'].includes(assignedTrip.status)
+                        ? 'IN_PROGRESS'
+                        : ['IN_TRANSIT', 'ARRIVED_DESTINATION', 'DELIVERED'].includes(assignedTrip.status)
+                        ? 'COMPLETED'
+                        : 'PENDING',
+                      otp: assignedTrip.shipment.pickupOtp,
+                    },
+                    {
+                      id: `stop_${assignedTrip.id}_d1`,
+                      sequence: 2,
+                      type: 'DROP',
+                      label: 'Drop 1',
+                      area: assignedTrip.drop.area,
+                      address: assignedTrip.drop.address,
+                      lat: assignedTrip.drop.lat,
+                      lng: assignedTrip.drop.lng,
+                      contactName: assignedTrip.drop.senderOrReceiverName || 'Receiver',
+                      contactPhone: assignedTrip.drop.senderOrReceiverPhone || '9842211990',
+                      associatedCharge: Math.round(assignedTrip.fare.totalFare * 0.6),
+                      distanceCoveredKm: Math.round((assignedTrip.distanceKm * 0.6) * 10) / 10,
+                      status: ['ARRIVED_DESTINATION'].includes(assignedTrip.status)
+                        ? 'IN_PROGRESS'
+                        : assignedTrip.status === 'DELIVERED'
+                        ? 'COMPLETED'
+                        : 'PENDING',
+                      otp: assignedTrip.shipment.deliveryOtp,
+                    },
+                  ];
+
+              const completedStopsCount = tripStops.filter((s) => s.status === 'COMPLETED').length;
+              const isMultiStop = tripStops.length > 2 || (assignedTrip.pickups && assignedTrip.pickups.length > 1) || (assignedTrip.drops && assignedTrip.drops.length > 1);
+
+              return (
+                <div className="bg-slate-950 rounded-3xl border border-emerald-500/80 p-5 space-y-4 shadow-2xl">
+                  {/* Trip Header & Earnings */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                          Active Trip: {assignedTrip.bookingCode}
+                        </span>
+                      </div>
+                      {isMultiStop && (
+                        <span className="text-[10px] mt-0.5 inline-block font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                          ⚡ Multi-Stop Route ({completedStopsCount}/{tripStops.length} Completed)
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 border border-emerald-700 px-2.5 py-1 rounded-xl">
+                      Net Earnings: ₹{assignedTrip.fare.driverEarnings}
                     </span>
                   </div>
-                  <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 border border-emerald-700 px-2.5 py-1 rounded-xl">
-                    Net Earnings: ₹{assignedTrip.fare.driverEarnings}
-                  </span>
-                </div>
 
-                {/* Deep link Google Maps Navigation button */}
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${
-                    assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT'
-                      ? `${assignedTrip.drop.lat},${assignedTrip.drop.lng}`
-                      : `${assignedTrip.pickup.lat},${assignedTrip.pickup.lng}`
-                  }`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-colors shadow"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span>
-                    Open Google Maps GPS (
-                    {assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT' ? 'To Drop' : 'To Pickup'}
-                    )
-                  </span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-
-                {/* Multi-Pickup & Multi-Drop Locations (Items 17 & 21) */}
-                <div className="space-y-2 text-xs bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
-                  {/* Pickups */}
-                  {assignedTrip.pickups && assignedTrip.pickups.length > 1 ? (
-                    <div className="space-y-2">
-                      <div className="text-[10px] uppercase font-bold text-emerald-400">
-                        Multi-Pickup Stops ({assignedTrip.pickups.length})
-                      </div>
-                      {assignedTrip.pickups.map((p, idx) => (
-                        <div key={idx} className="flex items-start space-x-2 pl-1 border-l-2 border-emerald-500">
-                          <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-slate-200">
-                              Stop #{idx + 1}: {p.area}
-                            </div>
-                            <div className="text-[11px] text-slate-400">{p.address}</div>
-                            {/* Item 21: Pickup contact number clickable */}
-                            <a
-                              href={`tel:${p.senderOrReceiverPhone || assignedTrip.customerPhone}`}
-                              className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
-                            >
-                              <Phone className="w-3 h-3 text-emerald-400" />
-                              <span>Call Contact: {p.senderOrReceiverPhone || assignedTrip.customerPhone}</span>
-                            </a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-start space-x-2.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                  {/* Item 8: Prominently show contact numbers once accepted */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {/* Customer Contact Card */}
+                    <div className="bg-slate-900/90 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-200">Pickup ({assignedTrip.pickup.area})</div>
-                        <div className="text-[11px] text-slate-400">{assignedTrip.pickup.address}</div>
-                        {/* Item 21: Clickable contact number */}
-                        <a
-                          href={`tel:${assignedTrip.pickup.senderOrReceiverPhone || assignedTrip.customerPhone}`}
-                          className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
-                        >
-                          <Phone className="w-3 h-3 text-emerald-400" />
-                          <span>Call: {assignedTrip.pickup.senderOrReceiverPhone || assignedTrip.customerPhone} ({assignedTrip.pickup.senderOrReceiverName || assignedTrip.customerName})</span>
-                        </a>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Customer (Sender)</div>
+                        <div className="font-bold text-white truncate">{assignedTrip.customerName}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">{assignedTrip.customerPhone}</div>
                       </div>
+                      <a
+                        href={`tel:${assignedTrip.customerPhone}`}
+                        className="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl font-bold flex items-center space-x-1.5 shrink-0 transition-colors"
+                        title="Call Customer"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Call</span>
+                      </a>
                     </div>
-                  )}
 
-                  {/* Drops */}
-                  <div className="pt-2 border-t border-slate-800">
-                    {assignedTrip.drops && assignedTrip.drops.length > 1 ? (
-                      <div className="space-y-2">
-                        <div className="text-[10px] uppercase font-bold text-rose-400">
-                          Multi-Drop Stops ({assignedTrip.drops.length})
-                        </div>
-                        {assignedTrip.drops.map((d, idx) => (
-                          <div key={idx} className="flex items-start space-x-2 pl-1 border-l-2 border-rose-500">
-                            <div className="min-w-0 flex-1">
-                              <div className="font-semibold text-slate-200">
-                                Drop #{idx + 1}: {d.area}
+                    {/* Driver Contact Card */}
+                    <div className="bg-slate-900/90 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Assigned Driver</div>
+                        <div className="font-bold text-white truncate">{currentDriver.name}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">{currentDriver.phone}</div>
+                      </div>
+                      <a
+                        href={`tel:${currentDriver.phone}`}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl font-bold flex items-center space-x-1.5 shrink-0 transition-colors"
+                        title="Call Driver Partner"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-slate-300" />
+                        <span>Direct</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Deep link Google Maps Navigation button */}
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${
+                      assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT'
+                        ? `${assignedTrip.drop.lat},${assignedTrip.drop.lng}`
+                        : `${assignedTrip.pickup.lat},${assignedTrip.pickup.lng}`
+                    }`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-colors shadow"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>
+                      Open Google Maps GPS (
+                      {assignedTrip.status === 'AT_PICKUP' || assignedTrip.status === 'IN_TRANSIT' ? 'To Drop' : 'To Pickup'}
+                      )
+                    </span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+
+                  {/* ================= ITEMS 1, 3 & 4: MULTI-STOP TRACKER WITH START, COMPLETE & COMPANY QR ================= */}
+                  <div className="space-y-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <div className="flex items-center space-x-1.5">
+                        <Layers className="w-4 h-4 text-emerald-400" />
+                        <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-200">
+                          Stop-by-Stop Leg Tracker ({tripStops.length} Stops)
+                        </h4>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        Step {Math.min(tripStops.length, completedStopsCount + 1)} of {tripStops.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {tripStops.map((stop, sIdx) => {
+                        const isStopCompleted = stop.status === 'COMPLETED';
+                        const isStopInProgress = stop.status === 'IN_PROGRESS';
+                        const isStopPending = stop.status === 'PENDING';
+                        const stopCharge = stop.associatedCharge || Math.round(assignedTrip.fare.totalFare / tripStops.length);
+                        const stopDist = stop.distanceCoveredKm || 2.5;
+
+                        return (
+                          <div
+                            key={stop.id || sIdx}
+                            className={`p-3 rounded-2xl border transition-all ${
+                              isStopInProgress
+                                ? 'bg-slate-950 border-emerald-500/80 shadow-md ring-1 ring-emerald-500/40'
+                                : isStopCompleted
+                                ? 'bg-slate-950/60 border-slate-800/80 opacity-90'
+                                : 'bg-slate-950/40 border-slate-800/60'
+                            }`}
+                          >
+                            {/* Stop Header Row */}
+                            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800/60 gap-2">
+                              <div className="flex items-center space-x-2 min-w-0">
+                                <span
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${
+                                    isStopCompleted
+                                      ? 'bg-emerald-500 text-slate-950'
+                                      : isStopInProgress
+                                      ? 'bg-amber-400 text-slate-950 animate-pulse'
+                                      : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                >
+                                  {isStopCompleted ? '✓' : stop.sequence}
+                                </span>
+                                <div className="min-w-0 truncate">
+                                  <span className="font-bold text-white text-xs mr-1">
+                                    {stop.label || `${stop.type} #${stop.sequence}`}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                      stop.type === 'PICKUP'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : 'bg-rose-500/20 text-rose-300'
+                                    }`}
+                                  >
+                                    {stop.type}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="text-[11px] text-slate-400">{d.address}</div>
-                              <a
-                                href={`tel:${d.senderOrReceiverPhone || '9842211990'}`}
-                                className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
-                              >
-                                <Phone className="w-3 h-3 text-rose-400" />
-                                <span>Call Drop Contact: {d.senderOrReceiverPhone || 'Receiver'}</span>
-                              </a>
+
+                              {/* Stop Status & Company QR Code Button (Item 4) */}
+                              <div className="flex items-center space-x-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveQrModalStop({ stop, bookingCode: assignedTrip.bookingCode })}
+                                  className="px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-colors"
+                                  title="Show Company Payment QR Code"
+                                >
+                                  <QrCode className="w-3 h-3 text-blue-400" />
+                                  <span>Company QR</span>
+                                </button>
+
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                    isStopCompleted
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                      : isStopInProgress
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                  }`}
+                                >
+                                  {stop.status}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Stop Address & Contact Details */}
+                            <div className="pt-2 text-xs space-y-1.5">
+                              <div>
+                                <div className="font-semibold text-slate-200">{stop.area}</div>
+                                <div className="text-[11px] text-slate-400 leading-snug">{stop.address}</div>
+                              </div>
+
+                              {/* Touch to call contact */}
+                              {stop.contactPhone && (
+                                <a
+                                  href={`tel:${stop.contactPhone}`}
+                                  className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 font-bold pt-0.5"
+                                >
+                                  <PhoneCall className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  <span>
+                                    Contact: {stop.contactPhone} {stop.contactName ? `(${stop.contactName})` : ''}
+                                  </span>
+                                </a>
+                              )}
+
+                              {/* Stop Metrics: Distance, Time, Charge (Item 4) */}
+                              <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800/80 text-slate-400">
+                                <span>Dist: <strong className="text-slate-200">{stopDist} km</strong></span>
+                                <span>
+                                  Time: <strong className="text-slate-200">{stop.timeTakenMinutes ? `${stop.timeTakenMinutes} mins` : isStopInProgress ? 'Clocking...' : '--'}</strong>
+                                </span>
+                                <span>Leg Fare: <strong className="text-emerald-400">₹{stopCharge}</strong></span>
+                              </div>
+
+                              {/* Items 3 & 1: Start and Complete Stop Controls */}
+                              <div className="pt-2">
+                                {isStopPending && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const res = startTripStop(assignedTrip.id, stop.id);
+                                      if (res.success) {
+                                        showToast(`Started ${stop.label} at ${stop.area}`);
+                                      }
+                                    }}
+                                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow transition-transform active:scale-95"
+                                  >
+                                    <span>Start {stop.label} ➔</span>
+                                  </button>
+                                )}
+
+                                {isStopInProgress && (
+                                  <div className="space-y-2 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                                    <div className="flex items-center justify-between text-[11px]">
+                                      <span className="text-amber-300 font-semibold">
+                                        Enter {stop.type === 'PICKUP' ? 'Pickup' : 'Drop'} OTP:
+                                      </span>
+                                      {stop.otp && (
+                                        <span className="text-[10px] text-slate-500 italic">
+                                          Demo OTP: {stop.otp}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="text"
+                                        maxLength={4}
+                                        placeholder="OTP"
+                                        value={stopOtpInputs[stop.id] || ''}
+                                        onChange={(e) =>
+                                          setStopOtpInputs((prev) => ({ ...prev, [stop.id]: e.target.value }))
+                                        }
+                                        className="w-24 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-base py-1.5 rounded-lg focus:border-emerald-500 focus:outline-none"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const otp = stopOtpInputs[stop.id] || (stop.type === 'PICKUP' ? assignedTrip.shipment.pickupOtp : assignedTrip.shipment.deliveryOtp);
+                                          const res = completeTripStop(assignedTrip.id, stop.id, otp);
+                                          if (res.success) {
+                                            showToast(`${stop.label} completed successfully!`);
+                                            if (res.nextStop) {
+                                              // Item 1: Display popup with contact and address of next pickup or drop
+                                              setNextStopModalData({
+                                                completedStop: stop,
+                                                nextStop: res.nextStop,
+                                                tripId: assignedTrip.id,
+                                              });
+                                            }
+                                          }
+                                        }}
+                                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs shadow"
+                                      >
+                                        Complete {stop.label} & Verify ✓
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {isStopCompleted && (
+                                  <div className="flex items-center space-x-1.5 text-emerald-400 text-[11px] font-bold py-1 bg-emerald-950/30 px-2 rounded-lg border border-emerald-900/40">
+                                    <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>
+                                      Completed at {stop.completedAt ? new Date(stop.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Logged'} • {stop.timeTakenMinutes || 15} mins elapsed
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-start space-x-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-slate-200">Drop Destination ({assignedTrip.drop.area})</div>
-                          <div className="text-[11px] text-slate-400">{assignedTrip.drop.address}</div>
-                          <a
-                            href={`tel:${assignedTrip.drop.senderOrReceiverPhone || '9842211990'}`}
-                            className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* TRIP EXECUTION ACTIONS BY STATUS (Standard Workflow Fallback) */}
+                  <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Overall Trip Workflow Stage ({assignedTrip.status})
+                    </div>
+
+                    {assignedTrip.status === 'DRIVER_ASSIGNED' && (
+                      <button
+                        onClick={handleAdvanceStatus}
+                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                      >
+                        I Am En Route to Pickup Location ➔
+                      </button>
+                    )}
+
+                    {assignedTrip.status === 'ARRIVING_PICKUP' && (
+                      <button
+                        onClick={handleAdvanceStatus}
+                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                      >
+                        I Have Arrived at Pickup Point ➔
+                      </button>
+                    )}
+
+                    {assignedTrip.status === 'AT_PICKUP' && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-amber-300 font-medium">
+                          Ask sender for 4-digit Pickup OTP before loading goods:
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            maxLength={4}
+                            placeholder="e.g. 4821"
+                            value={pickupOtpInput}
+                            onChange={(e) => setPickupOtpInput(e.target.value)}
+                            className="flex-1 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
+                          />
+                          <button
+                            onClick={handleAdvanceStatus}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs"
                           >
-                            <Phone className="w-3 h-3 text-rose-400" />
-                            <span>Call Receiver: {assignedTrip.drop.senderOrReceiverPhone || 'Recipient'} ({assignedTrip.drop.senderOrReceiverName || 'Receiver'})</span>
-                          </a>
+                            Verify & Start Trip
+                          </button>
+                        </div>
+                        <div className="text-[10px] text-slate-400 italic">
+                          Demo Tip: Valid Pickup OTP is {assignedTrip.shipment.pickupOtp}
+                        </div>
+                      </div>
+                    )}
+
+                    {assignedTrip.status === 'IN_TRANSIT' && (
+                      <button
+                        onClick={handleAdvanceStatus}
+                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                      >
+                        I Have Reached Drop Destination ➔
+                      </button>
+                    )}
+
+                    {assignedTrip.status === 'ARRIVED_DESTINATION' && (
+                      <div className="space-y-3">
+                        <div className="text-xs text-amber-300 font-medium">
+                          Collect Drop OTP from recipient & confirm delivery:
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            maxLength={4}
+                            placeholder="Drop OTP"
+                            value={deliveryOtpInput}
+                            onChange={(e) => setDeliveryOtpInput(e.target.value)}
+                            className="flex-1 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
+                          />
+                          <button
+                            onClick={handleAdvanceStatus}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs"
+                          >
+                            Confirm Delivery
+                          </button>
+                        </div>
+
+                        {assignedTrip.paymentMethod === 'CASH_ON_DELIVERY' && (
+                          <div className="p-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl text-xs text-amber-300 flex items-center justify-between">
+                            <span>Collect Cash on Drop:</span>
+                            <span className="font-extrabold text-white text-sm">₹{assignedTrip.fare.totalFare}</span>
+                          </div>
+                        )}
+
+                        <div className="text-[10px] text-slate-400 italic">
+                          Demo Tip: Valid Delivery OTP is {assignedTrip.shipment.deliveryOtp}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
+              );
+            })()}
 
-                {/* TRIP EXECUTION ACTIONS BY STATUS */}
-                <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-3">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Current Trip Stage</div>
-
-                  {assignedTrip.status === 'DRIVER_ASSIGNED' && (
-                    <button
-                      onClick={handleAdvanceStatus}
-                      className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
-                    >
-                      I Am En Route to Pickup Location ➔
-                    </button>
-                  )}
-
-                  {assignedTrip.status === 'ARRIVING_PICKUP' && (
-                    <button
-                      onClick={handleAdvanceStatus}
-                      className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
-                    >
-                      I Have Arrived at Pickup Point ➔
-                    </button>
-                  )}
-
-                  {assignedTrip.status === 'AT_PICKUP' && (
-                    <div className="space-y-2">
-                      <div className="text-xs text-amber-300 font-medium">
-                        Ask sender for 4-digit Pickup OTP before loading goods:
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          maxLength={4}
-                          placeholder="e.g. 4821"
-                          value={pickupOtpInput}
-                          onChange={(e) => setPickupOtpInput(e.target.value)}
-                          className="flex-1 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
-                        />
-                        <button
-                          onClick={handleAdvanceStatus}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs"
-                        >
-                          Verify & Start Trip
-                        </button>
-                      </div>
-                      <div className="text-[10px] text-slate-400 italic">Demo Tip: Valid Pickup OTP is {assignedTrip.shipment.pickupOtp}</div>
-                    </div>
-                  )}
-
-                  {assignedTrip.status === 'IN_TRANSIT' && (
-                    <button
-                      onClick={handleAdvanceStatus}
-                      className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
-                    >
-                      I Have Reached Drop Destination ➔
-                    </button>
-                  )}
-
-                  {assignedTrip.status === 'ARRIVED_DESTINATION' && (
-                    <div className="space-y-3">
-                      <div className="text-xs text-amber-300 font-medium">
-                        Collect Drop OTP from recipient & confirm delivery:
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          maxLength={4}
-                          placeholder="Drop OTP"
-                          value={deliveryOtpInput}
-                          onChange={(e) => setDeliveryOtpInput(e.target.value)}
-                          className="flex-1 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
-                        />
-                        <button
-                          onClick={handleAdvanceStatus}
-                          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs"
-                        >
-                          Confirm Delivery
-                        </button>
-                      </div>
-
-                      {assignedTrip.paymentMethod === 'CASH_ON_DELIVERY' && (
-                        <div className="p-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl text-xs text-amber-300 flex items-center justify-between">
-                          <span>Collect Cash on Drop:</span>
-                          <span className="font-extrabold text-white text-sm">₹{assignedTrip.fare.totalFare}</span>
-                        </div>
-                      )}
-
-                      <div className="text-[10px] text-slate-400 italic">Demo Tip: Valid Delivery OTP is {assignedTrip.shipment.deliveryOtp}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ================= ITEMS 20, 21, 22, 23: INCOMING ORDER POP-UPS ON DUTY PAGE ================= */}
+            {/* ================= ITEMS 2, 7, 8, 20, 21, 22, 23: INCOMING ORDER POP-UPS ON DUTY PAGE ================= */}
             {!assignedTrip && !isDriverBlocked && availableGroupTrips.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
@@ -1097,12 +1413,16 @@ export default function DriverApp() {
                   const countdown = order.dispatchCountdownSecs ?? dispatchTimeoutSecs;
                   const progressPct = Math.max(0, Math.min(100, (countdown / dispatchTimeoutSecs) * 100));
 
+                  const numPickups = order.pickups?.length || 1;
+                  const numDrops = order.drops?.length || 1;
+                  const isMultiStopIncoming = numPickups > 1 || numDrops > 1 || (order.stops && order.stops.length > 2);
+
                   return (
                     <div
                       key={order.id}
                       className="bg-slate-950 border-2 border-emerald-500/80 rounded-3xl p-5 space-y-4 shadow-2xl relative overflow-hidden"
                     >
-                      {/* Item 22: Clearly visible 10-second countdown timer header */}
+                      {/* Item 22 & Item 7: 10-second countdown timer header */}
                       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                         <div className="flex items-center space-x-2">
                           <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
@@ -1111,7 +1431,7 @@ export default function DriverApp() {
                           </span>
                         </div>
 
-                        {/* Visible 10s Timer Badge */}
+                        {/* Visible 10s Timer Badge (Item 7) */}
                         <div className="flex items-center space-x-2">
                           <div className="w-20 bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
                             <div
@@ -1125,36 +1445,70 @@ export default function DriverApp() {
                         </div>
                       </div>
 
-                      {/* Item 20: Charges Applicable */}
-                      <div className="grid grid-cols-2 gap-2 text-center">
+                      {/* Item 2: Clear visual indicator in initial popup if multiple pickups or drops are involved */}
+                      {isMultiStopIncoming && (
+                        <div className="p-2.5 bg-amber-500/15 border border-amber-500/40 rounded-2xl flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-base">⚡</span>
+                            <div>
+                              <div className="font-extrabold text-amber-300">
+                                MULTI-STOP TRIP ({numPickups} Pickups, {numDrops} Drops)
+                              </div>
+                              <div className="text-[10px] text-amber-400/80">
+                                Total {numPickups + numDrops} Stops Sequential Dispatch
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono font-black bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded-full">
+                            Multi-Leg
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Item 2 & Item 20: Charges Breakdown (Total Fare & Net Take-Home) */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
                         <div className="bg-slate-900/90 p-2.5 rounded-2xl border border-slate-800">
-                          <div className="text-[10px] uppercase font-bold text-slate-400">Total Task Fare</div>
-                          <div className="text-xl font-black text-white mt-0.5">₹{payout.grossFare}</div>
+                          <div className="text-[10px] uppercase font-bold text-slate-400">Total Fare</div>
+                          <div className="text-lg font-black text-white mt-0.5">₹{payout.grossFare}</div>
+                        </div>
+                        <div className="bg-slate-900/90 p-2.5 rounded-2xl border border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400">Platform Fee</div>
+                          <div className="text-lg font-bold text-slate-300 mt-0.5">₹{order.fare?.platformCommission || Math.round(payout.grossFare * 0.18)}</div>
                         </div>
                         <div className="bg-emerald-950/40 p-2.5 rounded-2xl border border-emerald-800/60">
                           <div className="text-[10px] uppercase font-bold text-emerald-300">Net Take-Home</div>
-                          <div className="text-xl font-black text-emerald-400 mt-0.5">₹{payout.netEarnings}</div>
+                          <div className="text-lg font-black text-emerald-400 mt-0.5">₹{payout.netEarnings}</div>
                         </div>
                       </div>
 
-                      {/* Items 20 & 21: Pickup & Drop Locations with Touchable Contact Numbers */}
+                      {/* Items 7, 20 & 21: Locality name, distance, and exact addresses so driver can decide */}
                       <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-3 text-xs">
                         {/* Pickup Stop(s) */}
                         {order.pickups && order.pickups.length > 1 ? (
-                          <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold uppercase text-emerald-400">Multi-Pickup ({order.pickups.length} stops)</span>
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-bold uppercase text-emerald-400 tracking-wider">
+                              Multi-Pickup ({order.pickups.length} Locations)
+                            </span>
                             {order.pickups.map((p, idx) => (
-                              <div key={idx} className="pl-2 border-l-2 border-emerald-500 text-slate-300">
-                                <div className="font-bold text-white">Stop #{idx + 1}: {p.area}</div>
+                              <div key={idx} className="pl-2 border-l-2 border-emerald-500 text-slate-300 space-y-0.5">
+                                <div className="font-bold text-white flex items-center justify-between">
+                                  <span>Stop #{idx + 1}: {p.area}</span>
+                                  {idx === 0 && (
+                                    <span className="text-[10px] text-emerald-400 font-normal">
+                                      {payout.driverDistanceToPickupKm} km from you
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[11px] text-slate-400">{p.address}</div>
-                                {/* Touch to call customer (Item 21) */}
-                                <a
-                                  href={`tel:${p.senderOrReceiverPhone || order.customerPhone}`}
-                                  className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
-                                >
-                                  <PhoneCall className="w-3 h-3" />
-                                  <span>Tap to Call: {p.senderOrReceiverPhone || order.customerPhone}</span>
-                                </a>
+                                {p.senderOrReceiverPhone && (
+                                  <a
+                                    href={`tel:${p.senderOrReceiverPhone}`}
+                                    className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 font-bold pt-0.5"
+                                  >
+                                    <PhoneCall className="w-3 h-3" />
+                                    <span>Call Contact: {p.senderOrReceiverPhone}</span>
+                                  </a>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -1162,12 +1516,16 @@ export default function DriverApp() {
                           <div className="flex items-start space-x-2.5">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <div className="font-bold text-slate-200">Pickup: {order.pickup.area}</div>
-                              <div className="text-[11px] text-slate-400">{order.pickup.address}</div>
-                              {/* Item 21: Touch contact number to contact customer */}
+                              <div className="font-bold text-slate-200 flex items-center justify-between">
+                                <span>Pickup Locality: {order.pickup.area}</span>
+                                <span className="text-[10px] text-emerald-400 font-mono">
+                                  {payout.driverDistanceToPickupKm} km from you
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-400 mt-0.5 font-medium">{order.pickup.address}</div>
                               <a
                                 href={`tel:${order.pickup.senderOrReceiverPhone || order.customerPhone}`}
-                                className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
+                                className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1 mt-1 font-bold"
                               >
                                 <PhoneCall className="w-3 h-3" />
                                 <span>Tap to Call Sender: {order.pickup.senderOrReceiverPhone || order.customerPhone}</span>
@@ -1179,19 +1537,25 @@ export default function DriverApp() {
                         {/* Drop Stop(s) */}
                         <div className="pt-2 border-t border-slate-800">
                           {order.drops && order.drops.length > 1 ? (
-                            <div className="space-y-1.5">
-                              <span className="text-[10px] font-bold uppercase text-rose-400">Multi-Drop ({order.drops.length} stops)</span>
+                            <div className="space-y-2">
+                              <span className="text-[10px] font-bold uppercase text-rose-400 tracking-wider">
+                                Multi-Drop ({order.drops.length} Locations)
+                              </span>
                               {order.drops.map((d, idx) => (
-                                <div key={idx} className="pl-2 border-l-2 border-rose-500 text-slate-300">
-                                  <div className="font-bold text-white">Drop #{idx + 1}: {d.area}</div>
+                                <div key={idx} className="pl-2 border-l-2 border-rose-500 text-slate-300 space-y-0.5">
+                                  <div className="font-bold text-white flex items-center justify-between">
+                                    <span>Drop #{idx + 1}: {d.area}</span>
+                                  </div>
                                   <div className="text-[11px] text-slate-400">{d.address}</div>
-                                  <a
-                                    href={`tel:${d.senderOrReceiverPhone || '9842211990'}`}
-                                    className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 mt-0.5 font-bold"
-                                  >
-                                    <PhoneCall className="w-3 h-3" />
-                                    <span>Tap to Call Recipient: {d.senderOrReceiverPhone || 'Receiver'}</span>
-                                  </a>
+                                  {d.senderOrReceiverPhone && (
+                                    <a
+                                      href={`tel:${d.senderOrReceiverPhone}`}
+                                      className="text-[11px] text-rose-400 hover:underline flex items-center space-x-1 font-bold pt-0.5"
+                                    >
+                                      <PhoneCall className="w-3 h-3" />
+                                      <span>Call Drop Contact: {d.senderOrReceiverPhone}</span>
+                                    </a>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -1199,8 +1563,13 @@ export default function DriverApp() {
                             <div className="flex items-start space-x-2.5">
                               <span className="w-2.5 h-2.5 rounded-full bg-rose-400 mt-1 shrink-0" />
                               <div className="min-w-0 flex-1">
-                                <div className="font-bold text-slate-200">Drop: {order.drop.area} ({order.distanceKm} km)</div>
-                                <div className="text-[11px] text-slate-400">{order.drop.address}</div>
+                                <div className="font-bold text-slate-200 flex items-center justify-between">
+                                  <span>Drop Destination: {order.drop.area}</span>
+                                  <span className="text-[10px] text-rose-400 font-mono">
+                                    {order.distanceKm} km from pickup
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-400 mt-0.5 font-medium">{order.drop.address}</div>
                               </div>
                             </div>
                           )}
@@ -1210,12 +1579,11 @@ export default function DriverApp() {
                       {/* Cargo info */}
                       <div className="text-[11px] text-slate-400 px-1 flex items-center justify-between">
                         <span>Cargo: {order.shipment.goodsCategory} (~{order.shipment.approxWeightKg}kg)</span>
-                        <span>Approach: {payout.driverDistanceToPickupKm}km to pickup</span>
+                        <span>Approach: {payout.driverDistanceToPickupKm}km away</span>
                       </div>
 
                       {/* Items 22 & 23: Skip Task & Accept Task Buttons */}
                       <div className="flex items-center space-x-2 pt-1 border-t border-slate-800">
-                        {/* Item 23: Option to skip tasks */}
                         <button
                           type="button"
                           onClick={() => {
@@ -1851,6 +2219,1044 @@ export default function DriverApp() {
                 Submit Driver Onboarding Application ➔
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEMS 9: LEFT-SIDE NAVIGATION DRAWER ================== */}
+      {/* ========================================================================= */}
+      {showSideMenu && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowSideMenu(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+          />
+
+          {/* Drawer Body */}
+          <div className="relative w-80 max-w-[85vw] bg-slate-950 border-r border-slate-800 h-full flex flex-col z-10 shadow-2xl overflow-y-auto">
+            {/* Header Profile Section */}
+            <div className="p-4 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="relative">
+                    <img
+                      src={currentDriver.avatar}
+                      alt={currentDriver.name}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500"
+                    />
+                    <span
+                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-950 ${
+                        currentDriver.isOnline ? 'bg-emerald-500' : 'bg-slate-500'
+                      }`}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-extrabold text-white text-sm truncate">{currentDriver.name}</div>
+                    <div className="text-[11px] text-emerald-400 font-mono font-bold">{currentDriver.vehicleNumber}</div>
+                    <div className="text-[10px] text-slate-400 truncate">⭐ {currentDriver.rating || 4.9} • {currentDriver.vehicleModel}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSideMenu(false)}
+                  className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Wallet quick balance */}
+              <div
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setWalletModalTab('recharge');
+                  setShowDriverTopupModal(true);
+                }}
+                className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
+                  isDriverBlocked
+                    ? 'bg-rose-950/40 border-rose-500/50 hover:bg-rose-900/40'
+                    : 'bg-slate-900/80 border-slate-800 hover:bg-slate-800/80'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Wallet className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs text-slate-300 font-semibold">Wallet Balance</span>
+                </div>
+                <span
+                  className={`font-black text-xs font-mono ${
+                    currentDriver.wallet.balance < 0 ? 'text-rose-400' : 'text-emerald-400'
+                  }`}
+                >
+                  {currentDriver.wallet.balance < 0 ? `-₹${Math.abs(currentDriver.wallet.balance)}` : `₹${currentDriver.wallet.balance}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Menu Links (Changes Required Item 9) */}
+            <div className="p-3 space-y-1 text-xs flex-1">
+              {/* Earnings */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowEarningsModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <span className="font-semibold">Earnings</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+
+              {/* Ledger */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowLedgerModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <FileText className="w-4 h-4 text-blue-400" />
+                  <span className="font-semibold">Ledger & Statement</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+
+              {/* Payments */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowDriverTopupModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <Wallet className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold">Payments & Wallet</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+
+              {/* Notifications */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowNotificationsModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <Bell className="w-4 h-4 text-rose-400" />
+                  <span className="font-semibold">Notifications</span>
+                </div>
+                {driverNotifications.filter((n) => !n.read).length > 0 ? (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">
+                    {driverNotifications.filter((n) => !n.read).length}
+                  </span>
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                )}
+              </button>
+
+              {/* Refer & Earn */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setDriverPage('home');
+                  setActiveDriverTab('referrals');
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <Gift className="w-4 h-4 text-purple-400" />
+                  <span className="font-semibold">Refer & Earn</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+
+              {/* Noticeboard */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowNoticeboardModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <Pin className="w-4 h-4 text-amber-400" />
+                  <span className="font-semibold">Noticeboard</span>
+                </div>
+                {isDriverBlocked && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-bold">
+                    Alert
+                  </span>
+                )}
+              </button>
+
+              {/* Profile */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowProfileModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <User className="w-4 h-4 text-cyan-400" />
+                  <span className="font-semibold">Profile & KYC Docs</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+
+              {/* Privacy Policy */}
+              <button
+                onClick={() => {
+                  setShowSideMenu(false);
+                  setShowPrivacyModal(true);
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-900 text-slate-200 hover:text-white transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span className="font-semibold">Company Privacy Policy</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+
+            {/* Bottom Footer Info */}
+            <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500 space-y-1">
+              <div className="font-bold text-slate-400">SwifLoad Logistics Pvt. Ltd.</div>
+              <div>Coimbatore Freight Hub v3.8.2</div>
+              <div className="text-[10px] text-slate-600">All driver operations logged securely</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 5: NOTICEBOARD MODAL (NEGATIVE BALANCE) ========== */}
+      {/* ========================================================================= */}
+      {showNoticeboardModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Pin className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm text-white">Driver Partner Noticeboard</h3>
+              </div>
+              <button onClick={() => setShowNoticeboardModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
+              {/* Item 5 Critical Notice: Warning when wallet is <= -200 asking to recharge within 5 days */}
+              {isDriverBlocked ? (
+                <div className="p-4 bg-rose-950/90 border-2 border-rose-600 rounded-2xl space-y-2.5 shadow-lg">
+                  <div className="flex items-center space-x-2 text-rose-300 font-extrabold text-xs uppercase tracking-wider">
+                    <AlertOctagon className="w-4 h-4 text-rose-400 animate-bounce" />
+                    <span>Immediate Action: Negative Balance Warning</span>
+                  </div>
+                  <p className="text-rose-100 text-[11px] leading-relaxed">
+                    Dear <strong>{currentDriver.name}</strong>, your wallet balance has fallen to{' '}
+                    <span className="font-mono font-bold text-white underline">
+                      -₹{Math.abs(currentDriver.wallet.balance)}
+                    </span>{' '}
+                    which exceeds the allowed negative limit (≤ -₹200).
+                  </p>
+                  <div className="p-2.5 bg-black/40 rounded-xl border border-rose-800 text-[11px] text-rose-200 space-y-1">
+                    <div className="font-bold text-rose-300">⚠️ Mandatory Operational Rule:</div>
+                    <div>
+                      You must recharge your driver wallet within <strong>5 days</strong>.
+                    </div>
+                    <div className="text-[10px] text-rose-400">
+                      Failing which, your registered mobile number (<strong>{currentDriver.phone}</strong>) and vehicle ({currentDriver.vehicleNumber}) will be temporarily blocked from receiving pickup calls.
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] text-rose-300 font-mono font-bold">
+                      ⏳ Deadline: 5 Days Remaining
+                    </span>
+                    <button
+                      onClick={() => {
+                        setShowNoticeboardModal(false);
+                        setDriverTopupAmt(200);
+                        setWalletModalTab('recharge');
+                        setShowDriverTopupModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-[11px] shadow transition-transform active:scale-95"
+                    >
+                      Recharge Wallet (Min ₹200) ➔
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-600/40 rounded-2xl flex items-center justify-between text-emerald-300">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span className="font-bold">Wallet Standing: Good</span>
+                  </div>
+                  <span className="font-mono font-bold">₹{currentDriver.wallet.balance}</span>
+                </div>
+              )}
+
+              {/* Circular 1 */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                    Circular #2026-08 • Operations
+                  </span>
+                  <span className="text-[10px] text-slate-500">Active</span>
+                </div>
+                <div className="font-bold text-white text-xs">
+                  Peak Industrial Hours Incentive Multiplier
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Earn an extra ₹150 milestone bonus for completing 5 trips originating from Peelamedu SIDCO & Ganapathy Foundry hubs between 9:00 AM and 1:00 PM.
+                </p>
+              </div>
+
+              {/* Circular 2 */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+                    Circular #2026-07 • Safety
+                  </span>
+                  <span className="text-[10px] text-slate-500">Mandatory</span>
+                </div>
+                <div className="font-bold text-white text-xs">
+                  Monsoon Weather Protection Protocol
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Heavy showers are forecasted across Coimbatore region. Drivers carrying textiles or electronics must secure heavy waterproof tarpaulins before leaving pickup locations.
+                </p>
+              </div>
+
+              {/* Circular 3 */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+                    Circular #2026-06 • Payments
+                  </span>
+                  <span className="text-[10px] text-slate-500">Notice</span>
+                </div>
+                <div className="font-bold text-white text-xs">
+                  Company Dynamic QR Code Payments
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Always use the SwifLoad Company QR code (<code className="text-emerald-300">swifload.ops@icici</code>) for customer digital payments to ensure automatic fare reconciliation and 0% delay in payouts.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowNoticeboardModal(false)}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs"
+            >
+              Close Noticeboard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 6: NOTIFICATIONS CENTER MODAL ==================== */}
+      {/* ========================================================================= */}
+      {showNotificationsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <Bell className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-sm text-white">Driver Notifications Center</h3>
+              </div>
+              <button onClick={() => setShowNotificationsModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Notification Filters */}
+            <div className="flex items-center justify-between">
+              <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs">
+                <button
+                  onClick={() => setNotifFilter('all')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                    notifFilter === 'all' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All ({driverNotifications.length})
+                </button>
+                <button
+                  onClick={() => setNotifFilter('unread')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                    notifFilter === 'unread' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Unread ({driverNotifications.filter((n) => !n.read).length})
+                </button>
+              </div>
+
+              {driverNotifications.length > 0 && (
+                <button
+                  onClick={() => clearDriverNotifications()}
+                  className="text-[10px] text-slate-500 hover:text-rose-400 underline font-semibold"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs">
+              {driverNotifications
+                .filter((n) => notifFilter === 'all' || !n.read)
+                .map((notif) => {
+                  const getIcon = () => {
+                    switch (notif.type) {
+                      case 'PICKUP':
+                        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+                      case 'DROP':
+                        return <MapPin className="w-4 h-4 text-cyan-400" />;
+                      case 'TRIP_UPDATE':
+                        return <Navigation className="w-4 h-4 text-blue-400" />;
+                      case 'CANCELLATION':
+                        return <AlertTriangle className="w-4 h-4 text-rose-400" />;
+                      case 'WALLET':
+                        return <Wallet className="w-4 h-4 text-amber-400" />;
+                      default:
+                        return <Bell className="w-4 h-4 text-purple-400" />;
+                    }
+                  };
+
+                  return (
+                    <div
+                      key={notif.id}
+                      onClick={() => !notif.read && markDriverNotificationRead(notif.id)}
+                      className={`p-3 rounded-2xl border transition-colors cursor-pointer ${
+                        notif.read
+                          ? 'bg-slate-900/60 border-slate-800 text-slate-400'
+                          : 'bg-slate-900 border-emerald-500/40 text-slate-200 shadow-md ring-1 ring-emerald-500/20'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-2.5">
+                        <div className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 shrink-0 mt-0.5">
+                          {getIcon()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white text-xs">{notif.title}</span>
+                            <span className="text-[10px] text-slate-500">
+                              {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">{notif.message}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {driverNotifications.filter((n) => notifFilter === 'all' || !n.read).length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                  <Bell className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                  <div>No notifications in this filter</div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowNotificationsModal(false)}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs"
+            >
+              Close Notifications
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 1: MULTI-STOP COMPLETION POPUP =================== */}
+      {/* ========================================================================= */}
+      {nextStopModalData && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border-2 border-emerald-500 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+                <h3 className="font-black text-sm text-emerald-400 uppercase tracking-wider">
+                  🎉 Stop Completed! Proceed to Next Leg
+                </h3>
+              </div>
+              <button
+                onClick={() => setNextStopModalData(null)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Completed Stop Tag */}
+            <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Just Finished:</span>
+              <span className="font-bold text-white flex items-center space-x-1">
+                <span>✓ {nextStopModalData.completedStop.label} ({nextStopModalData.completedStop.area})</span>
+              </span>
+            </div>
+
+            {/* Next Stop Details Card (Item 1: contact number and address details of next pickup or drop) */}
+            <div className="p-4 bg-gradient-to-b from-slate-900 to-slate-950 rounded-2xl border-2 border-emerald-500/60 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+                  Next Stop #{nextStopModalData.nextStop.sequence} ({nextStopModalData.nextStop.type})
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                  ₹{nextStopModalData.nextStop.associatedCharge || 200}
+                </span>
+              </div>
+
+              {/* Locality & Exact Address */}
+              <div>
+                <div className="text-base font-extrabold text-white">
+                  {nextStopModalData.nextStop.area}
+                </div>
+                <div className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                  {nextStopModalData.nextStop.address}
+                </div>
+              </div>
+
+              {/* Contact details with tap-to-call (Item 1 & 8) */}
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Contact Person</div>
+                  <div className="font-bold text-white truncate">
+                    {nextStopModalData.nextStop.contactName || 'Recipient / Sender'}
+                  </div>
+                  <div className="text-[11px] text-emerald-400 font-mono font-bold">
+                    {nextStopModalData.nextStop.contactPhone || '+91 98422 19283'}
+                  </div>
+                </div>
+
+                <a
+                  href={`tel:${nextStopModalData.nextStop.contactPhone || '9842219283'}`}
+                  className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-black text-xs flex items-center space-x-1.5 shadow transition-transform active:scale-95"
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  <span>Call Now</span>
+                </a>
+              </div>
+
+              <div className="text-[10px] text-slate-400 flex items-center justify-between px-1">
+                <span>Distance to leg: ~{nextStopModalData.nextStop.distanceCoveredKm || 3.2} km</span>
+                {nextStopModalData.nextStop.otp && (
+                  <span>Verification OTP: <strong>{nextStopModalData.nextStop.otp}</strong></span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-2 pt-1">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${nextStopModalData.nextStop.lat},${nextStopModalData.nextStop.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 shadow"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>Navigate GPS</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  startTripStop(nextStopModalData.tripId, nextStopModalData.nextStop.id);
+                  setNextStopModalData(null);
+                  showToast(`Started leg for ${nextStopModalData.nextStop.label}!`);
+                }}
+                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+              >
+                Start Next Leg ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 4: DYNAMIC COMPANY QR CODE PAYMENT MODAL ========= */}
+      {/* ========================================================================= */}
+      {activeQrModalStop && (() => {
+        const stop = activeQrModalStop.stop;
+        const bookingCode = activeQrModalStop.bookingCode;
+        const amount = stop.associatedCharge || 250;
+        const upiUri = `upi://pay?pa=swifload.ops@icici&pn=SwifLoad%20Logistics%20Private%20Limited&am=${amount}&cu=INR&tn=SwifLoad_${bookingCode}_Stop_${stop.sequence}`;
+        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiUri)}`;
+
+        return (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 text-white shadow-2xl text-center">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-2 text-left">
+                  <QrCode className="w-5 h-5 text-blue-400" />
+                  <div>
+                    <h3 className="font-bold text-sm text-white">Company Payment QR</h3>
+                    <p className="text-[10px] text-slate-400">Stop #{stop.sequence} • {stop.label}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveQrModalStop(null)}
+                  className="text-slate-400 hover:text-white p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* QR Code Container */}
+              <div className="p-4 bg-white rounded-2xl mx-auto w-fit shadow-xl border border-slate-200">
+                <img
+                  src={qrImgUrl}
+                  alt="Company UPI Payment QR Code"
+                  className="w-52 h-52 object-contain mx-auto"
+                />
+              </div>
+
+              {/* Amount & Account Details */}
+              <div className="space-y-1.5 text-xs">
+                <div className="text-2xl font-black text-emerald-400 font-mono">
+                  ₹{amount}
+                </div>
+                <div className="text-[11px] font-bold text-white">
+                  SwifLoad Logistics Private Limited
+                </div>
+                <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1 text-left">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Beneficiary:</span>
+                    <span className="font-mono font-semibold">swifload.ops@icici</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Bank:</span>
+                    <span>ICICI Bank Coimbatore Main</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Ref Note:</span>
+                    <span className="font-mono text-emerald-300">SwifLoad_{bookingCode}_S{stop.sequence}</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 pt-1">
+                  Customer can scan using Google Pay, PhonePe, Paytm, BHIM, or any banking app.
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText('swifload.ops@icici');
+                    showToast('Company UPI ID copied!');
+                  }}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs flex items-center justify-center space-x-1"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy UPI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveQrModalStop(null)}
+                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 9: DRIVER LEDGER & ACCOUNT STATEMENT ============= */}
+      {/* ========================================================================= */}
+      {showLedgerModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-lg w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-blue-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">Driver Partner Ledger</h3>
+                  <p className="text-[10px] text-slate-400">Account Statement • TN-38 Coimbatore Hub</p>
+                </div>
+              </div>
+              <button onClick={() => setShowLedgerModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="bg-slate-900 p-2.5 rounded-2xl border border-slate-800">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">Balance</div>
+                <div className={`text-base font-black mt-0.5 ${currentDriver.wallet.balance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  ₹{currentDriver.wallet.balance}
+                </div>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-2xl border border-slate-800">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">Transactions</div>
+                <div className="text-base font-black text-white mt-0.5">{reverseChronologicalTx.length}</div>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-2xl border border-slate-800">
+                <div className="text-[10px] text-slate-400 font-bold uppercase">Trips Logged</div>
+                <div className="text-base font-black text-white mt-0.5">{currentDriver.totalTrips}</div>
+              </div>
+            </div>
+
+            {/* Ledger List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
+              {reverseChronologicalTx.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between"
+                >
+                  <div className="flex items-start space-x-2.5">
+                    <div
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                        tx.type === 'CREDIT' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                      }`}
+                    >
+                      {tx.type === 'CREDIT' ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-200">{tx.description}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {new Date(tx.timestamp).toLocaleString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-black text-xs font-mono ${tx.type === 'CREDIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
+                    </span>
+                    <div className="text-[9px] text-slate-500 font-mono">Bal: ₹{tx.balanceAfter}</div>
+                  </div>
+                </div>
+              ))}
+
+              {reverseChronologicalTx.length === 0 && (
+                <div className="text-center py-6 text-slate-500">No ledger entries recorded yet.</div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowLedgerModal(false)}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs"
+            >
+              Close Statement
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 9: DRIVER EARNINGS MODAL ========================= */}
+      {/* ========================================================================= */}
+      {showEarningsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">Earnings Breakdown</h3>
+                  <p className="text-[10px] text-slate-400">{currentDriver.name} • Coimbatore Dispatch</p>
+                </div>
+              </div>
+              <button onClick={() => setShowEarningsModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
+              {/* Daily total card */}
+              <div className="p-4 bg-gradient-to-r from-emerald-950/60 to-slate-900 rounded-2xl border border-emerald-500/40 space-y-1">
+                <div className="text-[10px] uppercase font-bold text-emerald-400">Total Net Earnings (Platform)</div>
+                <div className="text-3xl font-black text-white font-mono">
+                  ₹{completedDriverTrips.reduce((acc, t) => acc + t.fare.driverEarnings, 0) + incentiveResult.totalIncentive}
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  {completedDriverTrips.length} Completed Trips • ₹{incentiveResult.totalIncentive} Incentive Bonus
+                </p>
+              </div>
+
+              {/* Incentives progress card */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between font-bold text-slate-200">
+                  <span className="flex items-center space-x-1.5">
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span>Milestone Incentives</span>
+                  </span>
+                  <span className="text-amber-400 font-mono">+₹{incentiveResult.totalIncentive}</span>
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  {(incentiveSlabs || []).map((s) => {
+                    const achieved = completedDriverTrips.length >= s.minCompletedTrips;
+                    return (
+                      <div key={s.id} className="flex items-center justify-between text-[11px] p-2 bg-slate-950 rounded-xl">
+                        <span>{s.minCompletedTrips} Trips Target</span>
+                        <span className={achieved ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                          {achieved ? `✓ ₹${s.incentiveAmount} Cleared` : `₹${s.incentiveAmount} (${s.minCompletedTrips - completedDriverTrips.length} to go)`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Recent Completed Trips */}
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  Recent Delivered Trips ({completedDriverTrips.length})
+                </div>
+                {completedDriverTrips.slice(0, 5).map((t) => (
+                  <div key={t.id} className="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-slate-200">{t.bookingCode}</div>
+                      <div className="text-[10px] text-slate-400">{t.pickup.area} ➔ {t.drop.area}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-emerald-400">+₹{t.fare.driverEarnings}</div>
+                      <div className="text-[9px] text-slate-500">Gross: ₹{t.fare.totalFare}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowEarningsModal(false)}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 9: DRIVER PROFILE & KYC MODAL ==================== */}
+      {/* ========================================================================= */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <User className="w-5 h-5 text-cyan-400" />
+                <h3 className="font-bold text-sm text-white">Driver Profile & Documents</h3>
+              </div>
+              <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
+              {/* Profile Card */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 flex items-center space-x-3">
+                <img
+                  src={currentDriver.avatar}
+                  alt={currentDriver.name}
+                  className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-white text-sm">{currentDriver.name}</div>
+                  <div className="text-[11px] text-slate-400">{currentDriver.phone}</div>
+                  <div className="text-[10px] text-slate-500 truncate">{currentDriver.email}</div>
+                  <div className="mt-1 flex items-center space-x-1.5">
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full font-bold text-[9px]">
+                      {currentDriver.kycStatus}
+                    </span>
+                    <span className="text-[10px] text-slate-400">⭐ {currentDriver.rating} Rating</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vehicle Specs */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vehicle Credentials</div>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-slate-500 block">Registration:</span>
+                    <span className="font-bold text-white font-mono">{currentDriver.vehicleNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Vehicle Model:</span>
+                    <span className="font-bold text-white">{currentDriver.vehicleModel}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Category:</span>
+                    <span className="font-bold text-white capitalize">{currentDriver.vehicleCategory.replace('_', ' ')}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Fleet Group:</span>
+                    <span className="font-bold text-white">{currentDriver.groupName || 'Central'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank & Payout Details */}
+              <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bank & Payout Setup</div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Account Name:</span>
+                    <span className="font-bold text-white">{currentDriver.bankDetails.accountName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Account No:</span>
+                    <span className="font-mono text-white">{currentDriver.bankDetails.accountNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">IFSC Code:</span>
+                    <span className="font-mono text-white">{currentDriver.bankDetails.ifscCode}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">UPI ID:</span>
+                    <span className="font-mono text-emerald-300">{currentDriver.bankDetails.upiId}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowProfileModal(false)}
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs"
+            >
+              Close Profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= ITEM 9: COMPANY PRIVACY POLICY MODAL ================== */}
+      {/* ========================================================================= */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-md w-full p-5 space-y-4 text-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-sm text-white">Company Privacy Policy</h3>
+                  <p className="text-[10px] text-slate-400">SwifLoad Logistics Private Limited</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrivacyModal(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs text-slate-300 leading-relaxed">
+              <p className="text-[11px] text-slate-400">
+                This Driver Partner Privacy Policy explains how SwifLoad Logistics Private Limited collects, uses, and protects your personal and operational information while you are on the platform.
+              </p>
+
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-bold text-white text-xs">1. Location & Telematics Tracking</div>
+                <p className="text-[11px] text-slate-400">
+                  When you toggle your status to <strong>ONLINE</strong>, SwifLoad records real-time GPS coordinates to calculate proximity to nearby freight bookings, ensure driver en-route safety, and power live customer tracking. Location sharing ceases when you toggle <strong>OFFLINE</strong>.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-bold text-white text-xs">2. Contact Number Sharing on Active Orders</div>
+                <p className="text-[11px] text-slate-400">
+                  Once an order is accepted, your contact number and vehicle registration plate are shared with the customer/shipper solely for coordination during loading and delivery. Off-platform misuse or private fare solicitation is strictly prohibited.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-bold text-white text-xs">3. Financial Ledger & Digital Payments</div>
+                <p className="text-[11px] text-slate-400">
+                  Bank accounts and UPI handles submitted are encrypted and used solely for platform earnings disbursements and incentive crediting. Negative balance recovery terms apply as outlined in partner contracts.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-bold text-white text-xs">4. Compliance with DPDPA 2023</div>
+                <p className="text-[11px] text-slate-400">
+                  All personal data is processed strictly in accordance with the Indian Information Technology Act 2000 and Digital Personal Data Protection Act (DPDPA 2023). For grievances, contact our Data Protection Officer at <code className="text-emerald-300">privacy@swifload.in</code>.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowPrivacyModal(false)}
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs shadow"
+            >
+              I Understand & Agree
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ================= HOME VIEW FLOATING INCOMING TASK POPUP ================ */}
+      {/* ========================================================================= */}
+      {driverPage === 'home' && activeIncomingTrip && (
+        <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto z-40 animate-in slide-in-from-bottom-5">
+          <div className="bg-slate-950 border-2 border-emerald-500 rounded-3xl p-4 shadow-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                <span className="font-black text-xs text-white uppercase tracking-wider">
+                  ⚡ New Freight Call: {activeIncomingTrip.bookingCode}
+                </span>
+              </div>
+              <span className="text-xs font-mono font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full">
+                ⏳ {activeIncomingTrip.dispatchCountdownSecs ?? dispatchTimeoutSecs}s
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+              <div>
+                <div className="text-slate-400 text-[10px]">Route</div>
+                <div className="font-bold text-white">{activeIncomingTrip.pickup.area} ➔ {activeIncomingTrip.drop.area}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-slate-400 text-[10px]">Net Earnings</div>
+                <div className="font-black text-emerald-400 text-sm">₹{activeIncomingTrip.fare.driverEarnings}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  passTripToNextGroup(activeIncomingTrip.id);
+                  setDismissedTripIds((prev) => [...prev, activeIncomingTrip.id]);
+                  showToast(`Skipped ${activeIncomingTrip.bookingCode}`);
+                }}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDriverPage('duty');
+                }}
+                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg"
+              >
+                View & Accept (₹{activeIncomingTrip.fare.driverEarnings}) ➔
+              </button>
+            </div>
           </div>
         </div>
       )}

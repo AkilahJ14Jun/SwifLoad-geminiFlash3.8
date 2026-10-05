@@ -173,6 +173,38 @@ export interface IncentiveSlab {
   label: string;
 }
 
+export interface TripStop {
+  id: string;
+  type: 'PICKUP' | 'DROP';
+  sequence: number; // 1-indexed
+  label: string; // e.g. "Pickup #1", "Drop #2"
+  area: string; // Locality name
+  address: string; // Exact address
+  lat: number;
+  lng: number;
+  contactName: string;
+  contactPhone: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+  startedAt?: string;
+  completedAt?: string;
+  timeTakenMinutes?: number;
+  distanceCoveredKm?: number;
+  associatedCharge: number;
+  companyPaymentQr?: string;
+  otp?: string;
+}
+
+export interface DriverNotification {
+  id: string;
+  driverId?: string;
+  tripId?: string;
+  title: string;
+  message: string;
+  type: 'TRIP_UPDATE' | 'PICKUP' | 'DROP' | 'CANCELLATION' | 'WALLET' | 'SYSTEM';
+  timestamp: string;
+  read: boolean;
+}
+
 export interface Trip {
   id: string;
   bookingCode: string;
@@ -188,6 +220,8 @@ export interface Trip {
   pickups?: LocationPoint[];
   drops?: LocationPoint[];
   stopType?: 'single' | 'multi_pickup' | 'multi_drop';
+  stops?: TripStop[];
+  currentStopIndex?: number;
   distanceKm: number;
   durationMins: number;
   shipment: ShipmentDetails;

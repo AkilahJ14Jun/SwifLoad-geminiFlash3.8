@@ -22,6 +22,8 @@ import {
   ReferralRecord,
   WalletTransaction,
   IncentiveSlab,
+  TripStop,
+  DriverNotification,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -35,6 +37,7 @@ import {
   INITIAL_REFERRALS,
   DEFAULT_INCENTIVE_SLABS,
   DEFAULT_DISPATCH_TIMEOUT_SECS,
+  INITIAL_DRIVER_NOTIFICATIONS,
 } from '@/lib/data';
 import {
   calculateDistanceKm,
@@ -114,6 +117,12 @@ interface LogisticsContextType {
   updateDriverNegativeLimit: (driverId: string, limit: number) => void;
   adjustWalletBalance: (entityType: 'customer' | 'driver', id: string, amount: number, note: string) => void;
 
+  // Driver Notifications
+  driverNotifications: DriverNotification[];
+  addDriverNotification: (notification: Omit<DriverNotification, 'id' | 'timestamp' | 'read'>) => void;
+  markDriverNotificationRead: (id: string) => void;
+  clearDriverNotifications: (driverId?: string) => void;
+
   // Customer Auth
   currentCustomer: CustomerUser;
   registerCustomer: (data: { name: string; phone: string; email: string; companyName?: string; customerType?: CustomerType; referralCodeApplied?: string }) => void;
@@ -133,6 +142,8 @@ interface LogisticsContextType {
   cancelTrip: (tripId: string, reason: string) => void;
   assignDriver: (tripId: string, driverId: string) => void;
   advanceTripStatus: (tripId: string, otpProvided?: string, photoProof?: string) => { success: boolean; message: string };
+  startTripStop: (tripId: string, stopId: string) => { success: boolean; message: string };
+  completeTripStop: (tripId: string, stopId: string, otpProvided?: string) => { success: boolean; message: string; nextStop?: TripStop; isCompleted?: boolean };
   submitRating: (tripId: string, rating: number, feedback: string) => void;
   toggleDriverOnline: (driverId: string) => void;
   approveDriverKyc: (driverId: string) => void;
@@ -157,6 +168,7 @@ const LOCAL_STORAGE_KEY_REFERRALS = 'swifload_referrals_v2_cbe';
 const LOCAL_STORAGE_KEY_REF_CONFIG = 'swifload_ref_config_v2_cbe';
 const LOCAL_STORAGE_KEY_INCENTIVE_SLABS = 'swifload_incentive_slabs_v2_cbe';
 const LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT = 'swifload_dispatch_timeout_v2_cbe';
+const LOCAL_STORAGE_KEY_NOTIFICATIONS = 'swifload_driver_notifs_v2_cbe';
 
 const INITIAL_CUSTOMER: CustomerUser = {
   id: 'cust_01',
@@ -212,6 +224,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [referrals, setReferrals] = useState<ReferralRecord[]>(INITIAL_REFERRALS);
   const [incentiveSlabs, setIncentiveSlabs] = useState<IncentiveSlab[]>(DEFAULT_INCENTIVE_SLABS);
   const [dispatchTimeoutSecs, setDispatchTimeoutSecs] = useState<number>(DEFAULT_DISPATCH_TIMEOUT_SECS);
+  const [driverNotifications, setDriverNotifications] = useState<DriverNotification[]>(INITIAL_DRIVER_NOTIFICATIONS);
 
   // Helpers for server DB synchronization
   const syncTripToServer = useCallback(async (trip: Trip) => {
@@ -287,6 +300,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const savedTimeout = localStorage.getItem(LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT);
       if (savedTimeout) setDispatchTimeoutSecs(JSON.parse(savedTimeout));
+
+      const savedNotifs = localStorage.getItem(LOCAL_STORAGE_KEY_NOTIFICATIONS);
+      if (savedNotifs) setDriverNotifications(JSON.parse(savedNotifs));
     } catch {
       // fallback
     }
@@ -417,6 +433,37 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem(LOCAL_STORAGE_KEY_CUSTOMER, JSON.stringify(currentCustomer));
     } catch {}
   }, [currentCustomer]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFICATIONS, JSON.stringify(driverNotifications));
+    } catch {}
+  }, [driverNotifications]);
+
+  const addDriverNotification = useCallback(
+    (notif: Omit<DriverNotification, 'id' | 'timestamp' | 'read'>) => {
+      const newNotif: DriverNotification = {
+        ...notif,
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      };
+      setDriverNotifications((prev) => [newNotif, ...prev]);
+    },
+    []
+  );
+
+  const markDriverNotificationRead = useCallback((id: string) => {
+    setDriverNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  }, []);
+
+  const clearDriverNotifications = useCallback((driverId?: string) => {
+    setDriverNotifications((prev) =>
+      driverId ? prev.filter((n) => n.driverId !== driverId) : []
+    );
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -1221,6 +1268,73 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => clearInterval(timer);
   }, [dispatchTimeoutSecs]);
 
+  // Helper to build sequential multi-stops (pickups and drops) for a trip
+  const buildTripStops = useCallback(
+    (tripData: {
+      bookingCode?: string;
+      pickups?: LocationPoint[];
+      drops?: LocationPoint[];
+      pickup?: LocationPoint;
+      drop?: LocationPoint;
+      fare?: { totalFare: number };
+      shipment?: { pickupOtp?: string; deliveryOtp?: string };
+    }): TripStop[] => {
+      const allPickups = tripData.pickups && tripData.pickups.length > 0 ? tripData.pickups : (tripData.pickup ? [tripData.pickup] : []);
+      const allDrops = tripData.drops && tripData.drops.length > 0 ? tripData.drops : (tripData.drop ? [tripData.drop] : []);
+      const totalStops = Math.max(1, allPickups.length + allDrops.length);
+      const totalFare = tripData.fare?.totalFare || 500;
+      const stops: TripStop[] = [];
+      let seq = 1;
+
+      allPickups.forEach((p, idx) => {
+        const charge = Math.round((totalFare / totalStops) * 10) / 10;
+        const qrData = `upi://pay?pa=swifload.ops@icici&pn=SwifLoad%20Logistics&am=${charge}&cu=INR&tn=SwifLoad_${tripData.bookingCode || 'TRIP'}_Stop_${seq}`;
+        stops.push({
+          id: `stop_p_${idx + 1}_${seq}`,
+          type: 'PICKUP',
+          sequence: seq++,
+          label: `Pickup #${idx + 1}`,
+          area: p.area || 'Pickup Locality',
+          address: p.address || '',
+          lat: p.lat,
+          lng: p.lng,
+          contactName: p.senderOrReceiverName || 'Sender',
+          contactPhone: p.senderOrReceiverPhone || p.contactPhone || '+91 98422 19283',
+          status: 'PENDING',
+          distanceCoveredKm: 2.5,
+          associatedCharge: charge,
+          companyPaymentQr: qrData,
+          otp: tripData.shipment?.pickupOtp || '4821',
+        });
+      });
+
+      allDrops.forEach((d, idx) => {
+        const charge = Math.round((totalFare / totalStops) * 10) / 10;
+        const qrData = `upi://pay?pa=swifload.ops@icici&pn=SwifLoad%20Logistics&am=${charge}&cu=INR&tn=SwifLoad_${tripData.bookingCode || 'TRIP'}_Stop_${seq}`;
+        stops.push({
+          id: `stop_d_${idx + 1}_${seq}`,
+          type: 'DROP',
+          sequence: seq++,
+          label: `Drop #${idx + 1}`,
+          area: d.area || 'Drop Locality',
+          address: d.address || '',
+          lat: d.lat,
+          lng: d.lng,
+          contactName: d.senderOrReceiverName || 'Receiver',
+          contactPhone: d.senderOrReceiverPhone || d.contactPhone || '+91 98422 88712',
+          status: 'PENDING',
+          distanceCoveredKm: 3.5,
+          associatedCharge: charge,
+          companyPaymentQr: qrData,
+          otp: tripData.shipment?.deliveryOtp || '7392',
+        });
+      });
+
+      return stops;
+    },
+    []
+  );
+
   // Create a new booking: dispatches to nearest driver group using slab distance rates
   const createBooking = useCallback(
     (payload: CreateTripPayload): string => {
@@ -1310,6 +1424,16 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const isPendingPayment = payload.paymentMethod === 'CASH_ON_DELIVERY' || payload.paymentMethod === 'POST_PAYMENT';
 
+      const initialStops = buildTripStops({
+        bookingCode,
+        pickups: payload.pickups || [payload.pickup],
+        drops: payload.drops || [payload.drop],
+        pickup: payload.pickup,
+        drop: payload.drop,
+        fare,
+        shipment: { pickupOtp, deliveryOtp },
+      });
+
       const newTrip: Trip = {
         id: tripId,
         bookingCode,
@@ -1325,6 +1449,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         pickups: payload.pickups || [payload.pickup],
         drops: payload.drops || [payload.drop],
         stopType: payload.stopType || (payload.pickups && payload.pickups.length > 1 ? 'multi_pickup' : (payload.drops && payload.drops.length > 1 ? 'multi_drop' : 'single')),
+        stops: initialStops,
+        currentStopIndex: 0,
         distanceKm,
         durationMins,
         shipment: {
@@ -1362,7 +1488,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast(`Trip ${bookingCode} created! Dispatched to ${nearestGroup.name}`);
       return tripId;
     },
-    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, dispatchTimeoutSecs, syncTripToServer, showToast]
+    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, dispatchTimeoutSecs, syncTripToServer, showToast, buildTripStops, syncWalletToServer]
   );
 
   // Driver Accepts a pickup task: Task payout is calculated from this driver's specific distance to pickup + trip distance!
@@ -1736,6 +1862,236 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [updateTripOnServer, updateDriverOnServer, showToast]
   );
 
+  // Start an individual pickup or drop stop (Changes Required Item 8)
+  const startTripStop = useCallback(
+    (tripId: string, stopId: string): { success: boolean; message: string } => {
+      let result = { success: false, message: 'Stop not found' };
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.id !== tripId) return t;
+          const currentStops = t.stops && t.stops.length > 0 ? t.stops : buildTripStops(t);
+          const stopIndex = currentStops.findIndex((s) => s.id === stopId);
+          if (stopIndex === -1) return t;
+
+          const updatedStops = currentStops.map((s) => {
+            if (s.id === stopId) {
+              return {
+                ...s,
+                status: 'IN_PROGRESS' as const,
+                startedAt: s.startedAt || new Date().toISOString(),
+              };
+            }
+            return s;
+          });
+
+          const currentStop = updatedStops[stopIndex];
+          const newStatus: TripStatus =
+            currentStop.type === 'PICKUP'
+              ? (t.status === 'DRIVER_ASSIGNED' ? 'ARRIVING_PICKUP' : t.status)
+              : 'IN_TRANSIT';
+
+          result = {
+            success: true,
+            message: `Started ${currentStop.label}: Driver en route to ${currentStop.area}!`,
+          };
+
+          addDriverNotification({
+            title: `${currentStop.label} En Route`,
+            message: `Driver is on the way to ${currentStop.label} at ${currentStop.area} (${currentStop.address})`,
+            type: currentStop.type === 'PICKUP' ? 'PICKUP' : 'DROP',
+            tripId: t.id,
+            driverId: t.driverId,
+          });
+
+          const updatedTrip = {
+            ...t,
+            status: newStatus,
+            stops: updatedStops,
+            currentStopIndex: stopIndex,
+            auditHistory: [
+              ...t.auditHistory,
+              {
+                timestamp: new Date().toISOString(),
+                event: `Driver started ${currentStop.label} at ${currentStop.area}`,
+                actor: 'Driver',
+              },
+            ],
+          };
+          updateTripOnServer(t.id, updatedTrip);
+          return updatedTrip;
+        })
+      );
+      if (result.success) showToast(result.message);
+      return result;
+    },
+    [addDriverNotification, buildTripStops, updateTripOnServer, showToast]
+  );
+
+  // Complete an individual pickup or drop stop (Changes Required Items 6, 8, 9)
+  const completeTripStop = useCallback(
+    (
+      tripId: string,
+      stopId: string,
+      otpProvided?: string
+    ): { success: boolean; message: string; nextStop?: TripStop; isCompleted?: boolean } => {
+      let result: { success: boolean; message: string; nextStop?: TripStop; isCompleted?: boolean } = {
+        success: false,
+        message: 'Invalid operation',
+      };
+
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.id !== tripId) return t;
+          const currentStops = t.stops && t.stops.length > 0 ? t.stops : buildTripStops(t);
+          const stopIndex = currentStops.findIndex((s) => s.id === stopId);
+          if (stopIndex === -1) return t;
+
+          const targetStop = currentStops[stopIndex];
+          if (otpProvided && targetStop.otp && otpProvided !== targetStop.otp) {
+            result = {
+              success: false,
+              message: `Incorrect OTP! Expected ${targetStop.otp}`,
+            };
+            return t;
+          }
+
+          const now = new Date();
+          const startedAt = targetStop.startedAt ? new Date(targetStop.startedAt) : new Date(now.getTime() - 15 * 60000);
+          const timeTakenMinutes = Math.max(1, Math.round((now.getTime() - startedAt.getTime()) / 60000));
+
+          const updatedStops = currentStops.map((s) => {
+            if (s.id === stopId) {
+              return {
+                ...s,
+                status: 'COMPLETED' as const,
+                completedAt: now.toISOString(),
+                timeTakenMinutes,
+              };
+            }
+            return s;
+          });
+
+          const nextStop = updatedStops[stopIndex + 1];
+          const isAllStopsCompleted = updatedStops.every((s) => s.status === 'COMPLETED');
+
+          addDriverNotification({
+            title: `${targetStop.label} Completed`,
+            message: `${targetStop.label} completed at ${targetStop.area} for Order ${t.bookingCode}.${nextStop ? ` Next: ${nextStop.label} at ${nextStop.area}.` : ' Trip delivered!'}`,
+            type: targetStop.type === 'PICKUP' ? 'PICKUP' : 'DROP',
+            tripId: t.id,
+            driverId: t.driverId,
+          });
+
+          if (isAllStopsCompleted) {
+            if (t.driverId) {
+              setDrivers((dList) =>
+                dList.map((d) => {
+                  if (d.id === t.driverId) {
+                    let newBal = d.wallet.balance;
+                    const transactions = [...(d.wallet.transactions || [])];
+
+                    if (t.paymentMethod === 'CASH_ON_DELIVERY') {
+                      newBal = Math.round((d.wallet.balance - t.fare.platformCommission) * 10) / 10;
+                      transactions.unshift({
+                        id: `tx_d_${Date.now()}`,
+                        timestamp: new Date().toISOString(),
+                        type: 'DEBIT',
+                        amount: t.fare.platformCommission,
+                        balanceAfter: newBal,
+                        description: `Platform Commission (18%) on COD trip ${t.bookingCode}`,
+                        category: 'COMMISSION_DEDUCTION',
+                        referenceId: t.id,
+                      });
+                    } else {
+                      newBal = Math.round((d.wallet.balance + t.fare.driverEarnings) * 10) / 10;
+                      transactions.unshift({
+                        id: `tx_d_${Date.now()}`,
+                        timestamp: new Date().toISOString(),
+                        type: 'CREDIT',
+                        amount: t.fare.driverEarnings,
+                        balanceAfter: newBal,
+                        description: `Task Earnings credited for trip ${t.bookingCode}`,
+                        category: 'TRIP_EARNING',
+                        referenceId: t.id,
+                      });
+                    }
+
+                    const updatedDriver = {
+                      ...d,
+                      currentStatus: 'IDLE' as any,
+                      totalTrips: d.totalTrips + 1,
+                      wallet: {
+                        ...d.wallet,
+                        balance: newBal,
+                        todayEarnings: d.wallet.todayEarnings + t.fare.driverEarnings,
+                        transactions,
+                      },
+                    };
+                    updateDriverOnServer(d.id, updatedDriver);
+                    return updatedDriver;
+                  }
+                  return d;
+                })
+              );
+            }
+
+            result = {
+              success: true,
+              message: `All stops completed for Order ${t.bookingCode}! Delivery verified.`,
+              isCompleted: true,
+            };
+
+            const updatedTrip = {
+              ...t,
+              status: 'DELIVERED' as TripStatus,
+              stops: updatedStops,
+              currentStopIndex: stopIndex,
+              auditHistory: [
+                ...t.auditHistory,
+                {
+                  timestamp: now.toISOString(),
+                  event: `All pickups and drops completed. Final delivery verified.`,
+                  actor: 'Driver',
+                },
+              ],
+            };
+            updateTripOnServer(t.id, updatedTrip);
+            return updatedTrip;
+          }
+
+          result = {
+            success: true,
+            message: `${targetStop.label} completed! Next: ${nextStop.label} (${nextStop.area})`,
+            nextStop,
+            isCompleted: false,
+          };
+
+          const nextStatus = nextStop.type === 'PICKUP' ? 'AT_PICKUP' : 'IN_TRANSIT';
+          const updatedTrip = {
+            ...t,
+            status: nextStatus as TripStatus,
+            stops: updatedStops,
+            currentStopIndex: stopIndex + 1,
+            auditHistory: [
+              ...t.auditHistory,
+              {
+                timestamp: now.toISOString(),
+                event: `${targetStop.label} completed at ${targetStop.area}. Moving to ${nextStop.label} (${nextStop.area})`,
+                actor: 'Driver',
+              },
+            ],
+          };
+          updateTripOnServer(t.id, updatedTrip);
+          return updatedTrip;
+        })
+      );
+
+      if (result.success) showToast(result.message);
+      return result;
+    },
+    [addDriverNotification, buildTripStops, updateDriverOnServer, updateTripOnServer, showToast]
+  );
+
   // Submit Rating & Feedback with Reward Points
   const submitRating = useCallback(
     (tripId: string, rating: number, feedback: string) => {
@@ -1984,6 +2340,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.removeItem(LOCAL_STORAGE_KEY_REF_CONFIG);
     localStorage.removeItem(LOCAL_STORAGE_KEY_INCENTIVE_SLABS);
     localStorage.removeItem(LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT);
+    localStorage.removeItem(LOCAL_STORAGE_KEY_NOTIFICATIONS);
     setTrips(INITIAL_TRIPS);
     setDrivers(INITIAL_DRIVERS);
     setVehicleConfigs(VEHICLE_CONFIGS);
@@ -1994,6 +2351,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setReferrals(INITIAL_REFERRALS);
     setIncentiveSlabs(DEFAULT_INCENTIVE_SLABS);
     setDispatchTimeoutSecs(DEFAULT_DISPATCH_TIMEOUT_SECS);
+    setDriverNotifications(INITIAL_DRIVER_NOTIFICATIONS);
     setActiveTripId('trip_cbe_1001');
 
     fetch('/api/state', {
@@ -2040,6 +2398,10 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         topUpDriverWallet,
         updateDriverNegativeLimit,
         adjustWalletBalance,
+        driverNotifications,
+        addDriverNotification,
+        markDriverNotificationRead,
+        clearDriverNotifications,
         currentCustomer,
         registerCustomer,
         loginCustomer,
@@ -2054,6 +2416,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         cancelTrip,
         assignDriver,
         advanceTripStatus,
+        startTripStop,
+        completeTripStop,
         submitRating,
         toggleDriverOnline,
         approveDriverKyc,
