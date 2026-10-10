@@ -60,7 +60,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="container">
 
 <h1>SwifLoad-geminiFlash3.8 — Complete Call Flow &amp; Architecture Documentation</h1>
-<p class="subtitle">Generated from graphify knowledge graph: 371 nodes, 721 edges, 21 communities. Commit: unknown</p>
+<p class="subtitle">Generated from graphify knowledge graph: 394 nodes, 759 edges, 22 communities. Commit: af8f30e</p>
 
 <div class="nav">
     <a href="#overview">Architecture Overview</a>
@@ -69,15 +69,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
     <a href="#cli-skills">CLI &amp; Skill Installers</a>
     <a href="#ingest-cache-update">Ingestion &amp; Updates</a>
     <a href="#serve-api">Serving API</a>
+    <a href="#uselogistics">useLogistics</a>
     <a href="#swifload-project-overview">SwifLoad Project Overview</a>
     <a href="#bengaluru-setup-and-hardware-cost-guide">Bengaluru Setup and Hardware Cost Guide</a>
     <a href="#layout-tsx">layout.tsx</a>
     <a href="#changes-required-specification">Changes Required Specification</a>
     <a href="#software-outsourcing-cost-estimate">Software Outsourcing Cost Estimate</a>
     <a href="#next-config-mjs">next.config.mjs</a>
+    <a href="#downloads-page-tsx">downloads/page.tsx</a>
     <a href="#postcss-config-js">postcss.config.js</a>
-    <a href="#sw-js">sw.js</a>
-    <a href="#tailwind-config-js">tailwind.config.js</a>
+    <a href="#other">Other</a>
 </div>
 
 <!-- ====== Architecture Overview ====== -->
@@ -87,16 +88,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    BUILD_GRAPH_321CBB04("Graph Build<br/><small>137 nodes</small>")
+    BUILD_GRAPH_321CBB04("Graph Build<br/><small>108 nodes</small>")
     class BUILD_GRAPH_321CBB04 module;
-    OUTPUTS_DOCS_ED82387C("Outputs &amp; Docs<br/><small>89 nodes</small>")
+    OUTPUTS_DOCS_ED82387C("Outputs &amp; Docs<br/><small>82 nodes</small>")
     class OUTPUTS_DOCS_ED82387C module;
     CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>22 nodes</small>")
     class CLI_SKILLS_9964CBB8 module;
-    INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>44 nodes</small>")
+    INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>47 nodes</small>")
     class INGEST_CACHE_UPDATE_FF457338 module;
     SERVE_API_35EC8E86("Serving API<br/><small>41 nodes</small>")
     class SERVE_API_35EC8E86 module;
+    USELOGISTICS_66953927("useLogistics<br/><small>54 nodes</small>")
+    class USELOGISTICS_66953927 module;
     SWIFLOAD_PROJECT_OVERVIEW_2DEA2D02("SwifLoad Project Overview<br/><small>13 nodes</small>")
     class SWIFLOAD_PROJECT_OVERVIEW_2DEA2D02 module;
     BENGALURU_SETUP_AND_HARDWARE_COST_GUIDE_A6A0101E("Bengaluru Setup and Hardware Cost Guide<br/><small>7 nodes</small>")
@@ -109,19 +112,19 @@ flowchart LR
     class SOFTWARE_OUTSOURCING_COST_ESTIMATE_93C77DBE module;
     NEXT_CONFIG_MJS_D24FB38C("next.config.mjs<br/><small>2 nodes</small>")
     class NEXT_CONFIG_MJS_D24FB38C module;
+    DOWNLOADS_PAGE_TSX_6CA98A90("downloads/page.tsx<br/><small>2 nodes</small>")
+    class DOWNLOADS_PAGE_TSX_6CA98A90 module;
     POSTCSS_CONFIG_JS_F78865D3("postcss.config.js<br/><small>1 nodes</small>")
     class POSTCSS_CONFIG_JS_F78865D3 module;
-    SW_JS_36209973("sw.js<br/><small>1 nodes</small>")
-    class SW_JS_36209973 module;
-    TAILWIND_CONFIG_JS_3BF2B486("tailwind.config.js<br/><small>1 nodes</small>")
-    class TAILWIND_CONFIG_JS_3BF2B486 module;
-    BUILD_GRAPH_321CBB04 -->|imports x30| OUTPUTS_DOCS_ED82387C
+    OTHER_D0941E68("Other<br/><small>2 nodes</small>")
+    class OTHER_D0941E68 module;
+    USELOGISTICS_66953927 -->|imports x36| OUTPUTS_DOCS_ED82387C
     SERVE_API_35EC8E86 -->|imports x18| OUTPUTS_DOCS_ED82387C
-    OUTPUTS_DOCS_ED82387C -->|imports x11| BUILD_GRAPH_321CBB04
+    OUTPUTS_DOCS_ED82387C -->|contains x12| USELOGISTICS_66953927
     OUTPUTS_DOCS_ED82387C -->|contains x4| SERVE_API_35EC8E86
-    SWIFLOAD_PROJECT_OVERVIEW_2DEA2D02 -->|implements x3| OUTPUTS_DOCS_ED82387C
     LAYOUT_TSX_1561C0B8 -->|imports x2| OUTPUTS_DOCS_ED82387C
-    SERVE_API_35EC8E86 -->|imports x2| BUILD_GRAPH_321CBB04
+    SWIFLOAD_PROJECT_OVERVIEW_2DEA2D02 -->|implements x2| USELOGISTICS_66953927
+    SWIFLOAD_PROJECT_OVERVIEW_2DEA2D02 -->|implements| OUTPUTS_DOCS_ED82387C
     INGEST_CACHE_UPDATE_FF457338 -->|relates| OUTPUTS_DOCS_ED82387C
     CHANGES_REQUIRED_SPECIFICATION_44D8EAEE -->|implements| OUTPUTS_DOCS_ED82387C
     CHANGES_REQUIRED_SPECIFICATION_44D8EAEE -->|relates| SERVE_API_35EC8E86
@@ -143,94 +146,79 @@ flowchart LR
     <h4>Architecture Layers</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
-      <tr><td>Graph Build</td><td>137</td><td><code>3, 4, 5, 8, 10</code></td></tr><tr><td>Outputs &amp; Docs</td><td>89</td><td><code>0, 1</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>22</td><td><code>7</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>44</td><td><code>6, 11, 12</code></td></tr><tr><td>Serving API</td><td>41</td><td><code>2</code></td></tr><tr><td>SwifLoad Project Overview</td><td>13</td><td><code>9</code></td></tr><tr><td>Bengaluru Setup and Hardware Cost Guide</td><td>7</td><td><code>13</code></td></tr><tr><td>layout.tsx</td><td>7</td><td><code>14</code></td></tr><tr><td>Changes Required Specification</td><td>4</td><td><code>15</code></td></tr><tr><td>Software Outsourcing Cost Estimate</td><td>2</td><td><code>16</code></td></tr><tr><td>next.config.mjs</td><td>2</td><td><code>17</code></td></tr><tr><td>postcss.config.js</td><td>1</td><td><code>18</code></td></tr><tr><td>sw.js</td><td>1</td><td><code>19</code></td></tr><tr><td>tailwind.config.js</td><td>1</td><td><code>20</code></td></tr>
+      <tr><td>Graph Build</td><td>108</td><td><code>3, 5, 7, 8</code></td></tr><tr><td>Outputs &amp; Docs</td><td>82</td><td><code>1, 4</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>22</td><td><code>9</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>47</td><td><code>6, 11, 12</code></td></tr><tr><td>Serving API</td><td>41</td><td><code>2</code></td></tr><tr><td>useLogistics</td><td>54</td><td><code>0</code></td></tr><tr><td>SwifLoad Project Overview</td><td>13</td><td><code>10</code></td></tr><tr><td>Bengaluru Setup and Hardware Cost Guide</td><td>7</td><td><code>13</code></td></tr><tr><td>layout.tsx</td><td>7</td><td><code>14</code></td></tr><tr><td>Changes Required Specification</td><td>4</td><td><code>15</code></td></tr><tr><td>Software Outsourcing Cost Estimate</td><td>2</td><td><code>16</code></td></tr><tr><td>next.config.mjs</td><td>2</td><td><code>17</code></td></tr><tr><td>downloads/page.tsx</td><td>2</td><td><code>18</code></td></tr><tr><td>postcss.config.js</td><td>1</td><td><code>19</code></td></tr><tr><td>Other</td><td>2</td><td><code>20, 21</code></td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Core Flow</h4>
-    <div class="arrow-chain">CLI &amp; Skill Installers -&gt; Serving API -&gt; Outputs &amp; Docs -&gt; Graph Build -&gt; Ingestion &amp; Updates -&gt; SwifLoad Project Overview -&gt; Bengaluru Setup and Hardware Cost Guide</div>
+    <div class="arrow-chain">Graph Build -&gt; Outputs &amp; Docs -&gt; useLogistics -&gt; CLI &amp; Skill Installers -&gt; Serving API -&gt; Ingestion &amp; Updates -&gt; SwifLoad Project Overview</div>
   </div>
 </div>
 <div class="grid">
   <div class="card">
     <h4>Graph Report Highlights</h4>
     <ul>
-      <li>371 nodes · 721 edges · 21 communities (16 shown, 5 thin omitted)</li>
+      <li>394 nodes · 759 edges · 22 communities (20 shown, 2 thin omitted)</li>
       <li>Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 29 edges (avg confidence: 0.93)</li>
       <li>Token cost: 0 input · 0 output</li>
       <li>1. `useLogistics()` - 31 edges</li>
       <li>2. `getDatabase()` - 23 edges</li>
-      <li>3. `saveDatabase()` - 18 edges</li>
+      <li>3. `LogisticsContextType` - 21 edges</li>
     </ul>
   </div>
 </div>
 <hr>
 <!-- ====== 2. Graph Build ====== -->
 <h2 id="build-graph">2. Graph Build</h2>
-<p>Graph Build groups implementation around packagejson, components, website, azure, mostly in package.json, AZURE_INFRASTRUCTURE_ARCHITECTURE.md, tsconfig.json. This section covers 137 nodes and 152 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Graph Build groups implementation around packagejson, azure, infrastructure, tsconfigjson, mostly in package.json, tsconfig.json, AZURE_INFRASTRUCTURE_ARCHITECTURE.md. This section covers 108 nodes and 106 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Graph Build (137 nodes, 152 edges)
-    subgraph build_graph_package_json_4e40bfbd["package.json"]
-        package_582681c2("package.json")
-        ref_capacitor_android_521aaa4c("@capacitor/android<br/><small>package.json</small>")
-        ref_capacitor_cli_0c16ce95("@capacitor/cli<br/><small>package.json</small>")
-    end
-    subgraph build_graph_components_Website_WebNavbar_tsx_548900f7["components/Website/WebNavbar.tsx"]
-        src_components_website_webnavbar_bd325050("WebNavbar.tsx")
-        src_components_website_webnavbar_webnavbar_8f14d908("WebNavbar()<br/><small>components/Website/WebNavbar.tsx</small>")
-    end
-    subgraph build_graph_components_Website_WebPlatform_tsx_afbe978b["components/Website/WebPlatform.tsx"]
-        src_components_website_webplatform_9efb80c0("WebPlatform.tsx")
-        src_components_website_webplatform_webplatform_748054f7("WebPlatform()<br/><small>components/Website/WebPlatform.tsx</small>")
-    end
-    src_app_downloads_page_4501e3b4("page.tsx")
-    src_components_website_bookingsuccessmodal_booki_948958da("BookingSuccessModal()<br/><small>components/Website/BookingSuccessModal.tsx</small>")
-    src_components_website_customerreviewssection_cu_6f38ac7c("CustomerReviewsSection()<br/><small>components/Website/CustomerReviewsSection.tsx</small>")
-    src_components_website_driverpartnersection_driv_116664ba("DriverPartnerSection()<br/><small>components/Website/DriverPartnerSection.tsx</small>")
-    src_components_website_enterprisesection_enterpr_5db5589f("EnterpriseSection()<br/><small>components/Website/EnterpriseSection.tsx</small>")
-    src_components_website_fleetcomparison_fleetcomp_f5387ec2("FleetComparison()<br/><small>components/Website/FleetComparison.tsx</small>")
-    src_components_website_packersmoverssection_pack_69ec478a("PackersMoversSection()<br/><small>components/Website/PackersMoversSection.tsx</small>")
-    src_components_website_prohibitedgoodsmodal_proh_e9075651("ProhibitedGoodsModal()<br/><small>components/Website/ProhibitedGoodsModal.tsx</small>")
-    src_components_website_trustandsafetysection_tru_340b8126("TrustAndSafetySection()<br/><small>components/Website/TrustAndSafetySection.tsx</small>")
-    src_components_website_webfaqsection_webfaqsecti_beab326f("WebFaqSection()<br/><small>components/Website/WebFaqSection.tsx</small>")
-    src_components_website_webfooter_webfooter_9e043458("WebFooter()<br/><small>components/Website/WebFooter.tsx</small>")
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_fleetcomparison_fleetcomp_f5387ec2
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_packersmoverssection_pack_69ec478a
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_enterprisesection_enterpr_5db5589f
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_driverpartnersection_driv_116664ba
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_trustandsafetysection_tru_340b8126
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_customerreviewssection_cu_6f38ac7c
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_webfaqsection_webfaqsecti_beab326f
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_webfooter_webfooter_9e043458
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_bookingsuccessmodal_booki_948958da
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_prohibitedgoodsmodal_proh_e9075651
-    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_webnavbar_webnavbar_8f14d908
-    package_582681c2 -->|imports| ref_capacitor_android_521aaa4c
-    package_582681c2 -->|imports| ref_capacitor_cli_0c16ce95
-    src_components_website_webplatform_9efb80c0 -->|imports| src_components_website_webnavbar_webnavbar_8f14d908
-    src_components_website_webplatform_9efb80c0 -->|imports| src_components_website_webnavbar_bd325050
-    %% Omitted for readability: 119 nodes, 0 edges
-    class package_582681c2 function;
-    class ref_capacitor_android_521aaa4c function;
-    class ref_capacitor_cli_0c16ce95 entry;
-    class src_components_website_webnavbar_bd325050 ui;
-    class src_components_website_webnavbar_webnavbar_8f14d908 ui;
-    class src_components_website_webplatform_9efb80c0 ui;
-    class src_components_website_webplatform_webplatform_748054f7 ui;
-    class src_app_downloads_page_4501e3b4 ui;
-    class src_components_website_bookingsuccessmodal_booki_948958da ui;
-    class src_components_website_customerreviewssection_cu_6f38ac7c async;
-    class src_components_website_driverpartnersection_driv_116664ba ui;
-    class src_components_website_enterprisesection_enterpr_5db5589f ui;
-    class src_components_website_fleetcomparison_fleetcomp_f5387ec2 ui;
-    class src_components_website_packersmoverssection_pack_69ec478a async;
-    class src_components_website_prohibitedgoodsmodal_proh_e9075651 ui;
-    class src_components_website_trustandsafetysection_tru_340b8126 ui;
-    class src_components_website_webfaqsection_webfaqsecti_beab326f ui;
-    class src_components_website_webfooter_webfooter_9e043458 ui;
+    %% Section: Graph Build (108 nodes, 106 edges)
+    package_dependencies_capacitor_android_8d75296c("@capacitor/android<br/><small>package.json</small>")
+    package_dependencies_capacitor_cli_f08b78e8("@capacitor/cli<br/><small>package.json</small>")
+    package_dependencies_capacitor_core_630463b1("@capacitor/core<br/><small>package.json</small>")
+    package_dependencies_capacitor_ios_a3b2a4f0("@capacitor/ios<br/><small>package.json</small>")
+    package_dependencies_clsx_4bc09135("clsx<br/><small>package.json</small>")
+    package_dependencies_leaflet_e1b9b00b("leaflet<br/><small>package.json</small>")
+    package_devdependencies_autoprefixer_b396c789("autoprefixer<br/><small>package.json</small>")
+    autoprefixer_87dfe145("autoprefixer<br/><small>package.json</small>")
+    package_devdependencies_postcss_4f8d5c72("postcss<br/><small>package.json</small>")
+    postcss_eee6200b("postcss<br/><small>package.json</small>")
+    package_devdependencies_tailwindcss_9686c9d3("tailwindcss<br/><small>package.json</small>")
+    tailwindcss_34a67857("tailwindcss<br/><small>package.json</small>")
+    package_devdependencies_types_leaflet_a4f29e55("@types/leaflet<br/><small>package.json</small>")
+    types_leaflet_12c15aad("@types/leaflet<br/><small>package.json</small>")
+    package_devdependencies_types_node_04b141e9("@types/node<br/><small>package.json</small>")
+    types_node_eed9011c("@types/node<br/><small>package.json</small>")
+    package_devdependencies_types_react_327092bf("@types/react<br/><small>package.json</small>")
+    types_react_cf3431a2("@types/react<br/><small>package.json</small>")
+    package_devdependencies_autoprefixer_b396c789 -->|imports| autoprefixer_87dfe145
+    package_devdependencies_postcss_4f8d5c72 -->|imports| postcss_eee6200b
+    package_devdependencies_tailwindcss_9686c9d3 -->|imports| tailwindcss_34a67857
+    package_devdependencies_types_leaflet_a4f29e55 -->|imports| types_leaflet_12c15aad
+    package_devdependencies_types_node_04b141e9 -->|imports| types_node_eed9011c
+    package_devdependencies_types_react_327092bf -->|imports| types_react_cf3431a2
+    %% Omitted for readability: 90 nodes, 0 edges
+    class package_dependencies_capacitor_android_8d75296c function;
+    class package_dependencies_capacitor_cli_f08b78e8 entry;
+    class package_dependencies_capacitor_core_630463b1 function;
+    class package_dependencies_capacitor_ios_a3b2a4f0 function;
+    class package_dependencies_clsx_4bc09135 function;
+    class package_dependencies_leaflet_e1b9b00b function;
+    class package_devdependencies_autoprefixer_b396c789 function;
+    class autoprefixer_87dfe145 function;
+    class package_devdependencies_postcss_4f8d5c72 function;
+    class postcss_eee6200b function;
+    class package_devdependencies_tailwindcss_9686c9d3 function;
+    class tailwindcss_34a67857 function;
+    class package_devdependencies_types_leaflet_a4f29e55 function;
+    class types_leaflet_12c15aad function;
+    class package_devdependencies_types_node_04b141e9 function;
+    class types_node_eed9011c function;
+    class package_devdependencies_types_react_327092bf function;
+    class types_react_cf3431a2 function;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -257,7 +245,7 @@ flowchart LR
   <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>@capacitor/android</code><br><small style="color:var(--muted)">package.json</small><br><code>@capacitor/cli</code><br><small style="color:var(--muted)">package.json</small><br><code>@capacitor/core</code><br><small style="color:var(--muted)">package.json</small><br>+17 more</td>
+  <td>No direct outbound edge</td>
   <td>package.json node in package.json.</td>
 </tr>
 <tr>
@@ -281,7 +269,7 @@ flowchart LR
   <td><code>autoprefixer</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>autoprefixer</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>autoprefixer node in package.json.</td>
 </tr>
 <tr>
@@ -289,7 +277,7 @@ flowchart LR
   <td><code>postcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>postcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>postcss node in package.json.</td>
 </tr>
 <tr>
@@ -297,59 +285,51 @@ flowchart LR
   <td><code>tailwindcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>tailwindcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>tailwindcss node in package.json.</td>
 </tr>
 <tr>
   <td>7</td>
-  <td><code>@tailwindcss/postcss</code><br><small style="color:var(--muted)">package.json</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>@tailwindcss/postcss node in package.json.</td>
-</tr>
-<tr>
-  <td>8</td>
   <td><code>@types/leaflet</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>@types/leaflet</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>@types/leaflet node in package.json.</td>
 </tr>
 <tr>
-  <td>9</td>
+  <td>8</td>
   <td><code>@types/node</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>@types/node</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>@types/node node in package.json.</td>
 </tr>
 <tr>
-  <td>10</td>
+  <td>9</td>
   <td><code>@types/react</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>@types/react</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>@types/react node in package.json.</td>
 </tr>
 <tr>
-  <td>11</td>
+  <td>10</td>
   <td><code>@types/react-dom</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>@types/react-dom</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>@types/react-dom node in package.json.</td>
 </tr>
 <tr>
-  <td>12</td>
+  <td>11</td>
   <td><code>typescript</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
+  <td><code>typescript</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>typescript node in package.json.</td>
 </tr>
 <tr>
-  <td>13</td>
+  <td>12</td>
   <td><code>name</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -357,7 +337,7 @@ flowchart LR
   <td>name node in package.json.</td>
 </tr>
 <tr>
-  <td>14</td>
+  <td>13</td>
   <td><code>private</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -365,7 +345,7 @@ flowchart LR
   <td>private node in package.json.</td>
 </tr>
 <tr>
-  <td>15</td>
+  <td>14</td>
   <td><code>scripts</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -373,7 +353,7 @@ flowchart LR
   <td>scripts node in package.json.</td>
 </tr>
 <tr>
-  <td>16</td>
+  <td>15</td>
   <td><code>build</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -381,7 +361,7 @@ flowchart LR
   <td>build node in package.json.</td>
 </tr>
 <tr>
-  <td>17</td>
+  <td>16</td>
   <td><code>cap:android</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -389,7 +369,7 @@ flowchart LR
   <td>cap:android node in package.json.</td>
 </tr>
 <tr>
-  <td>18</td>
+  <td>17</td>
   <td><code>cap:ios</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -397,7 +377,7 @@ flowchart LR
   <td>cap:ios node in package.json.</td>
 </tr>
 <tr>
-  <td>19</td>
+  <td>18</td>
   <td><code>cap:sync</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -405,7 +385,7 @@ flowchart LR
   <td>cap:sync node in package.json.</td>
 </tr>
 <tr>
-  <td>20</td>
+  <td>19</td>
   <td><code>dev</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -413,7 +393,7 @@ flowchart LR
   <td>dev node in package.json.</td>
 </tr>
 <tr>
-  <td>21</td>
+  <td>20</td>
   <td><code>lint</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -421,12 +401,20 @@ flowchart LR
   <td>lint node in package.json.</td>
 </tr>
 <tr>
-  <td>22</td>
+  <td>21</td>
   <td><code>start</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>start node in package.json.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>update-apks</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>update-apks node in package.json.</td>
 </tr>
 <tr>
   <td>23</td>
@@ -440,57 +428,57 @@ flowchart LR
   <td>24</td>
   <td><code>autoprefixer</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>autoprefixer</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
   <td>autoprefixer node in package.json.</td>
 </tr>
 <tr>
   <td>25</td>
-  <td><code>@capacitor/android</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>postcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>postcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
-  <td>@capacitor/android node in package.json.</td>
+  <td>postcss node in package.json.</td>
 </tr>
 <tr>
   <td>26</td>
-  <td><code>@capacitor/cli</code><br><small style="color:var(--muted)">package.json</small></td>
-  <td><span class="tag tag-cmd">Entry</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>tailwindcss</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>tailwindcss</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
-  <td>@capacitor/cli node in package.json.</td>
+  <td>tailwindcss node in package.json.</td>
 </tr>
 <tr>
   <td>27</td>
-  <td><code>@capacitor/core</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/leaflet</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/leaflet</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
-  <td>@capacitor/core node in package.json.</td>
+  <td>@types/leaflet node in package.json.</td>
 </tr>
 <tr>
   <td>28</td>
-  <td><code>@capacitor/ios</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/node</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/node</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
-  <td>@capacitor/ios node in package.json.</td>
+  <td>@types/node node in package.json.</td>
 </tr>
 <tr>
   <td>29</td>
-  <td><code>clsx</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/react</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/react</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
-  <td>clsx node in package.json.</td>
+  <td>@types/react node in package.json.</td>
 </tr>
 <tr>
   <td>30</td>
-  <td><code>leaflet</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/react-dom</code><br><small style="color:var(--muted)">package.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>package.json</code><br><small style="color:var(--muted)">package.json</small></td>
+  <td><code>@types/react-dom</code><br><small style="color:var(--muted)">package.json</small></td>
   <td>No direct outbound edge</td>
-  <td>leaflet node in package.json.</td>
+  <td>@types/react-dom node in package.json.</td>
 </tr>
 </table>
 
@@ -499,100 +487,93 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>package.json</code></td><td>55 nodes</td></tr>
-<tr><td><code>AZURE_INFRASTRUCTURE_ARCHITECTURE.md</code></td><td>27 nodes</td></tr>
-<tr><td><code>tsconfig.json</code></td><td>19 nodes</td></tr>
-<tr><td><code>components/Website/BookingSuccessModal.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Website/DriverPartnerSection.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Website/FleetComparison.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Website/PackersMoversSection.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Website/ProhibitedGoodsModal.tsx</code></td><td>3 nodes</td></tr>
+      <tr><td><code>package.json</code></td><td>54 nodes</td></tr>
+<tr><td><code>tsconfig.json</code></td><td>28 nodes</td></tr>
+<tr><td><code>AZURE_INFRASTRUCTURE_ARCHITECTURE.md</code></td><td>26 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x101, imports x21, imports x19, calls x11. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x78, imports x19, extends x9. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
 
 <!-- ====== 3. Outputs & Docs ====== -->
 <h2 id="outputs-docs">3. Outputs &amp; Docs</h2>
-<p>Outputs &amp; Docs groups implementation around logisticsts, types, components, pagetsx, mostly in src/types/logistics.ts, src/lib/data.ts, src/lib/pricing.ts. This section covers 89 nodes and 291 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Outputs &amp; Docs groups implementation around logisticsts, types, datats, pricingts, mostly in src/types/logistics.ts, src/lib/data.ts, src/lib/pricing.ts. This section covers 82 nodes and 271 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Outputs &amp; Docs (89 nodes, 291 edges)
+    %% Section: Outputs &amp; Docs (82 nodes, 271 edges)
     subgraph outputs_docs_src_lib_pricing_ts_02d0f7ba["src/lib/pricing.ts"]
         src_lib_pricing_81708ec4("pricing.ts")
-        src_lib_pricing_calculateslabdistancefare_2f1f5ff5("calculateSlabDistanceFare()<br/><small>src/lib/pricing.ts</small>")
         src_lib_pricing_calculatedistancekm_0785bfe1("calculateDistanceKm()<br/><small>src/lib/pricing.ts</small>")
+        src_lib_pricing_calculatemultistopdistancekm_dd854da0("calculateMultiStopDistanceKm()<br/><small>src/lib/pricing.ts</small>")
         src_lib_pricing_estimatedurationmins_548c2a8b("estimateDurationMins()<br/><small>src/lib/pricing.ts</small>")
-    end
-    subgraph outputs_docs_components_Admin_AdminPortal_tsx_a8e7c3e2["components/Admin/AdminPortal.tsx"]
-        src_components_admin_adminportal_eb0048e4("AdminPortal.tsx")
-        src_components_admin_adminportal_adminportal_41d331af("AdminPortal()<br/><small>components/Admin/AdminPortal.tsx</small>")
-        src_components_admin_adminportal_leafletmap_d360b986("LeafletMap<br/><small>components/Admin/AdminPortal.tsx</small>")
+        src_lib_pricing_calculatecustomerquotedslabfare_f850cc90("calculateCustomerQuotedSlabFare()<br/><small>src/lib/pricing.ts</small>")
+        src_lib_pricing_calculatedrivertaskpayout_7f2c87c2("calculateDriverTaskPayout()<br/><small>src/lib/pricing.ts</small>")
+        src_lib_pricing_calculatecancellationfee_90e8c59f("calculateCancellationFee()<br/><small>src/lib/pricing.ts</small>")
+        src_lib_pricing_calculateslabdistancefare_2f1f5ff5("calculateSlabDistanceFare()<br/><small>src/lib/pricing.ts</small>")
+        src_lib_pricing_detectzonesurge_ae3228af("detectZoneSurge()<br/><small>src/lib/pricing.ts</small>")
+        src_lib_pricing_calculatefare_d68b0d45("calculateFare()<br/><small>src/lib/pricing.ts</small>")
     end
     subgraph outputs_docs_components_Customer_CustomerApp_tsx_9d10153c["components/Customer/CustomerApp.tsx"]
         src_components_customer_customerapp_eeea01ae("CustomerApp.tsx")
         src_components_customer_customerapp_customerapp_30939343("CustomerApp()<br/><small>components/Customer/CustomerApp.tsx</small>")
-        src_components_customer_customerapp_leafletmap_f643bc48("LeafletMap<br/><small>components/Customer/CustomerApp.tsx</small>")
     end
     subgraph outputs_docs_src_context_LogisticsContext_tsx_c001804d["src/context/LogisticsContext.tsx"]
         src_context_logisticscontext_4a123b9d("LogisticsContext.tsx")
-        src_context_logisticscontext_uselogistics_a9a3ae8c("useLogistics()<br/><small>src/context/LogisticsContext.tsx</small>")
+        src_context_logisticscontext_logisticsprovider_33779c55("LogisticsProvider()<br/><small>src/context/LogisticsContext.tsx</small>")
     end
-    src_app_admin_page_adminpage_55859fe6("AdminPage()<br/><small>app/admin/page.tsx</small>")
-    src_app_customer_page_customerpage_8fee8943("CustomerPage()<br/><small>app/customer/page.tsx</small>")
-    src_app_driver_page_driverpage_30206a8f("DriverPage()<br/><small>app/driver/page.tsx</small>")
-    src_components_website_herobookingwidget_6a6e2755("HeroBookingWidget.tsx")
+    src_components_admin_adminportal_eb0048e4("AdminPortal.tsx")
+    src_components_website_herobookingwidget_heroboo_e6748f96("HeroBookingWidget()<br/><small>components/Website/HeroBookingWidget.tsx</small>")
     src_lib_server_db_a9b5461f("db.ts")
-    src_app_page_home_5400487e("Home()<br/><small>src/app/page.tsx</small>")
-    src_app_admin_page_adminpage_55859fe6 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_app_customer_page_customerpage_8fee8943 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_app_driver_page_driverpage_30206a8f -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_app_page_home_5400487e -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_components_admin_adminportal_adminportal_41d331af -->|calls| src_lib_pricing_calculateslabdistancefare_2f1f5ff5
-    src_components_admin_adminportal_adminportal_41d331af -->|calls| src_components_admin_adminportal_leafletmap_d360b986
-    src_components_admin_adminportal_adminportal_41d331af -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_components_customer_customerapp_customerapp_30939343 -->|calls| src_components_customer_customerapp_leafletmap_f643bc48
+    src_lib_data_7bb8b105("data.ts")
     src_components_customer_customerapp_customerapp_30939343 -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
+    src_components_customer_customerapp_customerapp_30939343 -->|calls| src_lib_pricing_calculatemultistopdistancekm_dd854da0
     src_components_customer_customerapp_customerapp_30939343 -->|calls| src_lib_pricing_estimatedurationmins_548c2a8b
-    src_components_customer_customerapp_customerapp_30939343 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_components_customer_customerapp_eeea01ae -->|imports| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_components_customer_customerapp_eeea01ae -->|imports| src_lib_pricing_calculatedistancekm_0785bfe1
-    src_components_customer_customerapp_eeea01ae -->|imports| src_lib_pricing_estimatedurationmins_548c2a8b
-    src_components_customer_customerapp_eeea01ae -->|imports| src_context_logisticscontext_4a123b9d
-    src_components_customer_customerapp_eeea01ae -->|imports| src_lib_pricing_81708ec4
-    src_components_website_herobookingwidget_6a6e2755 -->|imports| src_context_logisticscontext_uselogistics_a9a3ae8c
-    src_components_website_herobookingwidget_6a6e2755 -->|imports| src_lib_pricing_calculatedistancekm_0785bfe1
-    src_components_website_herobookingwidget_6a6e2755 -->|imports| src_lib_pricing_estimatedurationmins_548c2a8b
-    src_components_website_herobookingwidget_6a6e2755 -->|imports| src_context_logisticscontext_4a123b9d
-    src_components_website_herobookingwidget_6a6e2755 -->|imports| src_lib_pricing_81708ec4
-    src_components_admin_adminportal_eb0048e4 -->|imports| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_customer_customerapp_customerapp_30939343 -->|calls| src_lib_pricing_calculatecustomerquotedslabfare_f850cc90
+    src_components_website_herobookingwidget_heroboo_e6748f96 -->|calls| src_lib_pricing_calculatecustomerquotedslabfare_f850cc90
+    src_components_website_herobookingwidget_heroboo_e6748f96 -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
+    src_components_website_herobookingwidget_heroboo_e6748f96 -->|calls| src_lib_pricing_estimatedurationmins_548c2a8b
+    src_context_logisticscontext_logisticsprovider_33779c55 -->|calls| src_lib_pricing_calculatemultistopdistancekm_dd854da0
+    src_context_logisticscontext_logisticsprovider_33779c55 -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
+    src_context_logisticscontext_logisticsprovider_33779c55 -->|calls| src_lib_pricing_estimatedurationmins_548c2a8b
+    src_context_logisticscontext_logisticsprovider_33779c55 -->|calls| src_lib_pricing_calculatecustomerquotedslabfare_f850cc90
+    src_context_logisticscontext_logisticsprovider_33779c55 -->|calls| src_lib_pricing_calculatedrivertaskpayout_7f2c87c2
+    src_context_logisticscontext_logisticsprovider_33779c55 -->|calls| src_lib_pricing_calculatecancellationfee_90e8c59f
+    src_lib_pricing_calculatecustomerquotedslabfare_f850cc90 -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
+    src_lib_pricing_calculatecustomerquotedslabfare_f850cc90 -->|calls| src_lib_pricing_calculateslabdistancefare_2f1f5ff5
+    src_lib_pricing_calculatecustomerquotedslabfare_f850cc90 -->|calls| src_lib_pricing_detectzonesurge_ae3228af
+    src_lib_pricing_calculatedrivertaskpayout_7f2c87c2 -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
+    src_lib_pricing_calculatedrivertaskpayout_7f2c87c2 -->|calls| src_lib_pricing_calculateslabdistancefare_2f1f5ff5
+    src_lib_pricing_calculatefare_d68b0d45 -->|calls| src_lib_pricing_detectzonesurge_ae3228af
+    src_lib_pricing_calculatemultistopdistancekm_dd854da0 -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
+    src_lib_pricing_detectzonesurge_ae3228af -->|calls| src_lib_pricing_calculatedistancekm_0785bfe1
     src_components_admin_adminportal_eb0048e4 -->|imports| src_lib_pricing_calculateslabdistancefare_2f1f5ff5
     src_components_admin_adminportal_eb0048e4 -->|imports| src_context_logisticscontext_4a123b9d
-    %% Omitted for readability: 71 nodes, 4 edges
+    src_components_admin_adminportal_eb0048e4 -->|imports| src_lib_pricing_81708ec4
+    %% Omitted for readability: 64 nodes, 17 edges
     class src_lib_pricing_81708ec4 module;
-    class src_lib_pricing_calculateslabdistancefare_2f1f5ff5 function;
     class src_lib_pricing_calculatedistancekm_0785bfe1 function;
+    class src_lib_pricing_calculatemultistopdistancekm_dd854da0 function;
     class src_lib_pricing_estimatedurationmins_548c2a8b function;
-    class src_components_admin_adminportal_eb0048e4 ui;
-    class src_components_admin_adminportal_adminportal_41d331af ui;
-    class src_components_admin_adminportal_leafletmap_d360b986 ui;
+    class src_lib_pricing_calculatecustomerquotedslabfare_f850cc90 function;
+    class src_lib_pricing_calculatedrivertaskpayout_7f2c87c2 function;
+    class src_lib_pricing_calculatecancellationfee_90e8c59f function;
+    class src_lib_pricing_calculateslabdistancefare_2f1f5ff5 function;
+    class src_lib_pricing_detectzonesurge_ae3228af function;
+    class src_lib_pricing_calculatefare_d68b0d45 function;
     class src_components_customer_customerapp_eeea01ae ui;
     class src_components_customer_customerapp_customerapp_30939343 ui;
-    class src_components_customer_customerapp_leafletmap_f643bc48 ui;
     class src_context_logisticscontext_4a123b9d ui;
-    class src_context_logisticscontext_uselogistics_a9a3ae8c ui;
-    class src_app_admin_page_adminpage_55859fe6 ui;
-    class src_app_customer_page_customerpage_8fee8943 ui;
-    class src_app_driver_page_driverpage_30206a8f ui;
-    class src_components_website_herobookingwidget_6a6e2755 ui;
+    class src_context_logisticscontext_logisticsprovider_33779c55 ui;
+    class src_components_admin_adminportal_eb0048e4 ui;
+    class src_components_website_herobookingwidget_heroboo_e6748f96 ui;
     class src_lib_server_db_a9b5461f module;
-    class src_app_page_home_5400487e ui;
+    class src_lib_data_7bb8b105 module;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -616,243 +597,243 @@ flowchart LR
 </tr>
 <tr>
   <td>1</td>
-  <td><code>LeafletMapProps</code><br><small style="color:var(--muted)">components/Map/LeafletMap.tsx</small></td>
+  <td><code>LogisticsContextType</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>LeafletMapProps node in components/Map/LeafletMap.tsx.</td>
+  <td>LogisticsContextType node in src/context/LogisticsContext.tsx.</td>
 </tr>
 <tr>
   <td>2</td>
-  <td><code>HeroBookingWidgetProps</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>DatabaseSchema</code><br><small style="color:var(--muted)">lib/server/db.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>HeroBookingWidgetProps node in components/Website/HeroBookingWidget.tsx.</td>
+  <td>DatabaseSchema node in lib/server/db.ts.</td>
 </tr>
 <tr>
   <td>3</td>
-  <td><code>LiveTrackingModalProps</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td>External entry / no inbound edge</td>
+  <td><code>AdminRole</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>LiveTrackingModalProps node in components/Website/LiveTrackingModal.tsx.</td>
+  <td>AdminRole node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>4</td>
-  <td><code>CreateTripPayload</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td>External entry / no inbound edge</td>
+  <td><code>CustomerTypeSlabConfig</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br>+2 more</td>
   <td>No direct outbound edge</td>
-  <td>CreateTripPayload node in src/context/LogisticsContext.tsx.</td>
+  <td>Reads, resolves, or persists project configuration.</td>
 </tr>
 <tr>
   <td>5</td>
-  <td><code>FareBreakdown</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><code>CustomerUser</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>pricing.ts</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
+  <td><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>FareBreakdown node in src/types/logistics.ts.</td>
+  <td>CustomerUser node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>6</td>
-  <td><code>GoodsCategory</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><code>DistanceSlab</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>HeroBookingWidget.tsx</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>pricing.ts</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
   <td>No direct outbound edge</td>
-  <td>GoodsCategory node in src/types/logistics.ts.</td>
+  <td>DistanceSlab node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>7</td>
-  <td><code>LocationPoint</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><code>DriverCancellationLockout</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>HeroBookingWidget.tsx</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small><br>+2 more</td>
+  <td><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>LocationPoint node in src/types/logistics.ts.</td>
+  <td>DriverCancellationLockout node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>8</td>
-  <td><code>PaymentMethod</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><code>DriverCancellationReason</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>HeroBookingWidget.tsx</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>DriverApp.tsx</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>PaymentMethod node in src/types/logistics.ts.</td>
+  <td>DriverCancellationReason node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>9</td>
-  <td><code>SlabBreakdownItem</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><code>DriverCancellationSlabConfig</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>pricing.ts</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>SlabBreakdownItem node in src/types/logistics.ts.</td>
+  <td>Reads, resolves, or persists project configuration.</td>
 </tr>
 <tr>
   <td>10</td>
-  <td><code>VehicleCategory</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><code>DriverGroup</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>DriverApp.tsx</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small><br>+6 more</td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>VehicleCategory node in src/types/logistics.ts.</td>
+  <td>DriverGroup node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>11</td>
-  <td><code>AdminPage()</code><br><small style="color:var(--muted)">app/admin/page.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>DriverKycDoc</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>Organizes documentation pages, navigation, or content lookup.</td>
+  <td>No direct outbound edge</td>
+  <td>DriverKycDoc node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>12</td>
-  <td><code>CustomerPage()</code><br><small style="color:var(--muted)">app/customer/page.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>Organizes documentation pages, navigation, or content lookup.</td>
+  <td><code>DriverNotification</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>DriverApp.tsx</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>DriverNotification node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>13</td>
-  <td><code>DriverPage()</code><br><small style="color:var(--muted)">app/driver/page.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>Organizes documentation pages, navigation, or content lookup.</td>
+  <td><code>DriverPartner</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small><br>+3 more</td>
+  <td>No direct outbound edge</td>
+  <td>DriverPartner node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>14</td>
-  <td><code>Home()</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>Home() node in src/app/page.tsx.</td>
+  <td><code>IncentiveSlab</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br>+2 more</td>
+  <td>No direct outbound edge</td>
+  <td>IncentiveSlab node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>15</td>
-  <td><code>AdminPortal()</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>page.tsx</code><br><small style="color:var(--muted)">app/admin/page.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
-  <td><code>calculateSlabDistanceFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>LeafletMap</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>AdminPortal() node in components/Admin/AdminPortal.tsx.</td>
+  <td><code>ReferralProgramConfig</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>Reads, resolves, or persists project configuration.</td>
 </tr>
 <tr>
   <td>16</td>
-  <td><code>CustomerApp()</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>page.tsx</code><br><small style="color:var(--muted)">app/customer/page.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
-  <td><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>estimateDurationMins()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br>+2 more</td>
-  <td>CustomerApp() node in components/Customer/CustomerApp.tsx.</td>
+  <td><code>ReferralRecord</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br>+1 more</td>
+  <td>No direct outbound edge</td>
+  <td>ReferralRecord node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>17</td>
-  <td><code>DriverApp()</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>page.tsx</code><br><small style="color:var(--muted)">app/driver/page.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
-  <td><code>calculateDriverTaskPayout()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>DriverApp() node in components/Driver/DriverApp.tsx.</td>
+  <td><code>RegisterDriverPayload</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>RegisterDriverPayload node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>18</td>
-  <td><code>LeafletMap()</code><br><small style="color:var(--muted)">components/Map/LeafletMap.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>LiveTrackingModal.tsx</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small></td>
+  <td><code>ServiceZone</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br>+2 more</td>
   <td>No direct outbound edge</td>
-  <td>LeafletMap() node in components/Map/LeafletMap.tsx.</td>
+  <td>ServiceZone node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>19</td>
-  <td><code>HeroBookingWidget()</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small><br><code>WebPlatform.tsx</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
-  <td><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>estimateDurationMins()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br>+1 more</td>
-  <td>HeroBookingWidget() node in components/Website/HeroBookingWidget.tsx.</td>
+  <td><code>ShipmentDetails</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>ShipmentDetails node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>20</td>
-  <td><code>LiveTrackingModal()</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
-  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td>LiveTrackingModal() node in components/Website/LiveTrackingModal.tsx.</td>
+  <td><code>Trip</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small><br>+2 more</td>
+  <td>No direct outbound edge</td>
+  <td>Trip node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>21</td>
-  <td><code>LogisticsProvider()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>layout.tsx</code><br><small style="color:var(--muted)">src/app/layout.tsx</small></td>
-  <td><code>calculateCancellationFee()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br>+2 more</td>
-  <td>LogisticsProvider() node in src/context/LogisticsContext.tsx.</td>
+  <td><code>TripStatus</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>LiveTrackingModal.tsx</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>TripStatus node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>22</td>
-  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>AdminPage()</code><br><small style="color:var(--muted)">app/admin/page.tsx</small><br><code>AdminPortal()</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br>+27 more</td>
+  <td><code>TripStop</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>DriverApp.tsx</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>useLogistics() node in src/context/LogisticsContext.tsx.</td>
+  <td>TripStop node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>23</td>
-  <td><code>calculateCancellationFee()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small><br><code>LogisticsProvider()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td><code>UserRole</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
   <td>No direct outbound edge</td>
-  <td>calculateCancellationFee() node in src/lib/pricing.ts.</td>
+  <td>UserRole node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>24</td>
-  <td><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>CustomerApp()</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>HeroBookingWidget()</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small><br>+3 more</td>
-  <td><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateSlabDistanceFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>detectZoneSurge()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td>calculateCustomerQuotedSlabFare() node in src/lib/pricing.ts.</td>
+  <td><code>VehicleConfig</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br>+2 more</td>
+  <td>No direct outbound edge</td>
+  <td>Reads, resolves, or persists project configuration.</td>
 </tr>
 <tr>
   <td>25</td>
-  <td><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateDriverTaskPayout()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>CustomerApp()</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br>+6 more</td>
+  <td><code>WalletTransaction</code><br><small style="color:var(--muted)">src/types/logistics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small><br>+2 more</td>
   <td>No direct outbound edge</td>
-  <td>calculateDistanceKm() node in src/lib/pricing.ts.</td>
+  <td>WalletTransaction node in src/types/logistics.ts.</td>
 </tr>
 <tr>
   <td>26</td>
-  <td><code>calculateDriverTaskPayout()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>DriverApp()</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small><br><code>DriverApp.tsx</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small><br>+1 more</td>
-  <td><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateSlabDistanceFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td>calculateDriverTaskPayout() node in src/lib/pricing.ts.</td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>page.tsx</code><br><small style="color:var(--muted)">app/admin/page.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
+  <td><code>AdminRole</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br><code>calculateSlabDistanceFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>CustomerType</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br>+14 more</td>
+  <td>Module file in components/Admin/AdminPortal.tsx.</td>
 </tr>
 <tr>
   <td>27</td>
-  <td><code>calculateFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
   <td><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
-  <td><code>detectZoneSurge()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td>calculateFare() node in src/lib/pricing.ts.</td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>BookingSuccessModal.tsx</code><br><small style="color:var(--muted)">components/Website/BookingSuccessModal.tsx</small><br><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br>+13 more</td>
+  <td><code>AdminRole</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br><code>calculateCancellationFee()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br>+45 more</td>
+  <td>Module file in src/context/LogisticsContext.tsx.</td>
 </tr>
 <tr>
   <td>28</td>
-  <td><code>calculateSlabDistanceFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>AdminPortal()</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>AdminPortal.tsx</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small><br><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br>+1 more</td>
+  <td><code>INITIAL_CUSTOMER</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>calculateSlabDistanceFare() node in src/lib/pricing.ts.</td>
+  <td>INITIAL_CUSTOMER node in src/context/LogisticsContext.tsx.</td>
 </tr>
 <tr>
   <td>29</td>
-  <td><code>detectZoneSurge()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>calculateCustomerQuotedSlabFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><code>calculateDistanceKm()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td>detectZoneSurge() node in src/lib/pricing.ts.</td>
+  <td><code>LogisticsContext</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>LogisticsContext node in src/context/LogisticsContext.tsx.</td>
 </tr>
 <tr>
   <td>30</td>
-  <td><code>estimateDurationMins()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>CustomerApp()</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>CustomerApp.tsx</code><br><small style="color:var(--muted)">components/Customer/CustomerApp.tsx</small><br><code>HeroBookingWidget()</code><br><small style="color:var(--muted)">components/Website/HeroBookingWidget.tsx</small><br>+3 more</td>
-  <td>No direct outbound edge</td>
-  <td>estimateDurationMins() node in src/lib/pricing.ts.</td>
+  <td><code>data.ts</code><br><small style="color:var(--muted)">src/lib/data.ts</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>LogisticsContext.tsx</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small><br><code>pricing.ts</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small></td>
+  <td><code>CustomerTypeSlabConfig</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br><code>DriverCancellationSlabConfig</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br><code>DriverGroup</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br>+12 more</td>
+  <td>Module file in src/lib/data.ts.</td>
 </tr>
 </table>
 
@@ -861,19 +842,19 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>src/types/logistics.ts</code></td><td>25 nodes</td></tr>
-<tr><td><code>src/lib/data.ts</code></td><td>11 nodes</td></tr>
-<tr><td><code>src/lib/pricing.ts</code></td><td>9 nodes</td></tr>
-<tr><td><code>src/context/LogisticsContext.tsx</code></td><td>7 nodes</td></tr>
-<tr><td><code>components/Admin/AdminPortal.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Customer/CustomerApp.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Driver/DriverApp.tsx</code></td><td>3 nodes</td></tr>
-<tr><td><code>components/Map/LeafletMap.tsx</code></td><td>3 nodes</td></tr>
+      <tr><td><code>src/types/logistics.ts</code></td><td>31 nodes</td></tr>
+<tr><td><code>src/lib/data.ts</code></td><td>15 nodes</td></tr>
+<tr><td><code>src/lib/pricing.ts</code></td><td>10 nodes</td></tr>
+<tr><td><code>src/context/LogisticsContext.tsx</code></td><td>6 nodes</td></tr>
+<tr><td><code>components/Website/FleetComparison.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/HeroBookingWidget.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>lib/server/db.ts</code></td><td>3 nodes</td></tr>
+<tr><td><code>docs/swifload-booking-fulfillment-workflow.html</code></td><td>2 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: imports x120, contains x66, imports x38, calls x31. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: imports x124, contains x65, references x38, calls x21. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -1170,12 +1151,12 @@ flowchart LR
 
 <!-- ====== 5. Ingestion & Updates ====== -->
 <h2 id="ingest-cache-update">5. Ingestion &amp; Updates</h2>
-<p>Ingestion &amp; Updates groups implementation around generate, scripts, manifestjson, instagram, mostly in public/manifest.json, scripts/generate_instagram_promo_v2.py, scripts/generate_real_screenshot_promo.py. This section covers 44 nodes and 58 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Ingestion &amp; Updates groups implementation around generate, scripts, manifestjson, instagram, mostly in public/manifest.json, scripts/generate_instagram_promo_v2.py, scripts/generate_real_screenshot_promo.py. This section covers 47 nodes and 62 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Ingestion &amp; Updates (44 nodes, 58 edges)
+    %% Section: Ingestion &amp; Updates (47 nodes, 62 edges)
     subgraph ingest_cache_update_scripts_generate_instagram_p_45e90f4e["scripts/generate_instagram_promo_v2.py"]
         scripts_generate_instagram_promo_v2_42c241db("generate_instagram_promo_v2.py")
         scripts_generate_instagram_promo_v2_render_exten_617b444a("extended promo video()<br/><small>scripts/generate_instagram_promo_v2.py</small>")
@@ -1196,11 +1177,11 @@ flowchart LR
         scripts_generate_instagram_promo_get_font_eda231e1("get_font()<br/><small>scripts/generate_instagram_promo.py</small>")
         scripts_generate_instagram_promo_draw_rounded_re_5add6fef("draw_rounded_rect()<br/><small>scripts/generate_instagram_promo.py</small>")
     end
-    subgraph ingest_cache_update_External_generated_9d67cab5["External / generated"]
-        os_999a3419("os")
-        time_714eea0f("time")
-        playwright_sync_api_c42cb56f("playwright_sync_api")
+    subgraph ingest_cache_update_scripts_rebuild_apks_py_75cd3325["scripts/rebuild_apks.py"]
+        scripts_rebuild_apks_rebuild_apk_b1742554("rebuild_apk()<br/><small>scripts/rebuild_apks.py</small>")
+        scripts_rebuild_apks_sign_apk_data_f1ba0e09("sign_apk_data()<br/><small>scripts/rebuild_apks.py</small>")
     end
+    os_999a3419("os")
     scripts_capture_real_screenshots_8d13c95e("capture_real_screenshots.py")
     scripts_generate_instagram_promo_create_video_3221f36a -->|calls| scripts_generate_instagram_promo_get_font_eda231e1
     scripts_generate_instagram_promo_create_video_3221f36a -->|calls| scripts_generate_instagram_promo_draw_rounded_re_5add6fef
@@ -1210,13 +1191,12 @@ flowchart LR
     scripts_generate_real_screenshot_promo_render_re_47a1c19d -->|calls| scripts_generate_real_screenshot_promo_get_font_33611066
     scripts_generate_real_screenshot_promo_render_re_47a1c19d -->|calls| scripts_generate_real_screenshot_promo_generate_f20a397e
     scripts_generate_real_screenshot_promo_render_re_47a1c19d -->|calls| scripts_generate_real_screenshot_promo_draw_roun_aa4c9749
+    scripts_rebuild_apks_rebuild_apk_b1742554 -->|calls| scripts_rebuild_apks_sign_apk_data_f1ba0e09
     scripts_capture_real_screenshots_8d13c95e -->|imports| os_999a3419
-    scripts_capture_real_screenshots_8d13c95e -->|imports| time_714eea0f
-    scripts_capture_real_screenshots_8d13c95e -->|imports| playwright_sync_api_c42cb56f
     scripts_generate_instagram_promo_6dafc8de -->|imports| os_999a3419
     scripts_generate_instagram_promo_v2_42c241db -->|imports| os_999a3419
     scripts_generate_real_screenshot_promo_263077e9 -->|imports| os_999a3419
-    %% Omitted for readability: 26 nodes, 0 edges
+    %% Omitted for readability: 29 nodes, 0 edges
     class scripts_generate_instagram_promo_v2_42c241db module;
     class scripts_generate_instagram_promo_v2_render_exten_617b444a function;
     class scripts_generate_instagram_promo_v2_get_font_719eac99 function;
@@ -1231,9 +1211,9 @@ flowchart LR
     class scripts_generate_instagram_promo_create_video_3221f36a function;
     class scripts_generate_instagram_promo_get_font_eda231e1 function;
     class scripts_generate_instagram_promo_draw_rounded_re_5add6fef function;
+    class scripts_rebuild_apks_rebuild_apk_b1742554 function;
+    class scripts_rebuild_apks_sign_apk_data_f1ba0e09 function;
     class os_999a3419 function;
-    class time_714eea0f function;
-    class playwright_sync_api_c42cb56f api;
     class scripts_capture_real_screenshots_8d13c95e module;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
@@ -1346,6 +1326,22 @@ flowchart LR
 </tr>
 <tr>
   <td>12</td>
+  <td><code>rebuild_apk()</code><br><small style="color:var(--muted)">scripts/rebuild_apks.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>sign_apk_data()</code><br><small style="color:var(--muted)">scripts/rebuild_apks.py</small></td>
+  <td>rebuild_apk() node in scripts/rebuild_apks.py.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>sign_apk_data()</code><br><small style="color:var(--muted)">scripts/rebuild_apks.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>rebuild_apk()</code><br><small style="color:var(--muted)">scripts/rebuild_apks.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>sign_apk_data() node in scripts/rebuild_apks.py.</td>
+</tr>
+<tr>
+  <td>14</td>
   <td><code>capture_real_screenshots.py</code><br><small style="color:var(--muted)">scripts/capture_real_screenshots.py</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td>External entry / no inbound edge</td>
@@ -1353,7 +1349,7 @@ flowchart LR
   <td>Module file in scripts/capture_real_screenshots.py.</td>
 </tr>
 <tr>
-  <td>13</td>
+  <td>15</td>
   <td><code>generate_instagram_promo.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo.py</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td>External entry / no inbound edge</td>
@@ -1361,7 +1357,7 @@ flowchart LR
   <td>Module file in scripts/generate_instagram_promo.py.</td>
 </tr>
 <tr>
-  <td>14</td>
+  <td>16</td>
   <td><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td>External entry / no inbound edge</td>
@@ -1369,7 +1365,7 @@ flowchart LR
   <td>Module file in scripts/generate_instagram_promo_v2.py.</td>
 </tr>
 <tr>
-  <td>15</td>
+  <td>17</td>
   <td><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td>External entry / no inbound edge</td>
@@ -1377,7 +1373,15 @@ flowchart LR
   <td>Module file in scripts/generate_real_screenshot_promo.py.</td>
 </tr>
 <tr>
-  <td>16</td>
+  <td>18</td>
+  <td><code>rebuild_apks.py</code><br><small style="color:var(--muted)">scripts/rebuild_apks.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>os</code></td>
+  <td>Module file in scripts/rebuild_apks.py.</td>
+</tr>
+<tr>
+  <td>19</td>
   <td><code>cv2</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>generate_instagram_promo.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo.py</small><br><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
@@ -1385,7 +1389,7 @@ flowchart LR
   <td>cv2 node in project.</td>
 </tr>
 <tr>
-  <td>17</td>
+  <td>20</td>
   <td><code>imageio_ffmpeg</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
@@ -1393,7 +1397,7 @@ flowchart LR
   <td>imageio_ffmpeg node in project.</td>
 </tr>
 <tr>
-  <td>18</td>
+  <td>21</td>
   <td><code>numpy</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>generate_instagram_promo.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo.py</small><br><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
@@ -1401,15 +1405,15 @@ flowchart LR
   <td>numpy node in project.</td>
 </tr>
 <tr>
-  <td>19</td>
+  <td>22</td>
   <td><code>os</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>capture_real_screenshots.py</code><br><small style="color:var(--muted)">scripts/capture_real_screenshots.py</small><br><code>generate_instagram_promo.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo.py</small><br><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br>+1 more</td>
+  <td><code>capture_real_screenshots.py</code><br><small style="color:var(--muted)">scripts/capture_real_screenshots.py</small><br><code>generate_instagram_promo.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo.py</small><br><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br>+2 more</td>
   <td>No direct outbound edge</td>
   <td>os node in project.</td>
 </tr>
 <tr>
-  <td>20</td>
+  <td>23</td>
   <td><code>pil</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>generate_instagram_promo.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo.py</small><br><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
@@ -1417,7 +1421,7 @@ flowchart LR
   <td>pil node in project.</td>
 </tr>
 <tr>
-  <td>21</td>
+  <td>24</td>
   <td><code>playwright_sync_api</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-endpoint">API</span></td>
   <td><code>capture_real_screenshots.py</code><br><small style="color:var(--muted)">scripts/capture_real_screenshots.py</small></td>
@@ -1425,7 +1429,7 @@ flowchart LR
   <td>playwright_sync_api node in project.</td>
 </tr>
 <tr>
-  <td>22</td>
+  <td>25</td>
   <td><code>scipy_io_wavfile</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
@@ -1433,7 +1437,7 @@ flowchart LR
   <td>scipy_io_wavfile node in project.</td>
 </tr>
 <tr>
-  <td>23</td>
+  <td>26</td>
   <td><code>subprocess</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>generate_instagram_promo_v2.py</code><br><small style="color:var(--muted)">scripts/generate_instagram_promo_v2.py</small><br><code>generate_real_screenshot_promo.py</code><br><small style="color:var(--muted)">scripts/generate_real_screenshot_promo.py</small></td>
@@ -1441,7 +1445,7 @@ flowchart LR
   <td>subprocess node in project.</td>
 </tr>
 <tr>
-  <td>24</td>
+  <td>27</td>
   <td><code>time</code><br><small style="color:var(--muted)"></small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>capture_real_screenshots.py</code><br><small style="color:var(--muted)">scripts/capture_real_screenshots.py</small></td>
@@ -1449,7 +1453,7 @@ flowchart LR
   <td>time node in project.</td>
 </tr>
 <tr>
-  <td>25</td>
+  <td>28</td>
   <td><code>manifest.json</code><br><small style="color:var(--muted)">public/manifest.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -1457,7 +1461,7 @@ flowchart LR
   <td>manifest.json node in public/manifest.json.</td>
 </tr>
 <tr>
-  <td>26</td>
+  <td>29</td>
   <td><code>background_color</code><br><small style="color:var(--muted)">public/manifest.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
@@ -1465,36 +1469,12 @@ flowchart LR
   <td>background_color node in public/manifest.json.</td>
 </tr>
 <tr>
-  <td>27</td>
+  <td>30</td>
   <td><code>description</code><br><small style="color:var(--muted)">public/manifest.json</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
   <td>description node in public/manifest.json.</td>
-</tr>
-<tr>
-  <td>28</td>
-  <td><code>display</code><br><small style="color:var(--muted)">public/manifest.json</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>display node in public/manifest.json.</td>
-</tr>
-<tr>
-  <td>29</td>
-  <td><code>icons</code><br><small style="color:var(--muted)">public/manifest.json</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>icons node in public/manifest.json.</td>
-</tr>
-<tr>
-  <td>30</td>
-  <td><code>name</code><br><small style="color:var(--muted)">public/manifest.json</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td>External entry / no inbound edge</td>
-  <td>No direct outbound edge</td>
-  <td>name node in public/manifest.json.</td>
 </tr>
 </table>
 
@@ -1508,14 +1488,14 @@ flowchart LR
 <tr><td><code>scripts/generate_real_screenshot_promo.py</code></td><td>5 nodes</td></tr>
 <tr><td><code>scripts/generate_instagram_promo.py</code></td><td>4 nodes</td></tr>
 <tr><td><code>docs/swifload-architecture.html</code></td><td>3 nodes</td></tr>
+<tr><td><code>scripts/rebuild_apks.py</code></td><td>3 nodes</td></tr>
 <tr><td><code>archify_input.txt</code></td><td>2 nodes</td></tr>
 <tr><td><code>docs/Archify_Initial_Output_23Sep2026.JPG</code></td><td>2 nodes</td></tr>
-<tr><td><code>docs/Archify_25Sep2026_Updated.txt</code></td><td>1 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x21, imports x17, calls x8, references x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x23, imports x18, calls x9, references x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -1746,7 +1726,7 @@ flowchart LR
   <td>16</td>
   <td><code>getDatabase()</code><br><small style="color:var(--muted)">lib/server/db.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
-  <td><code>GET()</code><br><small style="color:var(--muted)">drivers/[id]/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">api/state/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">api/trips/route.ts</small><br>+17 more</td>
+  <td><code>GET()</code><br><small style="color:var(--muted)">api/drivers/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">trips/[id]/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">api/state/route.ts</small><br>+17 more</td>
   <td><code>getDbPath()</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>saveDatabase()</code><br><small style="color:var(--muted)">lib/server/db.ts</small></td>
   <td>getDatabase() node in lib/server/db.ts.</td>
 </tr>
@@ -1803,7 +1783,7 @@ flowchart LR
   <td><code>drivers/[id]/route.ts</code><br><small style="color:var(--muted)">drivers/[id]/route.ts</small></td>
   <td><span class="tag tag-endpoint">API</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>broadcastEvent()</code><br><small style="color:var(--muted)">lib/server/events.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>DriverPartner</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br>+5 more</td>
+  <td><code>broadcastEvent()</code><br><small style="color:var(--muted)">lib/server/events.ts</small><br><code>db.ts</code><br><small style="color:var(--muted)">lib/server/db.ts</small><br><code>DriverPartner</code><br><small style="color:var(--muted)">src/types/logistics.ts</small><br>+4 more</td>
   <td>Module file in drivers/[id]/route.ts.</td>
 </tr>
 <tr>
@@ -1886,8 +1866,372 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 7. SwifLoad Project Overview ====== -->
-<h2 id="swifload-project-overview">7. SwifLoad Project Overview</h2>
+<!-- ====== 7. useLogistics ====== -->
+<h2 id="uselogistics">7. useLogistics</h2>
+<p>useLogistics groups implementation around components, website, pagetsx, app, mostly in components/Driver/DriverApp.tsx, components/Map/LeafletMap.tsx, components/Website/BookingSuccessModal.tsx. This section covers 54 nodes and 94 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: useLogistics (54 nodes, 94 edges)
+    subgraph uselogistics_app_admin_page_tsx_1e279e6c["app/admin/page.tsx"]
+        src_app_admin_page_2b634994("page.tsx")
+        src_app_admin_page_adminpage_55859fe6("AdminPage()<br/><small>app/admin/page.tsx</small>")
+    end
+    subgraph uselogistics_app_driver_page_tsx_eb1271ae["app/driver/page.tsx"]
+        src_app_driver_page_a95accea("page.tsx")
+        src_app_driver_page_driverpage_30206a8f("DriverPage()<br/><small>app/driver/page.tsx</small>")
+    end
+    subgraph uselogistics_components_Website_LiveTrackingModa_58a61276["components/Website/LiveTrackingModal.tsx"]
+        src_components_website_livetrackingmodal_966198e3("LiveTrackingModal.tsx")
+        src_components_website_livetrackingmodal_livetra_89c7de12("LiveTrackingModal()<br/><small>components/Website/LiveTrackingModal.tsx</small>")
+    end
+    subgraph uselogistics_components_Website_WebPlatform_tsx_a32c5f7a["components/Website/WebPlatform.tsx"]
+        src_components_website_webplatform_9efb80c0("WebPlatform.tsx")
+        src_components_website_webplatform_webplatform_748054f7("WebPlatform()<br/><small>components/Website/WebPlatform.tsx</small>")
+    end
+    subgraph uselogistics_src_app_page_tsx_dbc6d903["src/app/page.tsx"]
+        src_app_page_29d61f84("page.tsx")
+        src_app_page_home_5400487e("Home()<br/><small>src/app/page.tsx</small>")
+    end
+    src_app_customer_page_customerpage_8fee8943("CustomerPage()<br/><small>app/customer/page.tsx</small>")
+    src_components_admin_adminportal_adminportal_41d331af("AdminPortal()<br/><small>components/Admin/AdminPortal.tsx</small>")
+    src_components_driver_driverapp_driverapp_68f26bbe("DriverApp()<br/><small>components/Driver/DriverApp.tsx</small>")
+    src_components_website_bookingsuccessmodal_booki_948958da("BookingSuccessModal()<br/><small>components/Website/BookingSuccessModal.tsx</small>")
+    src_components_website_driverpartnersection_driv_116664ba("DriverPartnerSection()<br/><small>components/Website/DriverPartnerSection.tsx</small>")
+    src_components_website_enterprisesection_enterpr_5db5589f("EnterpriseSection()<br/><small>components/Website/EnterpriseSection.tsx</small>")
+    src_context_logisticscontext_uselogistics_a9a3ae8c("useLogistics()<br/><small>src/context/LogisticsContext.tsx</small>")
+    src_lib_pricing_calculatedriverincentives_5b1cb3f9("calculateDriverIncentives()<br/><small>src/lib/pricing.ts</small>")
+    src_app_admin_page_adminpage_55859fe6 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_customer_page_customerpage_8fee8943 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_driver_page_driverpage_30206a8f -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_page_home_5400487e -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_admin_adminportal_adminportal_41d331af -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_driver_driverapp_driverapp_68f26bbe -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_driver_driverapp_driverapp_68f26bbe -->|calls| src_lib_pricing_calculatedriverincentives_5b1cb3f9
+    src_components_website_bookingsuccessmodal_booki_948958da -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_website_driverpartnersection_driv_116664ba -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_website_enterprisesection_enterpr_5db5589f -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_website_livetrackingmodal_livetra_89c7de12 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_enterprisesection_enterpr_5db5589f
+    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_driverpartnersection_driv_116664ba
+    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_livetrackingmodal_livetra_89c7de12
+    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_components_website_bookingsuccessmodal_booki_948958da
+    src_components_website_webplatform_webplatform_748054f7 -->|calls| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_admin_page_2b634994 -->|imports| src_components_admin_adminportal_adminportal_41d331af
+    src_app_admin_page_2b634994 -->|imports| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_driver_page_a95accea -->|imports| src_components_driver_driverapp_driverapp_68f26bbe
+    src_app_driver_page_a95accea -->|imports| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_page_29d61f84 -->|imports| src_context_logisticscontext_uselogistics_a9a3ae8c
+    src_app_page_29d61f84 -->|imports| src_components_driver_driverapp_driverapp_68f26bbe
+    src_app_page_29d61f84 -->|imports| src_components_admin_adminportal_adminportal_41d331af
+    src_app_page_29d61f84 -->|imports| src_components_website_webplatform_9efb80c0
+    %% Omitted for readability: 36 nodes, 3 edges
+    class src_app_admin_page_2b634994 ui;
+    class src_app_admin_page_adminpage_55859fe6 ui;
+    class src_app_driver_page_a95accea ui;
+    class src_app_driver_page_driverpage_30206a8f ui;
+    class src_components_website_livetrackingmodal_966198e3 ui;
+    class src_components_website_livetrackingmodal_livetra_89c7de12 ui;
+    class src_components_website_webplatform_9efb80c0 ui;
+    class src_components_website_webplatform_webplatform_748054f7 ui;
+    class src_app_page_29d61f84 ui;
+    class src_app_page_home_5400487e ui;
+    class src_app_customer_page_customerpage_8fee8943 ui;
+    class src_components_admin_adminportal_adminportal_41d331af ui;
+    class src_components_driver_driverapp_driverapp_68f26bbe ui;
+    class src_components_website_bookingsuccessmodal_booki_948958da ui;
+    class src_components_website_driverpartnersection_driv_116664ba ui;
+    class src_components_website_enterprisesection_enterpr_5db5589f ui;
+    class src_context_logisticscontext_uselogistics_a9a3ae8c ui;
+    class src_lib_pricing_calculatedriverincentives_5b1cb3f9 function;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>LeafletMapProps</code><br><small style="color:var(--muted)">components/Map/LeafletMap.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>LeafletMapProps node in components/Map/LeafletMap.tsx.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>BookingSuccessModalProps</code><br><small style="color:var(--muted)">components/Website/BookingSuccessModal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>BookingSuccessModalProps node in components/Website/BookingSuccessModal.tsx.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>DriverPartnerSectionProps</code><br><small style="color:var(--muted)">components/Website/DriverPartnerSection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>DriverPartnerSectionProps node in components/Website/DriverPartnerSection.tsx.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>LiveTrackingModalProps</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>LiveTrackingModalProps node in components/Website/LiveTrackingModal.tsx.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>PackersMoversSectionProps</code><br><small style="color:var(--muted)">components/Website/PackersMoversSection.tsx</small></td>
+  <td><span class="tag tag-async">Async</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>PackersMoversSectionProps node in components/Website/PackersMoversSection.tsx.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>ProhibitedGoodsModalProps</code><br><small style="color:var(--muted)">components/Website/ProhibitedGoodsModal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>ProhibitedGoodsModalProps node in components/Website/ProhibitedGoodsModal.tsx.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>TrustAndSafetySectionProps</code><br><small style="color:var(--muted)">components/Website/TrustAndSafetySection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>TrustAndSafetySectionProps node in components/Website/TrustAndSafetySection.tsx.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>WebFaqSectionProps</code><br><small style="color:var(--muted)">components/Website/WebFaqSection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>WebFaqSectionProps node in components/Website/WebFaqSection.tsx.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>WebFooterProps</code><br><small style="color:var(--muted)">components/Website/WebFooter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>WebFooterProps node in components/Website/WebFooter.tsx.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>WebNavbarProps</code><br><small style="color:var(--muted)">components/Website/WebNavbar.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>WebNavbarProps node in components/Website/WebNavbar.tsx.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>WebPlatformProps</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>WebPlatformProps node in components/Website/WebPlatform.tsx.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>AdminPage()</code><br><small style="color:var(--muted)">app/admin/page.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>CustomerPage()</code><br><small style="color:var(--muted)">app/customer/page.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>DriverPage()</code><br><small style="color:var(--muted)">app/driver/page.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>Home()</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>Home() node in src/app/page.tsx.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>AdminPortal()</code><br><small style="color:var(--muted)">components/Admin/AdminPortal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>page.tsx</code><br><small style="color:var(--muted)">app/admin/page.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
+  <td><code>calculateSlabDistanceFare()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>AdminPortal() node in components/Admin/AdminPortal.tsx.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>DriverApp()</code><br><small style="color:var(--muted)">components/Driver/DriverApp.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>page.tsx</code><br><small style="color:var(--muted)">app/driver/page.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">src/app/page.tsx</small></td>
+  <td><code>calculateDriverIncentives()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>calculateDriverTaskPayout()</code><br><small style="color:var(--muted)">src/lib/pricing.ts</small><br><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>DriverApp() node in components/Driver/DriverApp.tsx.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>LeafletMap()</code><br><small style="color:var(--muted)">components/Map/LeafletMap.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>LiveTrackingModal.tsx</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>LeafletMap() node in components/Map/LeafletMap.tsx.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>BookingSuccessModal()</code><br><small style="color:var(--muted)">components/Website/BookingSuccessModal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>BookingSuccessModal() node in components/Website/BookingSuccessModal.tsx.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>CustomerReviewsSection()</code><br><small style="color:var(--muted)">components/Website/CustomerReviewsSection.tsx</small></td>
+  <td><span class="tag tag-async">Async</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>CustomerReviewsSection() node in components/Website/CustomerReviewsSection.tsx.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>DriverPartnerSection()</code><br><small style="color:var(--muted)">components/Website/DriverPartnerSection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>DriverPartnerSection() node in components/Website/DriverPartnerSection.tsx.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>EnterpriseSection()</code><br><small style="color:var(--muted)">components/Website/EnterpriseSection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>EnterpriseSection() node in components/Website/EnterpriseSection.tsx.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>LiveTrackingModal()</code><br><small style="color:var(--muted)">components/Website/LiveTrackingModal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>LiveTrackingModal() node in components/Website/LiveTrackingModal.tsx.</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td><code>PackersMoversSection()</code><br><small style="color:var(--muted)">components/Website/PackersMoversSection.tsx</small></td>
+  <td><span class="tag tag-async">Async</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>PackersMoversSection() node in components/Website/PackersMoversSection.tsx.</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td><code>ProhibitedGoodsModal()</code><br><small style="color:var(--muted)">components/Website/ProhibitedGoodsModal.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>ProhibitedGoodsModal() node in components/Website/ProhibitedGoodsModal.tsx.</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td><code>TrustAndSafetySection()</code><br><small style="color:var(--muted)">components/Website/TrustAndSafetySection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>TrustAndSafetySection() node in components/Website/TrustAndSafetySection.tsx.</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td><code>WebFaqSection()</code><br><small style="color:var(--muted)">components/Website/WebFaqSection.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>WebFaqSection() node in components/Website/WebFaqSection.tsx.</td>
+</tr>
+<tr>
+  <td>28</td>
+  <td><code>WebFooter()</code><br><small style="color:var(--muted)">components/Website/WebFooter.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>WebFooter() node in components/Website/WebFooter.tsx.</td>
+</tr>
+<tr>
+  <td>29</td>
+  <td><code>WebNavbar()</code><br><small style="color:var(--muted)">components/Website/WebNavbar.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small><br><code>WebPlatform.tsx</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><code>useLogistics()</code><br><small style="color:var(--muted)">src/context/LogisticsContext.tsx</small></td>
+  <td>WebNavbar() node in components/Website/WebNavbar.tsx.</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td><code>WebPlatform()</code><br><small style="color:var(--muted)">components/Website/WebPlatform.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>BookingSuccessModal()</code><br><small style="color:var(--muted)">components/Website/BookingSuccessModal.tsx</small><br><code>CustomerReviewsSection()</code><br><small style="color:var(--muted)">components/Website/CustomerReviewsSection.tsx</small><br><code>DriverPartnerSection()</code><br><small style="color:var(--muted)">components/Website/DriverPartnerSection.tsx</small><br>+11 more</td>
+  <td>WebPlatform() node in components/Website/WebPlatform.tsx.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>components/Driver/DriverApp.tsx</code></td><td>4 nodes</td></tr>
+<tr><td><code>components/Map/LeafletMap.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/BookingSuccessModal.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/DriverPartnerSection.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/LiveTrackingModal.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/PackersMoversSection.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/ProhibitedGoodsModal.tsx</code></td><td>3 nodes</td></tr>
+<tr><td><code>components/Website/TrustAndSafetySection.tsx</code></td><td>3 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x31, calls x25, imports x19, imports x18. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 8. SwifLoad Project Overview ====== -->
+<h2 id="swifload-project-overview">8. SwifLoad Project Overview</h2>
 <p>SwifLoad Project Overview groups implementation around initial, readmemd, requirementstxt, app, mostly in README.md, Initial Requirements.txt. This section covers 13 nodes and 14 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2081,8 +2425,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 8. Bengaluru Setup and Hardware Cost Guide ====== -->
-<h2 id="bengaluru-setup-and-hardware-cost-guide">8. Bengaluru Setup and Hardware Cost Guide</h2>
+<!-- ====== 9. Bengaluru Setup and Hardware Cost Guide ====== -->
+<h2 id="bengaluru-setup-and-hardware-cost-guide">9. Bengaluru Setup and Hardware Cost Guide</h2>
 <p>Bengaluru Setup and Hardware Cost Guide groups implementation around hardware, setup, cost, docs, mostly in docs/SETUP_AND_HARDWARE_COST_BENGALURU.md, docs/SETUP_AND_HARDWARE_COST_COIMBATORE.md. This section covers 7 nodes and 6 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2208,8 +2552,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 9. layout.tsx ====== -->
-<h2 id="layout-tsx">9. layout.tsx</h2>
+<!-- ====== 10. layout.tsx ====== -->
+<h2 id="layout-tsx">10. layout.tsx</h2>
 <p>layout.tsx groups implementation around app, layouttsx, pwaregistertsx, components, mostly in src/app/layout.tsx, src/components/PwaRegister.tsx. This section covers 7 nodes and 7 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2332,8 +2676,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 10. Changes Required Specification ====== -->
-<h2 id="changes-required-specification">10. Changes Required Specification</h2>
+<!-- ====== 11. Changes Required Specification ====== -->
+<h2 id="changes-required-specification">11. Changes Required Specification</h2>
 <p>Changes Required Specification groups implementation around changes, requiredtxt, driver, mobile, mostly in Changes Required.txt. This section covers 4 nodes and 3 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2421,8 +2765,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 11. Software Outsourcing Cost Estimate ====== -->
-<h2 id="software-outsourcing-cost-estimate">11. Software Outsourcing Cost Estimate</h2>
+<!-- ====== 12. Software Outsourcing Cost Estimate ====== -->
+<h2 id="software-outsourcing-cost-estimate">12. Software Outsourcing Cost Estimate</h2>
 <p>Software Outsourcing Cost Estimate groups implementation around software, outsourcing, cost, docs, mostly in docs/SOFTWARE_OUTSOURCING_COST_ESTIMATE.md. This section covers 2 nodes and 1 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2488,8 +2832,8 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 12. next.config.mjs ====== -->
-<h2 id="next-config-mjs">12. next.config.mjs</h2>
+<!-- ====== 13. next.config.mjs ====== -->
+<h2 id="next-config-mjs">13. next.config.mjs</h2>
 <p>next.config.mjs groups implementation around nextconfigmjs, nextconfig, mostly in next.config.mjs. This section covers 2 nodes and 1 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2555,8 +2899,75 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 13. postcss.config.js ====== -->
-<h2 id="postcss-config-js">13. postcss.config.js</h2>
+<!-- ====== 14. downloads/page.tsx ====== -->
+<h2 id="downloads-page-tsx">14. downloads/page.tsx</h2>
+<p>downloads/page.tsx groups implementation around downloads, pagetsx, app, downloadspage, mostly in app/downloads/page.tsx. This section covers 2 nodes and 1 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: downloads/page.tsx (2 nodes, 1 edges)
+    src_app_downloads_page_4501e3b4("page.tsx")
+    src_app_downloads_page_downloadspage_a539480c("DownloadsPage()<br/><small>app/downloads/page.tsx</small>")
+    src_app_downloads_page_4501e3b4 -->|contains| src_app_downloads_page_downloadspage_a539480c
+    class src_app_downloads_page_4501e3b4 ui;
+    class src_app_downloads_page_downloadspage_a539480c ui;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>DownloadsPage()</code><br><small style="color:var(--muted)">app/downloads/page.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>downloads/page.tsx</code><br><small style="color:var(--muted)">app/downloads/page.tsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in app/downloads/page.tsx.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>app/downloads/page.tsx</code></td><td>2 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x1. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 15. postcss.config.js ====== -->
+<h2 id="postcss-config-js">15. postcss.config.js</h2>
 <p>postcss.config.js groups implementation around postcssconfigjs, mostly in postcss.config.js. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
@@ -2611,16 +3022,18 @@ flowchart LR
 </div>
 <hr>
 
-<!-- ====== 14. sw.js ====== -->
-<h2 id="sw-js">14. sw.js</h2>
-<p>sw.js groups implementation around swjs, public, mostly in public/sw.js. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<!-- ====== 16. Other ====== -->
+<h2 id="other">16. Other</h2>
+<p>Other groups implementation around swjs, tailwindconfigjs, public, mostly in public/sw.js, tailwind.config.js. This section covers 2 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: sw.js (1 nodes, 0 edges)
+    %% Section: Other (2 nodes, 0 edges)
     public_sw_be7f98ee("sw.js")
+    tailwind_config_2024816e("tailwind.config.js")
     class public_sw_be7f98ee module;
+    class tailwind_config_2024816e module;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -2650,56 +3063,8 @@ flowchart LR
   <td>No direct outbound edge</td>
   <td>sw.js node in public/sw.js.</td>
 </tr>
-</table>
-
-<div class="grid">
-  <div class="card">
-    <h4>Key Files</h4>
-    <table style="width:100%;font-size:0.85rem;">
-      <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>public/sw.js</code></td><td>1 nodes</td></tr>
-    </table>
-  </div>
-  <div class="card">
-    <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: No high-confidence call edges detected. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
-  </div>
-</div>
-<hr>
-
-<!-- ====== 15. tailwind.config.js ====== -->
-<h2 id="tailwind-config-js">15. tailwind.config.js</h2>
-<p>tailwind.config.js groups implementation around tailwindconfigjs, mostly in tailwind.config.js. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
-
-<div class="mermaid">
-%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
-flowchart LR
-    %% Section: tailwind.config.js (1 nodes, 0 edges)
-    tailwind_config_2024816e("tailwind.config.js")
-    class tailwind_config_2024816e module;
-    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
-    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
-    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
-    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
-    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
-    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
-    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
-    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
-    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
-</div>
-
-<h3>Call Details</h3>
-<table class="call-table">
 <tr>
-  <th style="width:5%">#</th>
-  <th style="width:28%">Node</th>
-  <th style="width:10%">Type</th>
-  <th style="width:17%">Caller</th>
-  <th style="width:20%">Callees</th>
-  <th style="width:20%">Description</th>
-</tr>
-<tr>
-  <td>1</td>
+  <td>2</td>
   <td><code>tailwind.config.js</code><br><small style="color:var(--muted)">tailwind.config.js</small></td>
   <td><span class="tag tag-class">Module</span></td>
   <td>External entry / no inbound edge</td>
@@ -2713,7 +3078,8 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>tailwind.config.js</code></td><td>1 nodes</td></tr>
+      <tr><td><code>public/sw.js</code></td><td>1 nodes</td></tr>
+<tr><td><code>tailwind.config.js</code></td><td>1 nodes</td></tr>
     </table>
   </div>
   <div class="card">
@@ -2769,17 +3135,17 @@ flowchart LR
   <div class="card">
     <h4>Graph</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>Nodes</td><td>371</td></tr>
-      <tr><td>Edges</td><td>721</td></tr>
+      <tr><td>Nodes</td><td>394</td></tr>
+      <tr><td>Edges</td><td>759</td></tr>
       <tr><td>Hyperedges</td><td>4</td></tr>
-      <tr><td>Communities</td><td>21</td></tr>
-      <tr><td>Documented Sections</td><td>14</td></tr>
+      <tr><td>Communities</td><td>22</td></tr>
+      <tr><td>Documented Sections</td><td>15</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Edge Confidence</h4>
     <table style="width:100%;font-size:0.85rem;">
-      <tr><td>EXTRACTED</td><td>692</td></tr>
+      <tr><td>EXTRACTED</td><td>730</td></tr>
       <tr><td>INFERRED</td><td>29</td></tr>
       <tr><td>AMBIGUOUS</td><td>0</td></tr>
     </table>
@@ -2788,7 +3154,7 @@ flowchart LR
 
 <div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
   <p>SwifLoad-geminiFlash3.8 — Architecture Documentation</p>
-  <p>Generated: 2026-10-03 09:08 UTC · graphify callflow-html</p>
+  <p>Generated: 2026-10-05 14:23 UTC · graphify callflow-html</p>
 </div>
 
 </div><!-- .container -->

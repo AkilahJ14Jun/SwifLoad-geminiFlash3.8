@@ -2,6 +2,137 @@
 
 This document tracks all technical updates, architectural additions, and feature implementations made in each development session across any LLM model.
 
+## 📅 Session: 2026-10-10 (Customer App Feature Overhaul & 'Changes Required.txt' Implementations)
+
+### Objectives
+1. Implement full set of customer app features and UX refinements detailed in `Changes Required.txt`.
+2. On the Customer App home dashboard, remove the explanatory subtext beneath `'Your Referral Code'` and integrate the `'Copy'` and `'Share'` action buttons directly inline into that space to maximize vertical space savings.
+3. Remove the `'Sponsored Ads'` heading section completely so the horizontal scrolling ad ticker displays seamlessly without requiring vertical scrolling on standard screens.
+4. Introduce animated flower shower greeting splash screen on customer launch with replay trigger in menu.
+5. Standardize top and bottom ribbons across all customer app screens with smooth scrolling and responsive spacing.
+6. Redesign Top Ribbon: clean single-line title `"SwiftLoad Coimbatore"`, remove redundant subtext and top 'Refer and Earn' button, add left side-menu hamburger button, notifications button, and help button.
+7. Streamline Home dashboard stats: remove redundant `'View Transactions History'` anchor and card subtext to recover screen height.
+8. Insert prominent Company Offers section directly beneath dashboard stat buttons and right above booking actions.
+9. Relocate `'Your Referral Code'` section immediately above the Sponsored Partner Ads section.
+10. Create comprehensive slide-over Side Menu Bar Drawer: Profile (with ID, contact, email, gender, DOB, registration, special dates), Default Pickup Address, Payment Details (Bank, IFSC, UPI), Referral code/link sharing, Wallet summary, Preferred Support Language selector, Feedback modal, Help FAQs, and Flower Shower replay.
+11. Upgrade Dedicated Booking Experience: Company Offers section with one-click coupon codes (`SWIF25`, `UPI50`, `FREEHELP`), Sponsored Commercial Partner Ads block, vehicle confirmation flow, two-way OTP verification (Customer & Driver), and real-time Leaflet map tracking of approaching driver and in-transit delivery.
+
+### Bullet-Point Changes
+- **Animated Flower Splash Screen ([`src/components/Customer/FlowerShowerSplash.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/FlowerShowerSplash.tsx)):**
+  - Created animated shower of falling petals/flowers (`🌸 🌺 🌼 🌻 🌷 🌹 💐 🏵️`) with realistic physics, sway, 3-second auto-dismiss timer, and interactive skip button.
+  - Added keyframe animations `@keyframes flowerFall` in [`src/app/globals.css`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/app/globals.css).
+- **Customer Side Menu Drawer ([`src/components/Customer/CustomerSideMenu.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerSideMenu.tsx)):**
+  - Created slide-over menu drawer accessible via top ribbon hamburger button.
+  - Profile section displaying Customer Name, Customer ID (`CUST-CBE-9821`), Phone, Email, Gender, DOB, Registered Since, and Special Dates with inline edit mode.
+  - Default Pickup Address section with custom contact number and instant update capability.
+  - Payment Details section managing Bank Account Number, IFSC Code, and UPI ID.
+  - Referral Code and Link sharing tool with native clipboard copying and WhatsApp/SMS share triggers.
+  - Wallet section displaying points and direct navigation to detailed wallet tab.
+  - Support section with preferred support language switcher (`Tamil`, `English`, `Hindi`, `Malayalam`, `Kannada`).
+  - Interactive Feedback modal with 5-star rating and message submission.
+  - Direct Help/FAQ trigger and "Replay Flower Shower" option.
+- **Logistics State & Domain Models ([`src/types/logistics.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/types/logistics.ts), [`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx), [`src/lib/server/db.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/server/db.ts)):**
+  - Extended `CustomerUser` interface with optional profile fields: `gender`, `dateOfBirth`, `registeredSince`, `specialDates`, `defaultPickupAddress`, `bankDetails`, and `preferredLanguage`.
+  - Added `updateCustomerProfile` method to `LogisticsContext` and synced `INITIAL_CUSTOMER` defaults across context and database seed.
+  - Updated `createBooking` to automatically assign nearby partner driver (~1.2 km away) in `ARRIVING_PICKUP` status so customer can immediately see driver approach towards pickup on Leaflet map.
+- **Customer UI Refinements, Popup Dialog & Navigation Updates ([`src/components/Customer/CustomerApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerApp.tsx)):**
+  - Updated Shipper Overview title to `"Dashboard - Customer"`.
+  - Removed promotional subtext below company offers cards across the dashboard and booking views to save screen height.
+  - Re-architected vehicle category selection into a responsive 2-boxes-per-row grid:
+    - **Row 1:** Two Wheeler (starts ₹40) and Three Wheeler (starts ₹130) as separate boxes.
+    - **Row 2:** Four Wheeler (starts ₹260) and EV Vehicles (Eco green fleet) as separate boxes.
+  - Implemented Vehicle Sub-Options Pop-up Dialog (`vehicleModalCategory`):
+    - Clicking Three Wheeler, Four Wheeler, EV Vehicles, or Two Wheeler on the Dashboard presents a modal dialog for choosing detailed vehicle configurations before proceeding.
+    - **Three Wheeler & Four Wheeler:** Options for Open Body (flatbed/open carrier) and Closed Body (weatherproof lockable container).
+    - **EV Vehicles:** Options for 2-Wheeler EV (up to 20kg), 3-Wheeler EV (up to 450kg), and 4-Wheeler EV (up to 900kg).
+    - **Two Wheeler:** Options for Moto Bike (courier express) and Scooter Type (floorboard).
+  - Converted Offers section to a continuous smooth horizontal scrolling marquee ticker:
+    - Items formatted concisely as `'Flat 25% OFF'`, `'Flat ₹50 Instant Cashback'`, and `'100% Free Loading Helper'`.
+    - Clicking any scrolling item opens an Offer Details Pop-up Modal with full terms, promo code, copy button, and instant apply action.
+  - Converted Sponsored Partner Ads to a continuous horizontal scrolling ticker:
+    - Features verified commercial partners (Apollo Commercial Tyres, Exide & Amaron Battery Hub, Castrol CRB Commercial Lubes).
+    - Clicking any scrolling partner ad opens a Partner Offer Pop-up Modal with full benefits, Coimbatore hub locations, and claim buttons.
+  - Minimized vertical page scrolling on the home dashboard to the absolute minimum level, consolidating full-card heights into clean single-line scrolling tickers.
+  - Streamlined `'Your Referral Code'` Card:
+    - Removed explanatory subtext paragraph (`"Earn rewards on every verified dispatch..."`) and the secondary share notice divider.
+    - Repositioned `'Copy'` and `'Share'` action buttons directly inline adjacent to the referral code in a compact single-row flex card.
+  - Removed `'Sponsored Ads'` Heading Section:
+    - Deleted the header row container (`"SPONSORED ADS"` badge, `"Coimbatore Commercial Partners"` subtitle, and `"Post Ad"` button).
+    - Reduced padding so the continuous horizontal scrolling ticker (`animate-marquee`) renders cleanly and compactly without requiring any vertical scrolling.
+
+### Verification Status
+- Executed `npm run build`: Exit code 0 (100% clean production build, 8/8 static/dynamic routes compiled, 0 TypeScript or lint errors).
+
+
+
+## 📅 Session: 2026-10-06 (Mobile APK Installation Resolution & Azure Cloud Re-Deployment)
+
+### Objectives
+1. Resolve mobile Android APK installation error: `"App not installed as package appears to be invalid"` encountered when installing Customer and Driver APKs downloaded from Azure site.
+2. Address root causes: missing APK Signature Scheme v2/v3 enforcement required by Android 11+ (Target SDK 34), package ID collisions, and lack of flavor separation.
+3. Configure native Android Gradle build pipeline with dual product flavors (`customer` and `driver`) and dedicated release signing keystore with v1 and v2 signature schemes.
+4. Verify APK signatures via Android SDK `apksigner` and `aapt dump badging`.
+5. Rebuild cloud container image in Azure Container Registry (`acrswifload.azurecr.io/swifload:v2`), update Azure App Service (`swifload-cbe`), and verify live downloads and signatures over HTTP.
+
+### Bullet-Point Changes
+- **Android Gradle Pipeline & Flavors (`android/app/build.gradle`):**
+  - Configured `flavorDimensions "app"` with two distinct product flavors:
+    - `customer`: `applicationId "com.swifload.customer"`, version 1.2.0.
+    - `driver`: `applicationId "com.swifload.driver"`, version 1.2.0.
+  - Generates independent package identities so both apps can be installed simultaneously on the same Android device without conflicts.
+  - Configured dedicated release signing keystore (`swifload-release.keystore`) with 10,000 days validity, enabling `v1SigningEnabled true` and `v2SigningEnabled true`.
+  - Added `android:usesCleartextTraffic="true"` in [`android/app/src/main/AndroidManifest.xml`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/main/AndroidManifest.xml).
+- **Flavor Resources & Assets:**
+  - Customer Flavor: [`android/app/src/customer/res/values/strings.xml`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/customer/res/values/strings.xml), [`android/app/src/customer/assets/capacitor.config.json`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/customer/assets/capacitor.config.json) targeting `/customer`, and [`android/app/src/customer/assets/public/index.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/customer/assets/public/index.html).
+  - Driver Flavor: [`android/app/src/driver/res/values/strings.xml`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/driver/res/values/strings.xml), [`android/app/src/driver/assets/capacitor.config.json`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/driver/assets/capacitor.config.json) targeting `/driver`, and [`android/app/src/driver/assets/public/index.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/android/app/src/driver/assets/public/index.html).
+- **APK Rebuild Automation Script ([`scripts/rebuild_apks.py`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/scripts/rebuild_apks.py)):**
+  - Replaced legacy python zip-packer with official Gradle assemble (`assembleCustomerRelease` & `assembleDriverRelease`) and automated `apksigner` validation.
+- **APK Distribution Deployment ([`public/downloads/`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/public/downloads/)):**
+  - Replaced `SwifLoad-Customer.apk` (2,979,449 bytes) and `SwifLoad-Driver.apk` (2,979,470 bytes) with freshly compiled release APKs.
+- **Azure Container Registry & Web App Deployment:**
+  - Built production container image via ACR (`az acr build --registry acrswifload --image swifload:latest .`).
+  - Tagged image `acrswifload.azurecr.io/swifload:v2`.
+  - Updated App Service `swifload-cbe` container configuration to `acrswifload.azurecr.io/swifload:v2` and restarted app.
+
+### Verification Status
+- APK Signature Scheme Verification:
+  - `apksigner verify -v public/downloads/SwifLoad-Customer.apk`: `Verifies (v1: true, v2: true)`.
+  - `apksigner verify -v public/downloads/SwifLoad-Driver.apk`: `Verifies (v1: true, v2: true)`.
+- Local Next.js Build: `npm run build` passed with exit code 0 (8/8 static pages compiled, 0 lint/type errors).
+- Live Azure Endpoints Verification (`https://swifload-cbe.azurewebsites.net/`):
+  - `GET /`: `HTTP 200 OK`
+  - `GET /customer`: `HTTP 200 OK`
+  - `GET /driver`: `HTTP 200 OK`
+  - `GET /downloads`: `HTTP 200 OK`
+  - `GET /downloads/SwifLoad-Customer.apk`: `HTTP 200 OK` (2,979,449 bytes, verified v1 & v2 signatures over HTTP).
+  - `GET /downloads/SwifLoad-Driver.apk`: `HTTP 200 OK` (2,979,470 bytes, verified v1 & v2 signatures over HTTP).
+
+## 📅 Session: 2026-10-05 (Codebase Knowledge Graph & Architecture Map Extraction — /graphify)
+
+### Objectives
+1. Execute `/graphify .` on repository to extract AST structural relationships, call-flows, and architectural dependencies across all source code modules.
+2. Generate and update knowledge graph artifacts (`graph.json`, `graph.html`, `GRAPH_TREE.html`, `GRAPH_REPORT.md`, `SwifLoad-geminiFlash3.8-callflow.html`).
+3. Identify architectural god nodes, community clusters, and cross-module couplings.
+4. Verify project build stability post-extraction.
+
+### Bullet-Point Changes
+- **Graphify Knowledge Extraction (`graphify-out/`):**
+  - Ran AST extraction across all codebase modules, generating **394 nodes**, **759 edges**, and **22 community clusters**.
+  - Generated interactive visualization: [graph.html](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.html).
+  - Generated collapsible D3 hierarchy tree: [GRAPH_TREE.html](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_TREE.html).
+  - Generated comprehensive architecture analysis report: [GRAPH_REPORT.md](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_REPORT.md).
+  - Exported interactive Mermaid-based callflow and sequence maps: [SwifLoad-geminiFlash3.8-callflow.html](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/SwifLoad-geminiFlash3.8-callflow.html).
+- **Architectural Hubs Identified:**
+  - `useLogistics()` (31 edges) — Primary state & hook coordinator in [`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx).
+  - `getDatabase()` (23 edges) & `saveDatabase()` (18 edges) — Central database persistence abstraction.
+  - `LogisticsContextType` (21 edges) — Central domain contract.
+  - `WebPlatform()` (15 edges) & `broadcastEvent()` (15 edges) — Platform dispatch & telemetry synchronization.
+  - `pricing.ts` slab calculation engines and vehicle categories.
+
+### Verification Status
+- Extraction commands: `graphify . --code-only`, `graphify cluster-only . --no-label`, `graphify tree`, `graphify export callflow-html` all exited with code 0.
+- Production build: `npm run build` completed successfully (Exit code: 0, 8/8 static pages compiled, 0 lint/type errors).
+
 ## 📅 Session: 2026-10-05 (Git Push Resolution — Purged Large File History & Ignored Zip Archives)
 
 ### Objectives

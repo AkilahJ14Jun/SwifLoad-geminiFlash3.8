@@ -49,6 +49,27 @@ const INITIAL_CUSTOMER: CustomerUser = {
   customerType: 'regular',
   referralCode: 'SWIF-KAVITHA-20',
   isLoggedIn: true,
+  gender: 'Female',
+  dateOfBirth: '22 May 1988',
+  registeredSince: '14 Jan 2024',
+  specialDates: [
+    { label: 'Wedding Anniversary', date: '28 October' },
+    { label: 'Business Founding Day', date: '12 March' },
+  ],
+  defaultPickupAddress: {
+    address: 'Plot 42, Peelamedu Industrial Estate, Avinashi Road',
+    area: 'Peelamedu, Coimbatore - 641004',
+    contactName: 'Kavitha Sundaram',
+    contactPhone: '+91 98422 19283',
+  },
+  bankDetails: {
+    accountName: 'Kavitha Sundaram',
+    accountNumber: '918273645012',
+    ifscCode: 'HDFC0001824',
+    bankName: 'HDFC Bank - Peelamedu Branch',
+    upiId: 'kavitha.sundaram@okhdfcbank',
+  },
+  preferredLanguage: 'Tamil (தமிழ்)',
   wallet: {
     balance: 1250,
     transactions: [

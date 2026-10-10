@@ -329,6 +329,24 @@ export interface CustomerUser {
   referredBy?: string;
   isLoggedIn: boolean;
   savedAddresses?: LocationPoint[];
+  gender?: string;
+  dateOfBirth?: string;
+  registeredSince?: string;
+  specialDates?: { label: string; date: string }[];
+  defaultPickupAddress?: {
+    address: string;
+    area: string;
+    contactName: string;
+    contactPhone: string;
+  };
+  bankDetails?: {
+    accountName: string;
+    accountNumber: string;
+    ifscCode: string;
+    bankName?: string;
+    upiId?: string;
+  };
+  preferredLanguage?: string;
   wallet: {
     balance: number; // Negative balance NOT allowed for customer
     transactions: WalletTransaction[];

@@ -44,3 +44,48 @@ body {
   border: none !important;
   transition: transform 1.3s cubic-bezier(0.2, 0.8, 0.4, 1) !important;
 }
+
+/* Showering of flowers animation */
+@keyframes flowerFall {
+  0% {
+    transform: translateY(-50px) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(105vh) rotate(360deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-flower-fall {
+  animation-name: flowerFall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/* Continuous Marquee Ticker for Offers and Ads */
+@keyframes ticker {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: ticker 24s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+

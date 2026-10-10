@@ -15,7 +15,6 @@
       "src_components_driver_driverapp",
       "src_components_driver_driverapp_driver_sponsored_ads",
       "src_components_driver_driverapp_driverapp",
-      "src_components_driver_driverapp_getgreetingofday",
       "src_components_driver_driverapp_leafletmap",
       "src_components_map_leafletmap",
       "src_components_map_leafletmap_leafletmap",
@@ -72,9 +71,11 @@
       "src_lib_data_coimbatore_landmarks",
       "src_lib_data_default_customer_slabs",
       "src_lib_data_default_dispatch_timeout_secs",
+      "src_lib_data_default_driver_cancellation_slabs",
       "src_lib_data_default_incentive_slabs",
       "src_lib_data_default_referral_config",
       "src_lib_data_driver_groups",
+      "src_lib_data_initial_driver_notifications",
       "src_lib_data_initial_drivers",
       "src_lib_data_initial_referrals",
       "src_lib_data_initial_trips",
@@ -88,8 +89,12 @@
       "src_types_logistics_customertypeslabconfig",
       "src_types_logistics_customeruser",
       "src_types_logistics_distanceslab",
+      "src_types_logistics_drivercancellationlockout",
+      "src_types_logistics_drivercancellationreason",
+      "src_types_logistics_drivercancellationslabconfig",
       "src_types_logistics_drivergroup",
       "src_types_logistics_driverkycdoc",
+      "src_types_logistics_drivernotification",
       "src_types_logistics_driverpartner",
       "src_types_logistics_incentiveslab",
       "src_types_logistics_referralprogramconfig",
@@ -99,6 +104,7 @@
       "src_types_logistics_shipmentdetails",
       "src_types_logistics_trip",
       "src_types_logistics_tripstatus",
+      "src_types_logistics_tripstop",
       "src_types_logistics_userrole",
       "src_types_logistics_vehicleconfig",
       "src_types_logistics_wallettransaction"
@@ -147,6 +153,39 @@
       "src_lib_server_events_realtimepayload"
     ],
     "3": [
+      "autoprefixer",
+      "package",
+      "package_description",
+      "package_devdependencies",
+      "package_devdependencies_autoprefixer",
+      "package_devdependencies_postcss",
+      "package_devdependencies_tailwindcss",
+      "package_devdependencies_types_leaflet",
+      "package_devdependencies_types_node",
+      "package_devdependencies_types_react",
+      "package_devdependencies_types_react_dom",
+      "package_devdependencies_typescript",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_cap_android",
+      "package_scripts_cap_ios",
+      "package_scripts_cap_sync",
+      "package_scripts_dev",
+      "package_scripts_lint",
+      "package_scripts_start",
+      "package_scripts_update_apks",
+      "package_version",
+      "postcss",
+      "tailwindcss",
+      "types_leaflet",
+      "types_node",
+      "types_react",
+      "types_react_dom",
+      "typescript"
+    ],
+    "4": [
       "docs_swifload_booking_fulfillment_lifecycle",
       "docs_swifload_booking_fulfillment_workflow_diagram",
       "docs_swifload_trip_dispatch_otp_flow",
@@ -179,38 +218,6 @@
       "src_types_logistics_slabbreakdownitem",
       "src_types_logistics_vehiclecategory"
     ],
-    "4": [
-      "autoprefixer",
-      "package",
-      "package_description",
-      "package_devdependencies",
-      "package_devdependencies_autoprefixer",
-      "package_devdependencies_postcss",
-      "package_devdependencies_tailwindcss",
-      "package_devdependencies_types_leaflet",
-      "package_devdependencies_types_node",
-      "package_devdependencies_types_react",
-      "package_devdependencies_types_react_dom",
-      "package_devdependencies_typescript",
-      "package_name",
-      "package_private",
-      "package_scripts",
-      "package_scripts_build",
-      "package_scripts_cap_android",
-      "package_scripts_cap_ios",
-      "package_scripts_cap_sync",
-      "package_scripts_dev",
-      "package_scripts_lint",
-      "package_scripts_start",
-      "package_version",
-      "postcss",
-      "tailwindcss",
-      "types_leaflet",
-      "types_node",
-      "types_react",
-      "types_react_dom",
-      "typescript"
-    ],
     "5": [
       "ref_dom",
       "ref_dom_iterable",
@@ -242,6 +249,35 @@
       "tsconfig_include"
     ],
     "6": [
+      "cv2",
+      "imageio_ffmpeg",
+      "numpy",
+      "os",
+      "pil",
+      "playwright_sync_api",
+      "scipy_io_wavfile",
+      "scripts_capture_real_screenshots",
+      "scripts_generate_instagram_promo",
+      "scripts_generate_instagram_promo_create_video",
+      "scripts_generate_instagram_promo_draw_rounded_rect",
+      "scripts_generate_instagram_promo_get_font",
+      "scripts_generate_instagram_promo_v2",
+      "scripts_generate_instagram_promo_v2_draw_rounded_rect",
+      "scripts_generate_instagram_promo_v2_generate_electronic_synth_beat",
+      "scripts_generate_instagram_promo_v2_get_font",
+      "scripts_generate_instagram_promo_v2_render_extended_promo_video",
+      "scripts_generate_real_screenshot_promo",
+      "scripts_generate_real_screenshot_promo_draw_rounded_rect",
+      "scripts_generate_real_screenshot_promo_generate_electronic_synth_beat",
+      "scripts_generate_real_screenshot_promo_get_font",
+      "scripts_generate_real_screenshot_promo_render_real_screenshots_video",
+      "scripts_rebuild_apks",
+      "scripts_rebuild_apks_rebuild_apk",
+      "scripts_rebuild_apks_sign_apk_data",
+      "subprocess",
+      "time"
+    ],
+    "7": [
       "azure_infrastructure_architecture",
       "azure_infrastructure_architecture_1_database_configuration_schema_systemconfig_maps",
       "azure_infrastructure_architecture_1_database_configuration_schema_systemconfig_payments",
@@ -268,32 +304,6 @@
       "azure_infrastructure_architecture_swifload_azure_cloud_infrastructure_architecture_guide",
       "azure_infrastructure_architecture_table_of_contents",
       "azure_infrastructure_architecture_traffic_resource_benchmarks"
-    ],
-    "7": [
-      "cv2",
-      "imageio_ffmpeg",
-      "numpy",
-      "os",
-      "pil",
-      "playwright_sync_api",
-      "scipy_io_wavfile",
-      "scripts_capture_real_screenshots",
-      "scripts_generate_instagram_promo",
-      "scripts_generate_instagram_promo_create_video",
-      "scripts_generate_instagram_promo_draw_rounded_rect",
-      "scripts_generate_instagram_promo_get_font",
-      "scripts_generate_instagram_promo_v2",
-      "scripts_generate_instagram_promo_v2_draw_rounded_rect",
-      "scripts_generate_instagram_promo_v2_generate_electronic_synth_beat",
-      "scripts_generate_instagram_promo_v2_get_font",
-      "scripts_generate_instagram_promo_v2_render_extended_promo_video",
-      "scripts_generate_real_screenshot_promo",
-      "scripts_generate_real_screenshot_promo_draw_rounded_rect",
-      "scripts_generate_real_screenshot_promo_generate_electronic_synth_beat",
-      "scripts_generate_real_screenshot_promo_get_font",
-      "scripts_generate_real_screenshot_promo_render_real_screenshots_video",
-      "subprocess",
-      "time"
     ],
     "8": [
       "capacitor_android",
@@ -430,14 +440,14 @@
     ]
   },
   "cohesion": {
-    "0": 0.06531986531986532,
-    "1": 0.1427061310782241,
+    "0": 0.06568832983927324,
+    "1": 0.12392156862745098,
     "2": 0.11219512195121951,
-    "3": 0.14623655913978495,
-    "4": 0.06666666666666667,
+    "3": 0.06451612903225806,
+    "4": 0.14623655913978495,
     "5": 0.07142857142857142,
-    "6": 0.08,
-    "7": 0.14492753623188406,
+    "6": 0.12535612535612536,
+    "7": 0.08,
     "8": 0.08695652173913043,
     "9": 0.09090909090909091,
     "10": 0.1794871794871795,
@@ -465,24 +475,24 @@
       "degree": 23
     },
     {
+      "id": "src_context_logisticscontext_logisticscontexttype",
+      "label": "LogisticsContextType",
+      "degree": 21
+    },
+    {
       "id": "src_lib_server_db_savedatabase",
       "label": "saveDatabase()",
       "degree": 18
     },
     {
-      "id": "src_components_website_webplatform_webplatform",
-      "label": "WebPlatform()",
-      "degree": 16
-    },
-    {
-      "id": "src_context_logisticscontext_logisticscontexttype",
-      "label": "LogisticsContextType",
-      "degree": 16
-    },
-    {
       "id": "tsconfig_compileroptions",
       "label": "compilerOptions",
       "degree": 16
+    },
+    {
+      "id": "src_components_website_webplatform_webplatform",
+      "label": "WebPlatform()",
+      "degree": 15
     },
     {
       "id": "src_lib_server_events_broadcastevent",
@@ -500,8 +510,8 @@
       "degree": 12
     },
     {
-      "id": "src_lib_pricing_calculatedistancekm",
-      "label": "calculateDistanceKm()",
+      "id": "src_lib_server_db_databaseschema",
+      "label": "DatabaseSchema",
       "degree": 11
     }
   ],
@@ -515,7 +525,7 @@
       ],
       "confidence": "INFERRED",
       "relation": "implements",
-      "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; bridges separate communities; peripheral node `Customer Tariff Distance Slabs` unexpectedly reaches hub `calculateCustomerQuotedSlabFare()`"
+      "why": "inferred connection - not explicitly stated in source; crosses file types (code \u2194 doc); connects across different repos/directories; bridges separate communities; peripheral node `Customer Tariff Distance Slabs` unexpectedly reaches hub `calculateCustomerQuotedSlabFare()`"
     },
     {
       "source": "End-to-End Shipper to Delivery Cycle",
@@ -529,30 +539,30 @@
       "why": "inferred connection - not explicitly stated in source; crosses file types (doc \u2194 code); connects across different repos/directories; peripheral node `End-to-End Shipper to Delivery Cycle` unexpectedly reaches hub `CreateTripPayload`"
     },
     {
-      "source": "Deploying to Azure App Service Guide",
-      "target": "Azure App Service and Container Registry Architecture",
-      "source_files": [
-        "docs/Deploying to Azure.txt",
-        "DEPLOYMENT_GUIDE.md"
-      ],
-      "confidence": "INFERRED",
-      "relation": "semantically_similar_to",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
-    },
-    {
-      "source": "Claude Development Guide",
-      "target": "SwifLoad Agent Mandatory Rules",
-      "source_files": [
-        "CLAUDE.md",
-        "AGENTS.md"
-      ],
-      "confidence": "INFERRED",
-      "relation": "semantically_similar_to",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
-    },
-    {
       "source": "Shipper Customer Mobile App",
       "target": "Customer Logistics App Scope",
+      "source_files": [
+        "README.md",
+        "Initial Requirements.txt"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Driver-Partner Mobile App",
+      "target": "Driver-Partner App Scope",
+      "source_files": [
+        "README.md",
+        "Initial Requirements.txt"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "Operations Command Center Portal",
+      "target": "Operations Admin Portal Scope",
       "source_files": [
         "README.md",
         "Initial Requirements.txt"

@@ -133,6 +133,7 @@ interface LogisticsContextType {
   loginCustomer: (phone: string, otp: string) => boolean;
   logoutCustomer: () => void;
   updateCustomerType: (type: CustomerType) => void;
+  updateCustomerProfile: (updates: Partial<CustomerUser>) => void;
 
   // Driver Auth
   registerDriver: (payload: RegisterDriverPayload) => string;
@@ -194,6 +195,27 @@ const INITIAL_CUSTOMER: CustomerUser = {
   customerType: 'regular',
   referralCode: 'SWIF-KAVITHA-20',
   isLoggedIn: true,
+  gender: 'Female',
+  dateOfBirth: '22 May 1988',
+  registeredSince: '14 Jan 2024',
+  specialDates: [
+    { label: 'Wedding Anniversary', date: '28 October' },
+    { label: 'Business Founding Day', date: '12 March' },
+  ],
+  defaultPickupAddress: {
+    address: 'Plot 42, Peelamedu Industrial Estate, Avinashi Road',
+    area: 'Peelamedu, Coimbatore - 641004',
+    contactName: 'Kavitha Sundaram',
+    contactPhone: '+91 98422 19283',
+  },
+  bankDetails: {
+    accountName: 'Kavitha Sundaram',
+    accountNumber: '918273645012',
+    ifscCode: 'HDFC0001824',
+    bankName: 'HDFC Bank - Peelamedu Branch',
+    upiId: 'kavitha.sundaram@okhdfcbank',
+  },
+  preferredLanguage: 'Tamil (தமிழ்)',
   wallet: {
     balance: 1250,
     transactions: [
@@ -1037,6 +1059,17 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [showToast]
   );
 
+  const updateCustomerProfile = useCallback(
+    (updates: Partial<CustomerUser>) => {
+      setCurrentCustomer((prev) => ({
+        ...prev,
+        ...updates,
+      }));
+      showToast('Customer profile updated successfully!');
+    },
+    [showToast]
+  );
+
   // Driver Registration & Auth
   const registerDriver = useCallback(
     (payload: RegisterDriverPayload): string => {
@@ -1507,6 +1540,50 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setTrips((prev) => [newTrip, ...prev]);
       setActiveTripId(tripId);
       syncTripToServer(newTrip);
+
+      // Auto-assign nearest available driver partner after 2 seconds so customer immediately sees driver approaching them till pickup
+      setTimeout(() => {
+        setTrips((prevTrips) => {
+          const currentTrip = prevTrips.find((t) => t.id === tripId);
+          if (!currentTrip || currentTrip.status !== 'SEARCHING') return prevTrips;
+
+          const assignedDriver =
+            drivers.find((d) => d.vehicleCategory === payload.vehicleCategory && d.currentStatus !== 'BUSY') ||
+            drivers[0];
+          if (!assignedDriver) return prevTrips;
+
+          // Position driver ~1.2 km away from pickup point
+          const initialDriverLoc = {
+            lat: payload.pickup.lat + 0.009,
+            lng: payload.pickup.lng - 0.007,
+          };
+
+          return prevTrips.map((t) => {
+            if (t.id === tripId && t.status === 'SEARCHING') {
+              return {
+                ...t,
+                status: 'ARRIVING_PICKUP' as TripStatus,
+                driverId: assignedDriver.id,
+                driverName: assignedDriver.name,
+                driverPhone: assignedDriver.phone,
+                driverVehicleNumber: assignedDriver.vehicleNumber,
+                driverRating: assignedDriver.rating,
+                driverLocation: initialDriverLoc,
+                driverToPickupDistanceKm: 1.2,
+                auditHistory: [
+                  ...t.auditHistory,
+                  {
+                    timestamp: new Date().toISOString(),
+                    event: `Order accepted by driver ${assignedDriver.name} (${assignedDriver.vehicleNumber}). Driver en route to pickup.`,
+                    actor: 'SwifLoad Express Dispatch',
+                  },
+                ],
+              };
+            }
+            return t;
+          });
+        });
+      }, 2000);
 
       showToast(`Trip ${bookingCode} created! Dispatched to ${nearestGroup.name}`);
       return tripId;
@@ -2633,6 +2710,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         loginCustomer,
         logoutCustomer,
         updateCustomerType,
+        updateCustomerProfile,
         registerDriver,
         loginDriver,
         logoutDriver,

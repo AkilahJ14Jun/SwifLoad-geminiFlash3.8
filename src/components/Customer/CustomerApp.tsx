@@ -44,10 +44,16 @@ import {
   ChevronUp,
   ArrowLeft,
   Zap,
+  Menu,
+  Bell,
+  CheckCheck,
+  Home,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import { VehicleCategory, GoodsCategory, PaymentMethod, LocationPoint, CustomerType, WalletTransaction } from '@/types/logistics';
 import { calculateDistanceKm, calculateCustomerQuotedSlabFare, estimateDurationMins, calculateMultiStopDistanceKm } from '@/lib/pricing';
+import FlowerShowerSplash from './FlowerShowerSplash';
+import CustomerSideMenu from './CustomerSideMenu';
 
 // Dynamic import of Leaflet map to prevent SSR window reference error
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
@@ -63,6 +69,7 @@ export default function CustomerApp() {
     serviceZones,
     createBooking,
     cancelTrip,
+    advanceTripStatus,
     submitRating,
     showToast,
     currentCustomer,
@@ -75,6 +82,7 @@ export default function CustomerApp() {
     applyCustomerReferralCode,
     topUpCustomerWallet,
     updateCustomerType,
+    updateCustomerProfile,
   } = useLogistics();
 
   // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'transactions' | 'wallet' | 'referrals' | 'profile' | 'support'
@@ -99,8 +107,46 @@ export default function CustomerApp() {
     });
   };
 
+  // Flower Shower Splash Greeting state (Changes Required Item 6)
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+
+  // Side Menu Bar Drawer state (Changes Required Item 10 & 18)
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
+  // Top Ribbon Notifications Modal & Data (Changes Required Item 15)
+  const [showNotificationsModal, setShowNotificationsModal] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 'notif_1',
+      title: '🎉 Welcome Offer: Flat 25% OFF',
+      message: 'Use coupon code SWIF25 for up to ₹150 off your intra-city trip in Coimbatore.',
+      time: 'Just now',
+      read: false,
+    },
+    {
+      id: 'notif_2',
+      title: '⚡ Instant ₹50 UPI Cashback',
+      message: 'Pay via Google Pay or UPI to get flat ₹50 cashback credited to your SwifLoad wallet.',
+      time: '1 hour ago',
+      read: false,
+    },
+    {
+      id: 'notif_3',
+      title: '🛡️ Two-Way OTP Handshake Required',
+      message: 'Always share 4-digit Pickup and Drop OTP with driver partners for verified custody.',
+      time: '2 hours ago',
+      read: false,
+    },
+  ]);
+
+  // Company Promo Code & Coupon States (Changes Required Item 17 & 35)
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string>('');
+  const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [selectedOfferModal, setSelectedOfferModal] = useState<any | null>(null);
+
   // Earmarked Ad Space state (Requirement 3)
   const [showAdModal, setShowAdModal] = useState<boolean>(false);
+  const [selectedAdModal, setSelectedAdModal] = useState<any | null>(null);
 
   // Transactions ledger filter (Requirement 9)
   const [txFilter, setTxFilter] = useState<'ALL' | 'CREDIT' | 'DEBIT' | 'REWARD_POINTS'>('ALL');
@@ -146,8 +192,8 @@ export default function CustomerApp() {
   const [fourWheelerSubtype, setFourWheelerSubtype] = useState<'open_body' | 'closed_body'>('open_body');
   const [evSubtype, setEvSubtype] = useState<'ev_2wheeler' | 'ev_3wheeler' | 'ev_4wheeler'>('ev_3wheeler');
 
-  // Accordion 'More Options' toggle state for vehicle categories
-  const [expandedVehicle, setExpandedVehicle] = useState<'2wheeler' | '3wheeler' | '4wheeler' | 'ev' | null>('4wheeler');
+  // Popup modal state for vehicle sub-selection (3wheeler, 4wheeler, ev, 2wheeler)
+  const [vehicleModalCategory, setVehicleModalCategory] = useState<'2wheeler' | '3wheeler' | '4wheeler' | 'ev' | null>(null);
 
   // Dedicated Booking Page Screen state (Moves booking & map away from home screen)
   const [bookingScreenActive, setBookingScreenActive] = useState<boolean>(false);
@@ -233,12 +279,122 @@ export default function CustomerApp() {
     serviceZones
   );
 
+  // SwifLoad Coimbatore Company Offers (Changes Required Item 17 & 35)
+  const COMPANY_OFFERS = [
+    {
+      code: 'SWIF25',
+      tickerText: 'Flat 25% OFF',
+      title: 'Flat 25% Off (Save up to ₹150)',
+      sub: 'Valid across all goods vehicles in Coimbatore hub',
+      description: 'Get flat 25% discount on intra-city freight trips across Coimbatore. Maximum discount capped at ₹150 per trip. Applicable on 2-Wheeler, 3-Wheeler cargo auto, Tata Ace, and EV fleet.',
+      discountType: 'percentage',
+      value: 25,
+      maxDiscount: 150,
+      badge: 'PROMO CODE',
+      icon: '🎉',
+    },
+    {
+      code: 'UPI50',
+      tickerText: 'Flat ₹50 Instant Cashback',
+      title: 'Flat ₹50 Instant Cashback',
+      sub: 'Pay online via UPI or SwifLoad Wallet',
+      description: 'Pay freight charges via Google Pay, PhonePe, Paytm, BHIM UPI or SwifLoad wallet balance to receive an instant ₹50 cashback credited directly to your SwifLoad passbook.',
+      discountType: 'flat',
+      value: 50,
+      maxDiscount: 50,
+      badge: 'CASHBACK',
+      icon: '⚡',
+    },
+    {
+      code: 'FREEHELP',
+      tickerText: '100% Free Loading Helper',
+      title: '100% Free Loading Helper',
+      sub: 'Waive loading & unloading porter charge',
+      description: 'Book with an assisted driver helper for zero extra cost! Save ₹150 - ₹250 porter fees on machinery, furniture, textile bales, and hardware shipments.',
+      discountType: 'helper',
+      value: 100,
+      maxDiscount: 250,
+      badge: 'FESTIVE SPECIAL',
+      icon: '🚚',
+    },
+  ];
+
+  // Coimbatore Commercial Partner Ads (Changes Required)
+  const SPONSORED_PARTNERS = [
+    {
+      id: 'apollo_tyres',
+      name: 'Apollo Commercial Tyres',
+      hub: 'Coimbatore Central & Peelamedu',
+      tickerTitle: 'Apollo Tyres: Flat 20% Off',
+      headline: 'Flat 20% Off Commercial LMV/HMV Tyres',
+      description: 'Exclusive partnership for SwifLoad shippers: Flat 20% discount on radial truck & pickup tyres. Includes free computer laser wheel alignment at 8 Coimbatore centers.',
+      promoCode: 'APOLLO-SWIF20',
+      badge: 'Verified Partner',
+      benefit: 'Flat 20% Off + Free Alignment',
+      icon: '🛞',
+      locations: 'Gandhipuram, Peelamedu, Singanallur, SIDCO Kurichi',
+    },
+    {
+      id: 'exide_batteries',
+      name: 'Exide & Amaron Commercial Hub',
+      hub: 'Trichy Road & Ganapathy Industrial Core',
+      tickerTitle: 'Exide & Amaron: ₹800 Exchange Rebate',
+      headline: '₹800 Heavy Commercial Battery Exchange Rebate',
+      description: 'Heavy-duty commercial batteries with 36-month on-site replacement warranty across Coimbatore. Instant ₹800 exchange value on old truck or auto batteries.',
+      promoCode: 'EXIDE-SWIF800',
+      badge: 'Official Battery Partner',
+      benefit: '₹800 Instant Battery Exchange Rebate',
+      icon: '🔋',
+      locations: 'Ramanathapuram, Ganapathy, Thudiyalur, Eachanari',
+    },
+    {
+      id: 'castrol_lubricants',
+      name: 'Castrol CRB Commercial Lubes',
+      hub: 'SIDCO Industrial Estate Kurichi',
+      tickerTitle: 'Castrol CRB: Flat 15% Engine Oil Rebate',
+      headline: 'Flat 15% Off Fleet Engine Oil & Lubrication Service',
+      description: 'Heavy diesel engine oil specially blended for Tata Ace, Bolero and multi-axle freight carriers. Free 21-point vehicle fluid health checkup across Coimbatore.',
+      promoCode: 'CASTROL-CBE15',
+      badge: 'Fleet Lubricant Partner',
+      benefit: 'Flat 15% Discount + Free Fluid Check',
+      icon: '🛢️',
+      locations: 'Kurichi SIDCO, Saravanampatti IT Corridor, Ukkadam',
+    },
+  ];
+
+  const handleApplyCoupon = (code: string) => {
+    if (appliedCouponCode === code) {
+      setAppliedCouponCode('');
+      setCouponDiscount(0);
+      showToast('Offer coupon removed');
+      return;
+    }
+    const offer = COMPANY_OFFERS.find((o) => o.code === code);
+    if (!offer) {
+      showToast('Invalid coupon code');
+      return;
+    }
+    let discount = 0;
+    if (offer.discountType === 'percentage') {
+      discount = Math.min(offer.maxDiscount, Math.round(fareBreakdown.totalFare * 0.25));
+    } else if (offer.discountType === 'flat') {
+      discount = offer.value;
+    } else if (offer.discountType === 'helper') {
+      discount = hasHelper ? (fareBreakdown.helperFee || 80) : 50;
+    }
+    setAppliedCouponCode(code);
+    setCouponDiscount(discount);
+    showToast(`🎉 Code ${code} applied! Saved ₹${discount}`);
+  };
+
+  const finalQuotedFare = Math.max(30, fareBreakdown.totalFare - couponDiscount);
+
   // Active Trip
   const currentTrip = trips.find((t) => t.id === activeTripId) || trips[0];
 
   const handleBookNow = () => {
-    if (paymentMethod === 'WALLET' && (currentCustomer?.wallet?.balance || 0) < fareBreakdown.totalFare) {
-      const shortage = Math.ceil(fareBreakdown.totalFare - (currentCustomer?.wallet?.balance || 0));
+    if (paymentMethod === 'WALLET' && (currentCustomer?.wallet?.balance || 0) < finalQuotedFare) {
+      const shortage = Math.ceil(finalQuotedFare - (currentCustomer?.wallet?.balance || 0));
       showToast(`Shortage of ₹${shortage} in your wallet. Please recharge to book.`);
       return;
     }
@@ -332,73 +488,76 @@ export default function CustomerApp() {
     <div className={`flex flex-col h-full pb-20 md:pb-6 transition-colors duration-200 ${
       darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
     }`}>
-      {/* Top Customer Header */}
-      <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white px-4 py-3.5 shadow-md flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-lg shadow-inner">
-            ⚡
-          </div>
-          <div>
-            <h1 className="font-bold text-base tracking-tight leading-tight">SwifLoad Coimbatore</h1>
-            <p className="text-[11px] text-emerald-100 flex items-center space-x-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-              <span>Intra-City On-Demand Express Freight • Tamil Nadu</span>
-            </p>
+      {/* Top Customer Header (Changes Required Items 7, 10, 11, 12, 15) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white px-3 py-2.5 shadow-md flex items-center justify-between sticky top-0 z-30">
+        {/* Left: Side Menu Hamburger Button & SwiftLoad Coimbatore on ONE line */}
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center justify-center shrink-0 border border-white/20"
+            title="Open Side Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center space-x-1.5">
+            <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-sm shadow-inner shrink-0">
+              ⚡
+            </div>
+            <h1 className="font-bold text-sm sm:text-base tracking-tight whitespace-nowrap leading-none">
+              SwiftLoad Coimbatore
+            </h1>
           </div>
         </div>
 
-        {/* Profile / Wallet / Referrals / Light-Dark Toggle / Support Shortcut */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2">
+        {/* Right Edge: Quick Wallet, Notifications, Help & Theme Toggle */}
+        <div className="flex items-center space-x-1 sm:space-x-1.5">
           {/* Quick Wallet Balance Badge */}
           <button
-            onClick={() => setActiveTab('transactions')}
-            className="px-2.5 py-1 text-xs bg-white/15 hover:bg-white/25 text-white font-bold rounded-lg flex items-center space-x-1.5 transition-all border border-white/20"
-            title="Customer Wallet Balance & Passbook"
+            onClick={() => {
+              setActiveTab('wallet');
+              setBookingScreenActive(false);
+            }}
+            className="px-2 py-1 text-xs bg-white/15 hover:bg-white/25 text-white font-bold rounded-lg flex items-center space-x-1 transition-all border border-white/20"
+            title="Customer Wallet Balance"
           >
             <Wallet className="w-3.5 h-3.5 text-emerald-300" />
             <span>₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}</span>
           </button>
 
-          {/* Light / Dark Mode Toggle Button (Requirement 4) */}
+          {/* Notifications Button on Top Ribbon Right Edge */}
           <button
-            onClick={toggleTheme}
-            className={`p-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all border ${
-              darkMode
-                ? 'bg-amber-400/20 text-amber-300 border-amber-400/40 hover:bg-amber-400/30'
-                : 'bg-white/20 text-white border-white/25 hover:bg-white/30'
-            }`}
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode for visual comfort'}
+            onClick={() => setShowNotificationsModal(true)}
+            className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors relative border border-white/20"
+            title="Notifications & Alerts"
           >
-            {darkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-white" />}
-            <span className="hidden md:inline text-[11px]">{darkMode ? 'Light' : 'Dark'}</span>
+            <Bell className="w-4 h-4" />
+            {notifications.filter((n) => !n.read).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full flex items-center justify-center shadow-xs">
+                {notifications.filter((n) => !n.read).length}
+              </span>
+            )}
           </button>
 
-          <button
-            onClick={() => setActiveTab('referrals')}
-            className="px-2.5 py-1 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-100 font-bold rounded-lg flex items-center space-x-1 border border-emerald-400/30 transition-all"
-            title="Refer & Earn Rewards"
-          >
-            <Gift className="w-3.5 h-3.5 text-emerald-300" />
-            <span className="hidden sm:inline">Refer & Earn</span>
-          </button>
-
+          {/* Help Button on Top Ribbon Right Edge */}
           <button
             onClick={() => {
-              setAuthMode('register');
-              setShowAuthModal(true);
+              setActiveTab('support');
+              setBookingScreenActive(false);
             }}
-            className="px-2.5 py-1 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg flex items-center space-x-1 transition-all shadow"
-            title="Register new customer profile"
+            className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors border border-white/20"
+            title="Customer Help & Support"
           >
-            <span>+ Customer</span>
+            <HelpCircle className="w-4 h-4" />
           </button>
 
+          {/* Light / Dark Mode Toggle */}
           <button
-            onClick={() => setActiveTab('support')}
-            className="px-2.5 py-1 text-xs bg-emerald-800/60 hover:bg-emerald-800 rounded-lg flex items-center space-x-1 transition-colors"
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors border border-white/20"
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Help</span>
+            {darkMode ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-white" />}
           </button>
         </div>
       </div>
@@ -413,158 +572,126 @@ export default function CustomerApp() {
               /* ======================= SCREEN A: HOME SCREEN =========================== */
               /* ========================================================================= */
               <div className="space-y-4">
-                {/* ================= REQUIREMENT 2: DASHBOARD STATS BAR (WALLET, TOTAL REFERRALS, VIEW PASSBOOK) ================= */}
-                <div className={`rounded-2xl p-3.5 shadow-sm border space-y-3 transition-colors ${
+                {/* ================= DASHBOARD STATS BAR (COMPACT BUTTONS - ITEMS 14 & 16) ================= */}
+                <div className={`rounded-2xl p-3 shadow-sm border space-y-2.5 transition-colors ${
                   darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
                 }`}>
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Customer Dashboard
+                    <span className={`text-[11px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Dashboard - Customer
                     </span>
-                    <button
-                      onClick={() => setActiveTab('transactions')}
-                      className="text-[11px] font-bold text-emerald-600 hover:text-emerald-500 flex items-center space-x-1"
-                    >
-                      <Receipt className="w-3.5 h-3.5" />
-                      <span>View Transactions History →</span>
-                    </button>
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                      Coimbatore Hub
+                    </span>
                   </div>
 
-                  {/* Exactly 3 Stat Cards as required: Wallet value, Total referrals, Option to view transactions history */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* 3 Compact Stat Buttons: Wallet value, Total referrals, Option to view transactions history */}
+                  <div className="grid grid-cols-3 gap-2">
                     {/* 1. Wallet Value */}
-                    <div
-                      onClick={() => setActiveTab('transactions')}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all hover:scale-[1.02] ${
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('wallet')}
+                      className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all hover:scale-[1.02] flex flex-col justify-between ${
                         darkMode
                           ? 'bg-slate-800/80 border-emerald-500/40 text-emerald-300'
                           : 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
                       }`}
-                      title="Click to view Transactions History & Passbook"
+                      title="Click to view Wallet Details & Top-up"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Wallet Value</span>
-                        <Wallet className="w-4 h-4 text-emerald-500" />
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[9px] font-bold uppercase tracking-wider truncate">Wallet Value</span>
+                        <Wallet className="w-3.5 h-3.5 text-emerald-500 shrink-0 ml-1" />
                       </div>
-                      <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                      <div className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 mt-1">
                         ₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}
                       </div>
-                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400/80 mt-1 font-semibold flex items-center space-x-0.5">
-                        <span>Recharge & Passbook →</span>
-                      </div>
-                    </div>
+                    </button>
 
                     {/* 2. Total Referrals */}
-                    <div
+                    <button
+                      type="button"
                       onClick={() => setActiveTab('referrals')}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all hover:scale-[1.02] ${
+                      className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all hover:scale-[1.02] flex flex-col justify-between ${
                         darkMode
                           ? 'bg-slate-800/60 border-purple-500/30 text-purple-300'
                           : 'bg-purple-50/80 border-purple-200 text-purple-900'
                       }`}
-                      title="Click to view referrals program"
+                      title="Click to view Refer & Earn program"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Total Referrals</span>
-                        <Gift className="w-4 h-4 text-purple-500" />
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[9px] font-bold uppercase tracking-wider truncate">Total Referrals</span>
+                        <Gift className="w-3.5 h-3.5 text-purple-500 shrink-0 ml-1" />
                       </div>
-                      <div className="text-xl font-black text-purple-600 dark:text-purple-400 mt-1">
+                      <div className="text-sm sm:text-base font-black text-purple-600 dark:text-purple-400 mt-1">
                         {referralsMadeCount}
                       </div>
-                      <div className="text-[10px] text-purple-700 dark:text-purple-300 mt-1 font-semibold">
-                        Invited Partners →
-                      </div>
-                    </div>
+                    </button>
 
                     {/* 3. Option to View Transactions History */}
-                    <div
+                    <button
+                      type="button"
                       onClick={() => setActiveTab('transactions')}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all hover:scale-[1.02] ${
+                      className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all hover:scale-[1.02] flex flex-col justify-between ${
                         darkMode
                           ? 'bg-slate-800/60 border-blue-500/30 text-blue-300'
                           : 'bg-blue-50/80 border-blue-200 text-blue-900'
                       }`}
                       title="Click to view complete passbook and ledger"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Transactions History</span>
-                        <Receipt className="w-4 h-4 text-blue-500" />
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[9px] font-bold uppercase tracking-wider truncate">Transactions</span>
+                        <Receipt className="w-3.5 h-3.5 text-blue-500 shrink-0 ml-1" />
                       </div>
-                      <div className="text-sm font-black text-blue-700 dark:text-blue-300 mt-1">
-                        Passbook & Ledger
+                      <div className="text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-300 mt-1 flex items-center space-x-0.5">
+                        <span>Passbook →</span>
                       </div>
-                      <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-1 font-semibold flex items-center space-x-0.5">
-                        <span>View All Statements →</span>
-                      </div>
-                    </div>
+                    </button>
                   </div>
+                </div>
 
-                  {/* ================= REQUIREMENT 3: CUSTOMER REFERRAL CODE BANNER (2-LINE DISPLAY) ================= */}
-                  <div className={`p-3.5 rounded-xl border space-y-2.5 ${
-                    darkMode ? 'bg-slate-800/80 border-emerald-500/30' : 'bg-emerald-50/60 border-emerald-200'
-                  }`}>
-                    {/* Line 1: Referral Code info & description */}
-                    <div className="flex items-center space-x-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                        🎁
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold leading-tight flex items-center space-x-1.5 flex-wrap gap-1">
-                          <span className={darkMode ? 'text-white' : 'text-slate-900'}>Your Referral Code:</span>
-                          <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black px-2 py-0.5 bg-white dark:bg-slate-900 rounded border border-emerald-300 dark:border-emerald-700 text-xs">
-                            {currentCustomer?.referralCode || 'SWIF-KAVITHA-20'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                          Use code for customer & driver referrals. Bonus: ₹150 for customer, ₹500 for driver!
-                        </p>
-                      </div>
+                {/* ================= COMPACT SCROLLING OFFERS TICKER (MINIMAL SCREEN HEIGHT - CHANGES REQUIRED) ================= */}
+                <div className={`rounded-xl p-2 shadow-xs border transition-colors overflow-hidden ${
+                  darkMode
+                    ? 'bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/30 border-amber-500/40'
+                    : 'bg-gradient-to-r from-amber-50/90 via-orange-50/40 to-white border-amber-200'
+                }`}>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 shrink-0 px-1.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 font-black text-[10px] uppercase shadow-xs">
+                      <Sparkles className="w-3 h-3 animate-pulse" />
+                      <span>OFFERS</span>
                     </div>
 
-                    {/* Line 2: Message preview, Copy & Share buttons inside boundary */}
-                    <div className="pt-2 border-t border-emerald-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate">
-                        Earn rewards on every verified dispatch
-                      </span>
-                      <div className="flex items-center space-x-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(currentCustomer?.referralCode || 'SWIF-KAVITHA-20');
-                            setReferralCopied(true);
-                            showToast('Referral code copied to clipboard!');
-                            setTimeout(() => setReferralCopied(false), 2000);
-                          }}
-                          className={`px-3 py-1.5 text-xs font-bold border rounded-lg flex items-center space-x-1 transition-colors ${
-                            darkMode
-                              ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
-                              : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          {referralCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{referralCopied ? 'Copied' : 'Copy'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const shareText = `Ship smart with SwifLoad Coimbatore on-demand city logistics! Use my referral code ${currentCustomer?.referralCode || 'SWIF-KAVITHA-20'} to get ₹100 welcome credit: https://swifload-cbe.azurewebsites.net/customer`;
-                            if (navigator.share) {
-                              navigator.share({ title: 'SwifLoad Referral Code', text: shareText }).catch(() => {});
-                            } else {
-                              window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-                            }
-                          }}
-                          className="px-3.5 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center space-x-1 shadow-sm transition-transform active:scale-95"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                          <span>Share</span>
-                        </button>
+                    {/* Scrolling Ticker Line */}
+                    <div className="overflow-x-auto no-scrollbar flex-1 flex items-center space-x-2 py-0.5">
+                      <div className="animate-marquee flex items-center space-x-2 shrink-0">
+                        {[...COMPANY_OFFERS, ...COMPANY_OFFERS].map((offer, idx) => (
+                          <button
+                            key={`${offer.code}-${idx}`}
+                            type="button"
+                            onClick={() => setSelectedOfferModal(offer)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 border transition-all flex items-center space-x-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                              appliedCouponCode === offer.code
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : darkMode
+                                ? 'bg-slate-800/90 text-amber-300 border-amber-500/30 hover:bg-slate-750'
+                                : 'bg-white text-amber-900 border-amber-300 hover:bg-amber-50 shadow-2xs'
+                            }`}
+                            title="Click for offer details and coupon code"
+                          >
+                            <span>{offer.icon}</span>
+                            <span className="font-extrabold">{offer.tickerText}</span>
+                            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700">
+                              {offer.code}
+                            </span>
+                            <span className="text-[10px] opacity-75">ℹ️</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* ================= REQUIREMENT 6: VEHICLE CATEGORY SELECTION WITH MORE BUTTONS ================= */}
+                {/* ================= VEHICLE CATEGORY SELECTION: 2 BOXES PER ROW GRID ================= */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
                     <div>
@@ -572,590 +699,270 @@ export default function CustomerApp() {
                         Select Vehicle Category
                       </h2>
                       <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Choose vehicle category and sub-type to proceed to booking
+                        Choose vehicle type and configuration to book now
                       </p>
                     </div>
                     <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                      Coimbatore Express Fleet
+                      Coimbatore Fleet
                     </span>
                   </div>
 
-                  <div className="space-y-3">
-                    {/* ================= 1. TWO WHEELER ================= */}
-                    <div className={`p-4 rounded-2xl border transition-all ${
-                      selectedVehicleCategory === '2wheeler'
-                        ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 ring-2 ring-emerald-500/50'
-                        : darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
-                            <Bike className="w-6 h-6" />
+                  {/* 2 BOXES PER ROW GRID */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* ROW 1 - BOX 1: TWO WHEELER */}
+                    <div
+                      onClick={() => {
+                        setSelectedVehicleCategory('2wheeler');
+                        setVehicleModalCategory('2wheeler');
+                      }}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between hover:scale-[1.01] active:scale-[0.99] ${
+                        selectedVehicleCategory === '2wheeler'
+                          ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/40 ring-2 ring-emerald-500/60 shadow-sm'
+                          : darkMode
+                          ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          : 'bg-white border-slate-200/90 hover:border-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                            <Bike className="w-5 h-5" />
                           </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h3 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                                Two Wheeler
-                              </h3>
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
-                                Starts ₹40
-                              </span>
-                            </div>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              Instant documents, courier, parcels & groceries up to 20kg
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* More Button */}
-                        <button
-                          type="button"
-                          onClick={() => setExpandedVehicle(expandedVehicle === '2wheeler' ? null : '2wheeler')}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center space-x-1 transition-all ${
-                            expandedVehicle === '2wheeler'
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-                              : darkMode
-                              ? 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
-                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                          }`}
-                        >
-                          <span>{expandedVehicle === '2wheeler' ? 'Hide Options' : 'More Options'}</span>
-                          {expandedVehicle === '2wheeler' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      {/* Expanded Sub-option Selector: Moto Bike vs Scooter Type */}
-                      {expandedVehicle === '2wheeler' && (
-                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in-50">
-                          <span className={`text-[11px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            Choose Two Wheeler Sub-type:
+                          <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                            ₹40+
                           </span>
-                          <div className="grid grid-cols-2 gap-2">
-                            {/* Moto Bike option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTwoWheelerSubtype('moto_bike');
-                                setSelectedVehicleCategory('2wheeler');
-                              }}
-                              className={`p-3 rounded-xl border text-left transition-all ${
-                                selectedVehicleCategory === '2wheeler' && twoWheelerSubtype === 'moto_bike'
-                                  ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-1.5 font-bold text-xs">
-                                <Bike className="w-4 h-4 text-emerald-600" />
-                                <span>Moto Bike</span>
-                              </div>
-                              <p className={`text-[10px] mt-1 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Standard motorcycle with rear delivery rack / bag. Fast courier express.
-                              </p>
-                            </button>
-
-                            {/* Scooter Type option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTwoWheelerSubtype('scooter');
-                                setSelectedVehicleCategory('2wheeler');
-                              }}
-                              className={`p-3 rounded-xl border text-left transition-all ${
-                                selectedVehicleCategory === '2wheeler' && twoWheelerSubtype === 'scooter'
-                                  ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-1.5 font-bold text-xs">
-                                <Bike className="w-4 h-4 text-emerald-600" />
-                                <span>Scooter Type</span>
-                              </div>
-                              <p className={`text-[10px] mt-1 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Wide flat floorboard scooter. Perfect for delicate parcels & bakery boxes.
-                              </p>
-                            </button>
-                          </div>
                         </div>
-                      )}
-
-                      {/* Navigation CTA to Dedicated Booking Page */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                        <span className={`text-[11px] font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Selected: <strong className="text-emerald-600 dark:text-emerald-400">{twoWheelerSubtype === 'moto_bike' ? 'Moto Bike' : 'Scooter Type'}</strong>
+                        <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          Two Wheeler
+                        </h3>
+                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Courier, parcels & food up to 20kg
+                        </p>
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {twoWheelerSubtype === 'moto_bike' ? 'Moto Bike' : 'Scooter'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleProceedToBooking('2wheeler')}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-transform active:scale-95 flex items-center space-x-1.5"
-                        >
-                          <span>Proceed to Booking</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                          Options ⚙️
+                        </span>
                       </div>
                     </div>
 
-                    {/* ================= 2. THREE WHEELER ================= */}
-                    <div className={`p-4 rounded-2xl border transition-all ${
-                      selectedVehicleCategory === '3wheeler'
-                        ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 ring-2 ring-emerald-500/50'
-                        : darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 flex items-center justify-center">
-                            <CarFront className="w-6 h-6" />
+                    {/* ROW 1 - BOX 2: THREE WHEELER */}
+                    <div
+                      onClick={() => {
+                        setSelectedVehicleCategory('3wheeler');
+                        setVehicleModalCategory('3wheeler');
+                      }}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between hover:scale-[1.01] active:scale-[0.99] ${
+                        selectedVehicleCategory === '3wheeler'
+                          ? 'border-teal-600 bg-teal-50/50 dark:bg-teal-950/40 ring-2 ring-teal-500/60 shadow-sm'
+                          : darkMode
+                          ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          : 'bg-white border-slate-200/90 hover:border-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/60 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+                            <CarFront className="w-5 h-5" />
                           </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h3 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                                Three Wheeler
-                              </h3>
-                              <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-1.5 py-0.2 rounded">
-                                Starts ₹130
-                              </span>
-                            </div>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              Urban cargo auto for boxes, appliances & textile bolts up to 500kg
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* More Button */}
-                        <button
-                          type="button"
-                          onClick={() => setExpandedVehicle(expandedVehicle === '3wheeler' ? null : '3wheeler')}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center space-x-1 transition-all ${
-                            expandedVehicle === '3wheeler'
-                              ? 'bg-teal-600 text-white border-teal-600 shadow'
-                              : darkMode
-                              ? 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
-                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                          }`}
-                        >
-                          <span>{expandedVehicle === '3wheeler' ? 'Hide Options' : 'More Options'}</span>
-                          {expandedVehicle === '3wheeler' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      {/* Expanded Sub-option Selector: Open Body vs Closed Body */}
-                      {expandedVehicle === '3wheeler' && (
-                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in-50">
-                          <span className={`text-[11px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            Choose Three Wheeler Sub-type:
+                          <span className="text-[9px] bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-bold px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800">
+                            ₹130+
                           </span>
-                          <div className="grid grid-cols-2 gap-2">
-                            {/* Open Body option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setThreeWheelerSubtype('open_body');
-                                setSelectedVehicleCategory('3wheeler');
-                              }}
-                              className={`p-3 rounded-xl border text-left transition-all ${
-                                selectedVehicleCategory === '3wheeler' && threeWheelerSubtype === 'open_body'
-                                  ? 'border-teal-600 bg-teal-50 dark:bg-teal-950/60 ring-2 ring-teal-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-1.5 font-bold text-xs">
-                                <CarFront className="w-4 h-4 text-teal-600" />
-                                <span>Open Body</span>
-                              </div>
-                              <p className={`text-[10px] mt-1 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Open bed cargo auto for quick top-loading, crates & construction materials.
-                              </p>
-                            </button>
-
-                            {/* Closed Body option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setThreeWheelerSubtype('closed_body');
-                                setSelectedVehicleCategory('3wheeler');
-                              }}
-                              className={`p-3 rounded-xl border text-left transition-all ${
-                                selectedVehicleCategory === '3wheeler' && threeWheelerSubtype === 'closed_body'
-                                  ? 'border-teal-600 bg-teal-50 dark:bg-teal-950/60 ring-2 ring-teal-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-1.5 font-bold text-xs">
-                                <Container className="w-4 h-4 text-teal-600" />
-                                <span>Closed Body</span>
-                              </div>
-                              <p className={`text-[10px] mt-1 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Closed weather-proof cargo auto container for cartons, textiles & retail stock.
-                              </p>
-                            </button>
-                          </div>
                         </div>
-                      )}
-
-                      {/* Navigation CTA to Dedicated Booking Page */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                        <span className={`text-[11px] font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Selected: <strong className="text-teal-600 dark:text-teal-400">{threeWheelerSubtype === 'open_body' ? 'Open Body Auto' : 'Closed Body Auto'}</strong>
+                        <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          Three Wheeler
+                        </h3>
+                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Cargo auto for boxes & textiles up to 500kg
+                        </p>
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">
+                          {threeWheelerSubtype === 'open_body' ? 'Open Body' : 'Closed Body'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleProceedToBooking('3wheeler')}
-                          className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition-transform active:scale-95 flex items-center space-x-1.5"
-                        >
-                          <span>Proceed to Booking</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        <span className="text-[10px] font-semibold text-teal-600 bg-teal-50 dark:bg-teal-950/60 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800">
+                          Options ⚙️
+                        </span>
                       </div>
                     </div>
 
-                    {/* ================= 3. FOUR WHEELER ================= */}
-                    <div className={`p-4 rounded-2xl border transition-all ${
-                      selectedVehicleCategory === '4wheeler'
-                        ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 ring-2 ring-emerald-500/50'
-                        : darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center">
-                            <Truck className="w-6 h-6" />
+                    {/* ROW 2 - BOX 1: FOUR WHEELER */}
+                    <div
+                      onClick={() => {
+                        setSelectedVehicleCategory('4wheeler');
+                        setVehicleModalCategory('4wheeler');
+                      }}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between hover:scale-[1.01] active:scale-[0.99] ${
+                        selectedVehicleCategory === '4wheeler'
+                          ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/40 ring-2 ring-blue-500/60 shadow-sm'
+                          : darkMode
+                          ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          : 'bg-white border-slate-200/90 hover:border-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
+                            <Truck className="w-5 h-5" />
                           </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h3 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                                Four Wheeler
-                              </h3>
-                              <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 rounded">
-                                Starts ₹260
-                              </span>
-                            </div>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              Tata Ace / Bolero Pickup / 8ft trucks for loads up to 1000kg - 1500kg
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* More Button */}
-                        <button
-                          type="button"
-                          onClick={() => setExpandedVehicle(expandedVehicle === '4wheeler' ? null : '4wheeler')}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center space-x-1 transition-all ${
-                            expandedVehicle === '4wheeler'
-                              ? 'bg-blue-600 text-white border-blue-600 shadow'
-                              : darkMode
-                              ? 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
-                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                          }`}
-                        >
-                          <span>{expandedVehicle === '4wheeler' ? 'Hide Options' : 'More Options'}</span>
-                          {expandedVehicle === '4wheeler' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      {/* Expanded Sub-option Selector: Open Body vs Closed Body */}
-                      {expandedVehicle === '4wheeler' && (
-                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in-50">
-                          <span className={`text-[11px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            Choose Four Wheeler Sub-type:
+                          <span className="text-[9px] bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-bold px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                            ₹260+
                           </span>
-                          <div className="grid grid-cols-2 gap-2">
-                            {/* Open Body option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFourWheelerSubtype('open_body');
-                                setSelectedVehicleCategory('4wheeler');
-                              }}
-                              className={`p-3 rounded-xl border text-left transition-all ${
-                                selectedVehicleCategory === '4wheeler' && fourWheelerSubtype === 'open_body'
-                                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/60 ring-2 ring-blue-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-1.5 font-bold text-xs">
-                                <Truck className="w-4 h-4 text-blue-600" />
-                                <span>Open Body</span>
-                              </div>
-                              <p className={`text-[10px] mt-1 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Tata Ace / 8ft open trailer flatbed. Best for machinery, pumps & hardware.
-                              </p>
-                            </button>
-
-                            {/* Closed Body option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFourWheelerSubtype('closed_body');
-                                setSelectedVehicleCategory('4wheeler');
-                              }}
-                              className={`p-3 rounded-xl border text-left transition-all ${
-                                selectedVehicleCategory === '4wheeler' && fourWheelerSubtype === 'closed_body'
-                                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-950/60 ring-2 ring-blue-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-1.5 font-bold text-xs">
-                                <Container className="w-4 h-4 text-blue-600" />
-                                <span>Closed Body</span>
-                              </div>
-                              <p className={`text-[10px] mt-1 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Closed container truck. Rainproof & lockable for electronics, pharma & garments.
-                              </p>
-                            </button>
-                          </div>
                         </div>
-                      )}
-
-                      {/* Navigation CTA to Dedicated Booking Page */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                        <span className={`text-[11px] font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Selected: <strong className="text-blue-600 dark:text-blue-400">{fourWheelerSubtype === 'open_body' ? 'Open Body (Tata Ace)' : 'Closed Container Box'}</strong>
+                        <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          Four Wheeler
+                        </h3>
+                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Tata Ace, Bolero Pickup up to 1000-1500kg
+                        </p>
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                          {fourWheelerSubtype === 'open_body' ? 'Open Body' : 'Closed Body'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleProceedToBooking('4wheeler')}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-transform active:scale-95 flex items-center space-x-1.5"
-                        >
-                          <span>Proceed to Booking</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
+                          Options ⚙️
+                        </span>
                       </div>
                     </div>
 
-                    {/* ================= 4. EV VEHICLES (WITH 2, 3, AND 4 WHEELER ICONS SHOWN) ================= */}
-                    <div className={`p-4 rounded-2xl border transition-all ${
-                      selectedVehicleCategory === 'ev'
-                        ? 'border-emerald-600 bg-emerald-50/40 dark:bg-emerald-950/30 ring-2 ring-emerald-500/50'
-                        : darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
-                            <Zap className="w-6 h-6 animate-pulse" />
+                    {/* ROW 2 - BOX 2: EV VEHICLES */}
+                    <div
+                      onClick={() => {
+                        setSelectedVehicleCategory('ev');
+                        setVehicleModalCategory('ev');
+                      }}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between hover:scale-[1.01] active:scale-[0.99] ${
+                        selectedVehicleCategory === 'ev'
+                          ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/40 ring-2 ring-emerald-500/60 shadow-sm'
+                          : darkMode
+                          ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          : 'bg-white border-slate-200/90 hover:border-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+                            <Zap className="w-5 h-5 animate-pulse" />
                           </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h3 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                                EV Vehicles (Eco Fleet)
-                              </h3>
-                              <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded">
-                                Zero Emission
-                              </span>
-                            </div>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              100% Electric delivery fleet across Coimbatore city
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* More Button */}
-                        <button
-                          type="button"
-                          onClick={() => setExpandedVehicle(expandedVehicle === 'ev' ? null : 'ev')}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center space-x-1 transition-all ${
-                            expandedVehicle === 'ev'
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-                              : darkMode
-                              ? 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
-                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                          }`}
-                        >
-                          <span>{expandedVehicle === 'ev' ? 'Hide Options' : 'More Options'}</span>
-                          {expandedVehicle === 'ev' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-
-                      {/* Prominently shown 2, 3, and 4 wheeler icons inside this section (Requirement 16) */}
-                      <div className="mt-3 p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex items-center justify-around">
-                        <div className="flex flex-col items-center space-y-1">
-                          <Bike className="w-5 h-5 text-emerald-500" />
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">2-Wheeler EV</span>
-                        </div>
-                        <div className="w-px h-6 bg-emerald-500/30" />
-                        <div className="flex flex-col items-center space-y-1">
-                          <CarFront className="w-5 h-5 text-emerald-500" />
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">3-Wheeler EV</span>
-                        </div>
-                        <div className="w-px h-6 bg-emerald-500/30" />
-                        <div className="flex flex-col items-center space-y-1">
-                          <Truck className="w-5 h-5 text-emerald-500" />
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">4-Wheeler EV</span>
-                        </div>
-                      </div>
-
-                      {/* Expanded Sub-option Selector: 2W, 3W, 4W EV Options */}
-                      {expandedVehicle === 'ev' && (
-                        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in-50">
-                          <span className={`text-[11px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            Choose EV Fleet Model:
+                          <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded">
+                            ECO EV
                           </span>
-                          <div className="grid grid-cols-3 gap-2">
-                            {/* EV 2W option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEvSubtype('ev_2wheeler');
-                                setSelectedVehicleCategory('ev');
-                              }}
-                              className={`p-2.5 rounded-xl border text-center transition-all ${
-                                selectedVehicleCategory === 'ev' && evSubtype === 'ev_2wheeler'
-                                  ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <Bike className="w-4 h-4 mx-auto text-emerald-500 mb-1" />
-                              <div className="font-bold text-[11px]">EV 2-Wheeler</div>
-                              <p className={`text-[9px] mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Up to 20kg
-                              </p>
-                            </button>
-
-                            {/* EV 3W option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEvSubtype('ev_3wheeler');
-                                setSelectedVehicleCategory('ev');
-                              }}
-                              className={`p-2.5 rounded-xl border text-center transition-all ${
-                                selectedVehicleCategory === 'ev' && evSubtype === 'ev_3wheeler'
-                                  ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <CarFront className="w-4 h-4 mx-auto text-emerald-500 mb-1" />
-                              <div className="font-bold text-[11px]">EV 3-Wheeler</div>
-                              <p className={`text-[9px] mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Up to 450kg
-                              </p>
-                            </button>
-
-                            {/* EV 4W option */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEvSubtype('ev_4wheeler');
-                                setSelectedVehicleCategory('ev');
-                              }}
-                              className={`p-2.5 rounded-xl border text-center transition-all ${
-                                selectedVehicleCategory === 'ev' && evSubtype === 'ev_4wheeler'
-                                  ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500 font-bold'
-                                  : darkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                              }`}
-                            >
-                              <Truck className="w-4 h-4 mx-auto text-emerald-500 mb-1" />
-                              <div className="font-bold text-[11px]">EV 4-Wheeler</div>
-                              <p className={`text-[9px] mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                Up to 900kg
-                              </p>
-                            </button>
-                          </div>
                         </div>
-                      )}
-
-                      {/* Navigation CTA to Dedicated Booking Page */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                        <span className={`text-[11px] font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Selected: <strong className="text-emerald-600 dark:text-emerald-400">{evSubtype === 'ev_2wheeler' ? 'EV 2W Bike' : evSubtype === 'ev_3wheeler' ? 'EV 3W Loader' : 'EV 4W Mini Truck'}</strong>
+                        <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          EV Vehicles
+                        </h3>
+                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          2W, 3W & 4W zero emission green fleet
+                        </p>
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {evSubtype === 'ev_2wheeler' ? 'EV 2-Wheeler' : evSubtype === 'ev_3wheeler' ? 'EV 3-Wheeler' : 'EV 4-Wheeler'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleProceedToBooking('ev')}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-transform active:scale-95 flex items-center space-x-1.5"
-                        >
-                          <span>Proceed to Booking</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                          Options ⚙️
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* ================= SPONSORED PARTNER ADS (BOTTOM OF MAIN PAGE) ================= */}
-                <div className={`rounded-2xl p-4 shadow-sm border space-y-3 relative overflow-hidden transition-colors ${
+                {/* ================= YOUR REFERRAL CODE BANNER (COMPACT - NO SCROLL) ================= */}
+                <div className={`px-3 py-2 rounded-xl border transition-colors ${
+                  darkMode ? 'bg-slate-900 border-emerald-500/30' : 'bg-emerald-50/70 border-emerald-200'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                        🎁
+                      </div>
+                      <div className="text-xs font-bold leading-tight flex items-center space-x-1.5 flex-wrap gap-1">
+                        <span className={darkMode ? 'text-white' : 'text-slate-900'}>Your Referral Code:</span>
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black px-2 py-0.5 bg-white dark:bg-slate-900 rounded-lg border border-emerald-300 dark:border-emerald-700 text-xs">
+                          {currentCustomer?.referralCode || 'SWIF-KAVITHA-20'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(currentCustomer?.referralCode || 'SWIF-KAVITHA-20');
+                          setReferralCopied(true);
+                          showToast('Referral code copied to clipboard!');
+                          setTimeout(() => setReferralCopied(false), 2000);
+                        }}
+                        className={`px-2.5 py-1 text-xs font-bold border rounded-lg flex items-center space-x-1 transition-colors ${
+                          darkMode
+                            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                            : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {referralCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{referralCopied ? 'Copied' : 'Copy'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const shareText = `Ship smart with SwifLoad Coimbatore on-demand city logistics! Use my referral code ${currentCustomer?.referralCode || 'SWIF-KAVITHA-20'} to get ₹100 welcome credit: https://swifload-cbe.azurewebsites.net/customer`;
+                          if (navigator.share) {
+                            navigator.share({ title: 'SwifLoad Referral Code', text: shareText }).catch(() => {});
+                          } else {
+                            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                          }
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center space-x-1 shadow-sm transition-transform active:scale-95"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>Share</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ================= COMPACT SCROLLING SPONSORED PARTNER ADS (WITHOUT HEADING) ================= */}
+                <div className={`rounded-xl px-2 py-1.5 shadow-xs border transition-colors overflow-hidden ${
                   darkMode
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-gradient-to-r from-amber-50/70 via-white to-orange-50/50 border-amber-200/80'
                 }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase bg-amber-500 text-slate-950 flex items-center space-x-1 shadow-xs">
-                        <Megaphone className="w-3 h-3" />
-                        <span>SPONSORED PARTNER ADS</span>
-                      </span>
-                      <span className="text-[11px] text-slate-400">Coimbatore Commercial Partner Promotions</span>
-                    </div>
-                    <button
-                      onClick={() => setShowAdModal(true)}
-                      className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-1"
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                      <span>Post Ad Here</span>
-                    </button>
-                  </div>
-
-                  {/* Horizontal Full-Width Ads Stacked One Below the Other */}
-                  <div className="flex flex-col space-y-2.5">
-                    {/* Partner Ad 1 */}
-                    <div className={`w-full p-3.5 rounded-xl border flex items-center justify-between gap-3 shadow-xs ${
-                      darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-amber-200/90'
-                    }`}>
-                      <div className="flex items-start space-x-3 min-w-0 flex-1">
-                        <div className="text-2xl shrink-0 mt-0.5">🛞</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className={`font-extrabold text-xs truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                              Apollo Commercial Tyres • CBE Hub
-                            </span>
-                            <span className="text-[9px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 font-bold rounded shrink-0">
-                              Verified Partner
+                  {/* Horizontal Scrolling Ticker of Ads */}
+                  <div className="overflow-x-auto no-scrollbar flex items-center py-0.5">
+                    <div className="animate-marquee flex items-center space-x-2 shrink-0">
+                      {[...SPONSORED_PARTNERS, ...SPONSORED_PARTNERS].map((partner, pIdx) => (
+                        <button
+                          key={`${partner.id}-${pIdx}`}
+                          type="button"
+                          onClick={() => setSelectedAdModal(partner)}
+                          className={`px-3 py-1.5 rounded-xl border text-left shrink-0 transition-all flex items-center space-x-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                            darkMode
+                              ? 'bg-slate-800/90 border-slate-700 text-white hover:border-amber-500/50'
+                              : 'bg-white border-amber-200 text-slate-900 hover:border-amber-300 shadow-2xs'
+                          }`}
+                          title="Click to view full partner offer details"
+                        >
+                          <span className="text-base shrink-0">{partner.icon}</span>
+                          <div className="flex flex-col text-left">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-[11px] font-extrabold truncate max-w-[140px]">
+                                {partner.name}
+                              </span>
+                              <span className="text-[8px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold shrink-0">
+                                Verified
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 truncate max-w-[170px]">
+                              {partner.headline}
                             </span>
                           </div>
-                          <p className="text-xs text-amber-700 dark:text-amber-400 font-bold mt-0.5">
-                            Flat 20% Off Commercial LMV/HMV Tyres
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            Free computer wheel alignment at 8 Coimbatore centers for SwifLoad shippers.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => showToast('Promo code APOLLO-SWIF20 applied!')}
-                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] rounded-lg shrink-0 shadow-xs transition-transform active:scale-95"
-                      >
-                        Claim 20%
-                      </button>
-                    </div>
-
-                    {/* Partner Ad 2 */}
-                    <div className={`w-full p-3.5 rounded-xl border flex items-center justify-between gap-3 shadow-xs ${
-                      darkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-amber-200/90'
-                    }`}>
-                      <div className="flex items-start space-x-3 min-w-0 flex-1">
-                        <div className="text-2xl shrink-0 mt-0.5">🔋</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className={`font-extrabold text-xs truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                              Exide & Amaron Commercial Battery Hub
-                            </span>
-                            <span className="text-[9px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 font-bold rounded shrink-0">
-                              Partner
-                            </span>
-                          </div>
-                          <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
-                            ₹800 Heavy Commercial Battery Exchange Rebate
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            Heavy-duty commercial batteries with 36-month on-site warranty across Coimbatore.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => showToast('Promo code EXIDE-SWIF800 applied!')}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] rounded-lg shrink-0 shadow-xs transition-transform active:scale-95"
-                      >
-                        Get ₹800
-                      </button>
+                          <span className="text-[10px] text-slate-400 shrink-0 pl-1">ℹ️</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1651,6 +1458,97 @@ export default function CustomerApp() {
                   )}
                 </div>
 
+                {/* ================= COMPANY OFFERS ON BOOKING PAGE (CHANGES REQUIRED ITEM 35) ================= */}
+                <div className={`rounded-2xl p-3.5 shadow-sm border space-y-2.5 transition-colors ${
+                  darkMode ? 'bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/30 border-amber-500/40' : 'bg-gradient-to-r from-amber-50 via-orange-50/40 to-white border-amber-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span className={`text-xs font-black uppercase tracking-wider ${darkMode ? 'text-amber-300' : 'text-amber-950'}`}>
+                        Apply Company Booking Offer
+                      </span>
+                    </div>
+                    <span className="text-[10px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase">
+                      Discount Coupons
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {COMPANY_OFFERS.map((offer) => (
+                      <div
+                        key={offer.code}
+                        className={`p-2.5 rounded-xl border flex flex-col justify-between transition-all ${
+                          appliedCouponCode === offer.code
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500/40'
+                            : darkMode
+                            ? 'bg-slate-800/80 border-slate-700'
+                            : 'bg-white border-amber-200/80 shadow-2xs'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-base">{offer.icon}</span>
+                            <span className="font-mono text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              {offer.code}
+                            </span>
+                          </div>
+                          <div className="font-bold text-xs mt-1 text-slate-900 dark:text-white leading-tight">
+                            {offer.title}
+                          </div>
+                        </div>
+                        <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleApplyCoupon(offer.code)}
+                            className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              appliedCouponCode === offer.code
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                            }`}
+                          >
+                            {appliedCouponCode === offer.code ? 'Applied ✓' : 'Apply Code'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ================= ROOM FOR SPONSORED ADS ON BOOKING PAGE (CHANGES REQUIRED ITEM 35) ================= */}
+                <div className={`rounded-2xl p-3.5 shadow-sm border space-y-2.5 transition-colors ${
+                  darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gradient-to-r from-slate-50 via-white to-amber-50/30 border-slate-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase bg-amber-500 text-slate-950 flex items-center space-x-1 shadow-2xs">
+                      <Megaphone className="w-3 h-3" />
+                      <span>SPONSORED COMMERCIAL ADS</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400">Coimbatore Hub Partners</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className={`p-2.5 rounded-xl border flex items-center space-x-2.5 ${
+                      darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-amber-200/60'
+                    }`}>
+                      <div className="text-xl">🛞</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-xs truncate">Apollo Commercial Tyres CBE</div>
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">20% off fleet replacement</p>
+                      </div>
+                    </div>
+                    <div className={`p-2.5 rounded-xl border flex items-center space-x-2.5 ${
+                      darkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-white border-amber-200/60'
+                    }`}>
+                      <div className="text-xl">⚡</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-xs truncate">Exide Commercial Batteries</div>
+                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Free doorstep installation</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Final Fare Breakdown & Confirm Booking Action */}
                 <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-lg space-y-3">
                   <div className="p-3 rounded-xl bg-slate-800/90 border border-amber-500/40 text-xs text-amber-200 leading-relaxed flex items-start space-x-2.5">
@@ -1718,6 +1616,15 @@ export default function CustomerApp() {
                       <span>+₹{fareBreakdown.surgeFare}</span>
                     </div>
                   )}
+                  {appliedCouponCode && couponDiscount > 0 && (
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs text-emerald-400">
+                      <span className="flex items-center space-x-1">
+                        <Sparkles className="w-3 h-3" />
+                        <span>Promo Coupon Discount ({appliedCouponCode})</span>
+                      </span>
+                      <span className="font-bold">-₹{couponDiscount}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs">
                     <span className="text-slate-400">GST (5% Logistics)</span>
                     <span>₹{fareBreakdown.taxGst}</span>
@@ -1725,14 +1632,14 @@ export default function CustomerApp() {
                   <div className="flex items-center justify-between pt-1">
                     <div>
                       <div className="text-[11px] text-slate-400">Total Fare (Quoted & Guaranteed)</div>
-                      <div className="text-2xl font-black text-emerald-400">₹{fareBreakdown.totalFare}</div>
+                      <div className="text-2xl font-black text-emerald-400">₹{finalQuotedFare}</div>
                     </div>
                     <button
                       type="button"
                       onClick={handleBookNow}
                       className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-3 rounded-xl shadow-lg transition-transform transform active:scale-95 flex items-center space-x-2"
                     >
-                      <span>Book Goods Vehicle</span>
+                      <span>Confirm & Book Goods Vehicle</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1859,6 +1766,121 @@ export default function CustomerApp() {
                 </div>
               </div>
             </div>
+
+            {/* Interactive OTP Confirmation Handshake (Changes Required Item 30 & 33 & 34) */}
+            {currentTrip.status === 'ARRIVING_PICKUP' && (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-amber-500 font-black text-xs uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>Driver Approaching Your Pickup Point</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      advanceTripStatus(currentTrip.id);
+                      showToast('Fast-forward: Driver has reached your pickup location!');
+                    }}
+                    className="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline bg-amber-500/15 px-2 py-0.5 rounded-lg border border-amber-500/30"
+                  >
+                    Simulate Driver Arrival ⏩
+                  </button>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Driver partner <strong>{currentTrip.driverName || 'Partner'}</strong> ({currentTrip.driverVehicleNumber || 'Tata Ace'}) is en route. Watch live movement on the map above.
+                </p>
+              </div>
+            )}
+
+            {currentTrip.status === 'AT_PICKUP' && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/40 space-y-3 shadow-md animate-in fade-in-50">
+                <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400 font-black text-xs uppercase tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Driver Arrived at Pickup Location • Handover Verification</span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-200 leading-snug">
+                  Please share your 4-digit Pickup OTP with driver partner <strong>{currentTrip.driverName}</strong> or click below to authenticate loading:
+                </p>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800">
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Your Pickup OTP</span>
+                    <div className="text-2xl font-mono font-black tracking-widest text-emerald-600 dark:text-emerald-400">
+                      {currentTrip.shipment.pickupOtp}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const res = advanceTripStatus(currentTrip.id, currentTrip.shipment.pickupOtp);
+                      if (res.success) {
+                        showToast('Pickup OTP verified! Goods safely loaded. Trip in transit.');
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-transform active:scale-95 flex items-center space-x-1.5"
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    <span>Confirm Pickup & Start Trip →</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {currentTrip.status === 'IN_TRANSIT' && (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-black text-xs uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Cargo In Transit • Navigating to Destination</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      advanceTripStatus(currentTrip.id);
+                      showToast('Fast-forward: Driver has reached drop destination!');
+                    }}
+                    className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-500/30"
+                  >
+                    Simulate Destination Arrival ⏩
+                  </button>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Goods are loaded and moving smoothly across Coimbatore. Live location updates continuously on the map.
+                </p>
+              </div>
+            )}
+
+            {currentTrip.status === 'ARRIVED_DESTINATION' && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border border-emerald-500/40 space-y-3 shadow-md animate-in fade-in-50">
+                <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-black text-xs uppercase tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Driver Reached Destination • Delivery Verification</span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-200 leading-snug">
+                  Vehicle has arrived at the drop address. Share the 4-digit Delivery OTP with driver or confirm safe receipt below:
+                </p>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800">
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Your Delivery OTP</span>
+                    <div className="text-2xl font-mono font-black tracking-widest text-emerald-600 dark:text-emerald-400">
+                      {currentTrip.shipment.deliveryOtp}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const res = advanceTripStatus(currentTrip.id, currentTrip.shipment.deliveryOtp);
+                      if (res.success) {
+                        showToast('Delivery OTP verified! Cargo successfully delivered.');
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-transform active:scale-95 flex items-center space-x-1.5"
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    <span>Verify Delivery OTP & Finalize ✓</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Driver Partner Details Card (Revealed only after acceptance) */}
             {currentTrip.driverName && currentTrip.status !== 'SEARCHING' ? (
@@ -2816,10 +2838,11 @@ export default function CustomerApp() {
             setActiveTab('book');
             setBookingScreenActive(false);
           }}
-          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'book' ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+          className={`flex flex-col items-center space-y-0.5 ${activeTab === 'book' && !bookingScreenActive ? 'text-emerald-500 font-bold' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+          title="Return to Home Dashboard"
         >
-          <Truck className="w-5 h-5" />
-          <span className="text-[10px]">Vehicles</span>
+          <Home className="w-5 h-5" />
+          <span className="text-[10px]">Home</span>
         </button>
 
         <button
@@ -2874,6 +2897,451 @@ export default function CustomerApp() {
           <span className="text-[10px]">Profile</span>
         </button>
       </div>
+
+      {/* ================= MODAL: VEHICLE SUB-OPTIONS POPUP (CHANGES REQUIRED) ================= */}
+      {vehicleModalCategory && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className={`rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl border transition-all ${
+            darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                  vehicleModalCategory === '2wheeler'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                    : vehicleModalCategory === '3wheeler'
+                    ? 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300'
+                    : vehicleModalCategory === '4wheeler'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                    : 'bg-emerald-500/20 text-emerald-500'
+                }`}>
+                  {vehicleModalCategory === '2wheeler' && <Bike className="w-5 h-5" />}
+                  {vehicleModalCategory === '3wheeler' && <CarFront className="w-5 h-5" />}
+                  {vehicleModalCategory === '4wheeler' && <Truck className="w-5 h-5" />}
+                  {vehicleModalCategory === 'ev' && <Zap className="w-5 h-5 animate-pulse" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">
+                    {vehicleModalCategory === '2wheeler' && 'Two Wheeler Options'}
+                    {vehicleModalCategory === '3wheeler' && 'Three Wheeler Body Options'}
+                    {vehicleModalCategory === '4wheeler' && 'Four Wheeler Body Options'}
+                    {vehicleModalCategory === 'ev' && 'Electric EV Fleet Options'}
+                  </h3>
+                  <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Select configuration before booking
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVehicleModalCategory(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content - TWO WHEELER */}
+            {vehicleModalCategory === '2wheeler' && (
+              <div className="space-y-3">
+                <p className={`text-xs ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Choose vehicle style for your courier, document or food parcel shipment:
+                </p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setTwoWheelerSubtype('moto_bike')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      twoWheelerSubtype === 'moto_bike'
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 font-bold text-xs">
+                      <Bike className="w-4 h-4 shrink-0" />
+                      <span>Moto Bike</span>
+                    </div>
+                    <p className={`text-[10px] mt-1.5 leading-snug ${twoWheelerSubtype === 'moto_bike' ? 'text-emerald-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Standard motorcycle with rear carrier rack / bag.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTwoWheelerSubtype('scooter')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      twoWheelerSubtype === 'scooter'
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 font-bold text-xs">
+                      <Bike className="w-4 h-4 shrink-0" />
+                      <span>Scooter Type</span>
+                    </div>
+                    <p className={`text-[10px] mt-1.5 leading-snug ${twoWheelerSubtype === 'scooter' ? 'text-emerald-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Wide flat floorboard for bakery boxes & fragile goods.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Content - THREE WHEELER: OPEN BODY VS CLOSED BODY */}
+            {vehicleModalCategory === '3wheeler' && (
+              <div className="space-y-3">
+                <p className={`text-xs ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Choose open or closed cargo auto container according to your goods:
+                </p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setThreeWheelerSubtype('open_body')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      threeWheelerSubtype === 'open_body'
+                        ? 'border-teal-600 bg-teal-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 font-bold text-xs">
+                      <CarFront className="w-4 h-4 shrink-0" />
+                      <span>Open Body</span>
+                    </div>
+                    <p className={`text-[10px] mt-1.5 leading-snug ${threeWheelerSubtype === 'open_body' ? 'text-teal-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Open bed cargo auto for quick top-loading & crates.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setThreeWheelerSubtype('closed_body')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      threeWheelerSubtype === 'closed_body'
+                        ? 'border-teal-600 bg-teal-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 font-bold text-xs">
+                      <Container className="w-4 h-4 shrink-0" />
+                      <span>Closed Body</span>
+                    </div>
+                    <p className={`text-[10px] mt-1.5 leading-snug ${threeWheelerSubtype === 'closed_body' ? 'text-teal-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      All-weather closed box for cartons, fabric & retail goods.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Content - FOUR WHEELER: OPEN BODY VS CLOSED BODY */}
+            {vehicleModalCategory === '4wheeler' && (
+              <div className="space-y-3">
+                <p className={`text-xs ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Choose open bed (Tata Ace) or closed container truck:
+                </p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setFourWheelerSubtype('open_body')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      fourWheelerSubtype === 'open_body'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 font-bold text-xs">
+                      <Truck className="w-4 h-4 shrink-0" />
+                      <span>Open Body</span>
+                    </div>
+                    <p className={`text-[10px] mt-1.5 leading-snug ${fourWheelerSubtype === 'open_body' ? 'text-blue-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Tata Ace open bed / 8ft flatbed for motors, pumps & steel.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFourWheelerSubtype('closed_body')}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      fourWheelerSubtype === 'closed_body'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 font-bold text-xs">
+                      <Container className="w-4 h-4 shrink-0" />
+                      <span>Closed Body</span>
+                    </div>
+                    <p className={`text-[10px] mt-1.5 leading-snug ${fourWheelerSubtype === 'closed_body' ? 'text-blue-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Closed container box. Lockable & rainproof for pharma & garments.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Content - EV VEHICLES: 2-WHEELER EV, 3-WHEELER EV, 4-WHEELER EV */}
+            {vehicleModalCategory === 'ev' && (
+              <div className="space-y-3">
+                <p className={`text-xs ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Choose 100% electric zero-emission fleet size:
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEvSubtype('ev_2wheeler')}
+                    className={`p-2.5 rounded-2xl border text-center transition-all ${
+                      evSubtype === 'ev_2wheeler'
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <Bike className="w-4 h-4 mx-auto mb-1 text-inherit" />
+                    <div className="font-bold text-[11px] leading-tight">2-Wheeler EV</div>
+                    <p className={`text-[9px] mt-0.5 ${evSubtype === 'ev_2wheeler' ? 'text-emerald-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Up to 20kg
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEvSubtype('ev_3wheeler')}
+                    className={`p-2.5 rounded-2xl border text-center transition-all ${
+                      evSubtype === 'ev_3wheeler'
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <CarFront className="w-4 h-4 mx-auto mb-1 text-inherit" />
+                    <div className="font-bold text-[11px] leading-tight">3-Wheeler EV</div>
+                    <p className={`text-[9px] mt-0.5 ${evSubtype === 'ev_3wheeler' ? 'text-emerald-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Up to 450kg
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEvSubtype('ev_4wheeler')}
+                    className={`p-2.5 rounded-2xl border text-center transition-all ${
+                      evSubtype === 'ev_4wheeler'
+                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-md font-bold'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4 mx-auto mb-1 text-inherit" />
+                    <div className="font-bold text-[11px] leading-tight">4-Wheeler EV</div>
+                    <p className={`text-[9px] mt-0.5 ${evSubtype === 'ev_4wheeler' ? 'text-emerald-100' : darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Up to 900kg
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Footer with Book Now CTA */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setVehicleModalCategory(null)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+                  darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const cat = vehicleModalCategory;
+                  setVehicleModalCategory(null);
+                  handleProceedToBooking(cat);
+                }}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg transition-transform active:scale-95 flex items-center space-x-1.5 cursor-pointer"
+              >
+                <span>Book Now</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: OFFER DETAILS POPUP (CHANGES REQUIRED) ================= */}
+      {selectedOfferModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className={`rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl border transition-all ${
+            darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">{selectedOfferModal.icon}</span>
+                <div>
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500 text-slate-950">
+                    {selectedOfferModal.badge}
+                  </span>
+                  <h3 className="font-extrabold text-sm mt-0.5">{selectedOfferModal.title}</h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOfferModal(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className={`p-3 rounded-2xl border flex items-center justify-between ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-amber-50 border-amber-200'
+              }`}>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold">Coupon Code</span>
+                  <div className="font-mono text-base font-black text-amber-600 dark:text-amber-400">
+                    {selectedOfferModal.code}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedOfferModal.code);
+                    showToast(`Copied ${selectedOfferModal.code}!`);
+                  }}
+                  className="px-3 py-1.5 bg-slate-900 dark:bg-slate-700 text-white text-[11px] font-bold rounded-xl flex items-center space-x-1"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy</span>
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Terms & Benefits</span>
+                <p className={`leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {selectedOfferModal.description}
+                </p>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+                📍 {selectedOfferModal.sub}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setSelectedOfferModal(null)}
+                className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleApplyCoupon(selectedOfferModal.code);
+                  setSelectedOfferModal(null);
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all ${
+                  appliedCouponCode === selectedOfferModal.code
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black'
+                }`}
+              >
+                {appliedCouponCode === selectedOfferModal.code ? 'Applied ✓' : 'Apply Coupon'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: SPONSORED PARTNER AD DETAILS POPUP (CHANGES REQUIRED) ================= */}
+      {selectedAdModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className={`rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl border transition-all ${
+            darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <span className="text-2xl">{selectedAdModal.icon}</span>
+                <div>
+                  <div className="flex items-center space-x-1.5">
+                    <h3 className="font-extrabold text-sm">{selectedAdModal.name}</h3>
+                    <span className="text-[8px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
+                      {selectedAdModal.badge}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">{selectedAdModal.hub}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAdModal(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 font-bold">
+                ⭐ {selectedAdModal.headline}
+              </div>
+
+              <div className="space-y-1">
+                <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Offer Overview</span>
+                <p className={`leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {selectedAdModal.description}
+                </p>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] space-y-1">
+                <div className="font-bold text-slate-700 dark:text-slate-300">Coimbatore Partner Hubs:</div>
+                <div className="text-slate-500 dark:text-slate-400">{selectedAdModal.locations}</div>
+              </div>
+
+              <div className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+              }`}>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold">Partner Code</span>
+                  <div className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    {selectedAdModal.promoCode}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedAdModal.promoCode);
+                    showToast(`Copied ${selectedAdModal.promoCode}!`);
+                  }}
+                  className="px-2.5 py-1 bg-emerald-600 text-white font-bold text-[10px] rounded-lg"
+                >
+                  Copy Code
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setSelectedAdModal(null)}
+                className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  showToast(`Partner offer for ${selectedAdModal.name} redeemed!`);
+                  setSelectedAdModal(null);
+                }}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md transition-transform active:scale-95 cursor-pointer"
+              >
+                Claim Offer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL: SHIPMENT DETAILS EDIT ================= */}
       {showShipmentModal && (
@@ -3464,6 +3932,70 @@ export default function CustomerApp() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= FLOWER SHOWER SPLASH SCREEN (CHANGES REQUIRED ITEM 6) ================= */}
+      {showSplash && (
+        <FlowerShowerSplash onDismiss={() => setShowSplash(false)} />
+      )}
+
+      {/* ================= SIDE MENU BAR DRAWER (CHANGES REQUIRED ITEM 10 & 18) ================= */}
+      <CustomerSideMenu
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        customer={currentCustomer}
+        onUpdateCustomer={updateCustomerProfile}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          setBookingScreenActive(false);
+        }}
+        onReplaySplash={() => setShowSplash(true)}
+        darkMode={darkMode}
+        showToast={showToast}
+      />
+
+      {/* ================= NOTIFICATIONS MODAL (CHANGES REQUIRED ITEM 15) ================= */}
+      {showNotificationsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl border ${
+            darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-2">
+                <Bell className="w-5 h-5 text-emerald-500" />
+                <h3 className="font-bold text-base">Notifications & Offers</h3>
+              </div>
+              <button
+                onClick={() => setShowNotificationsModal(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-2.5 max-h-[60vh] overflow-y-auto">
+              {notifications.map((n) => (
+                <div key={n.id} className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs">{n.title}</span>
+                    <span className="text-[10px] text-slate-400">{n.time}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">{n.message}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                setShowNotificationsModal(false);
+                showToast('All notifications marked as read');
+              }}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+            >
+              Mark All as Read
+            </button>
           </div>
         </div>
       )}

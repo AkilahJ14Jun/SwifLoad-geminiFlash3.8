@@ -1,22 +1,10 @@
 Go through output of graphify to understand this solution.
 
  
-Need the following features implemented in Driver App :
+Need the following features implemented in Customer App :
 
-The '+Driver' feature not required because already the app would be associated with a driver's mobile number.
-The 'Noticeboard' button overlapping at the right edge with 'Refer' button. Make some space between the two buttons.
-The driver name greeting band itself not required.
-The 'Cancel Trip / Unable to complete' button can be renamed as 'Cancel Order' alone.
-On 'Live Duty' menu option screen 'Cancel Accepted Orders / Unable to Complete' can be renamed as 'Cancel Accepted Order' alone.
-The 'Refer' menu option functionality can be moved to be accessible via 'Refer & Earn' left side menu bar.
-Need ability to switch between light and dark mode.
- 
-
-
-
-
-
-
+On the home page the text below 'Your Referral Code' can be removed. Move the 'Copy' and 'Share' button options to that place. This will save some space on screen.
+Remove 'Sponsored Ads' heading section also to completely avoid user scrolling on the screen.
 
 
 
