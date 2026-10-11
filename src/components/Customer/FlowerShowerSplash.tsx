@@ -5,6 +5,8 @@ import { Sparkles, ArrowRight, ShieldCheck, Truck, X } from 'lucide-react';
 
 interface FlowerShowerSplashProps {
   onDismiss: () => void;
+  role?: 'customer' | 'driver';
+  userName?: string;
 }
 
 const FLOWERS = ['🌸', '🌺', '🌼', '🌻', '🌷', '🌹', '💐', '🏵️'];
@@ -19,7 +21,11 @@ interface Petal {
   swayAmount: number; // px
 }
 
-export default function FlowerShowerSplash({ onDismiss }: FlowerShowerSplashProps) {
+export default function FlowerShowerSplash({
+  onDismiss,
+  role = 'customer',
+  userName,
+}: FlowerShowerSplashProps) {
   const [petals, setPetals] = useState<Petal[]>([]);
   const [countdown, setCountdown] = useState<number>(4);
 
@@ -85,17 +91,19 @@ export default function FlowerShowerSplash({ onDismiss }: FlowerShowerSplashProp
         {/* Festive Badge */}
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>வணக்கம் • Welcome to Coimbatore</span>
+          <span>{role === 'driver' ? 'வணக்கம் • Driver Partner Welcome' : 'வணக்கம் • Welcome to Coimbatore'}</span>
         </div>
 
         {/* Hero Title */}
         <div className="space-y-1">
           <div className="text-3xl">🌸 🌺 🌼</div>
           <h2 className="text-xl font-black tracking-tight text-white">
-            SwiftLoad Coimbatore
+            {role === 'driver' ? 'SwiftLoad Driver Partner' : 'SwiftLoad Coimbatore'}
           </h2>
           <p className="text-xs text-emerald-300/90 font-medium">
-            Express Intra-City Freight & On-Demand Logistics
+            {role === 'driver'
+              ? `Welcome ${userName ? userName : 'Partner'} • Express Intra-City Fleet`
+              : 'Express Intra-City Freight & On-Demand Logistics'}
           </p>
         </div>
 
@@ -104,13 +112,13 @@ export default function FlowerShowerSplash({ onDismiss }: FlowerShowerSplashProp
           <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center space-x-2">
             <Truck className="w-4 h-4 text-emerald-400 shrink-0" />
             <span className="text-[11px] text-slate-300 font-medium leading-tight">
-              2W, 3W, 4W & EV Loaders
+              {role === 'driver' ? 'Instant 10s Dispatch Alerts' : '2W, 3W, 4W & EV Loaders'}
             </span>
           </div>
           <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center space-x-2">
             <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0" />
             <span className="text-[11px] text-slate-300 font-medium leading-tight">
-              Two-Way Secure OTP
+              {role === 'driver' ? 'Fair Tariffs & Fast Payouts' : 'Two-Way Secure OTP'}
             </span>
           </div>
         </div>
@@ -121,7 +129,9 @@ export default function FlowerShowerSplash({ onDismiss }: FlowerShowerSplashProp
             onClick={onDismiss}
             className="w-full py-3 px-4 rounded-xl font-black text-sm bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95"
           >
-            <span>Enter Customer App ({countdown}s)</span>
+            <span>
+              {role === 'driver' ? `Start Duty (${countdown}s)` : `Enter Customer App (${countdown}s)`}
+            </span>
             <ArrowRight className="w-4 h-4" />
           </button>
           <p className="text-[10px] text-slate-400 mt-2 font-mono">

@@ -53,6 +53,8 @@ export default function CustomerSideMenu({
     'menu' | 'profile' | 'address' | 'payment' | 'referral' | 'support' | 'feedback' | 'help'
   >('menu');
 
+  const [selectedHelpTopicId, setSelectedHelpTopicId] = useState<string | null>(null);
+
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
@@ -384,9 +386,12 @@ export default function CustomerSideMenu({
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
 
-              {/* Help & FAQs */}
+              {/* Help (Frequently Asked Questions & Problem Solutions) */}
               <button
-                onClick={() => setActiveSection('help')}
+                onClick={() => {
+                  setSelectedHelpTopicId(null);
+                  setActiveSection('help');
+                }}
                 className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all ${
                   darkMode ? 'bg-slate-800/70 border-slate-700/80 hover:bg-slate-800' : 'bg-slate-50 border-slate-200/80 hover:bg-white hover:shadow-xs'
                 }`}
@@ -396,8 +401,8 @@ export default function CustomerSideMenu({
                     <HelpCircle className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold leading-tight">Help & FAQs</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Tariffs, OTPs, Safety Guide</div>
+                    <div className="text-xs font-bold leading-tight">Help</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">FAQs & Solutions to Common Problems</div>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -893,49 +898,259 @@ export default function CustomerSideMenu({
           {/* ================= 8. HELP SUB-VIEW ================= */}
           {activeSection === 'help' && (
             <div className="space-y-3 animate-in fade-in-50 text-xs">
-              <button
-                onClick={() => setActiveSection('menu')}
-                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-1"
-              >
-                <span>← Back to Menu</span>
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    if (selectedHelpTopicId) {
+                      setSelectedHelpTopicId(null);
+                    } else {
+                      setActiveSection('menu');
+                    }
+                  }}
+                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center space-x-1"
+                >
+                  <span>{selectedHelpTopicId ? '← Back to Questions' : '← Back to Menu'}</span>
+                </button>
+                {selectedHelpTopicId && (
+                  <button
+                    onClick={() => setActiveSection('menu')}
+                    className="text-[11px] text-slate-400 hover:underline"
+                  >
+                    Main Menu
+                  </button>
+                )}
+              </div>
 
+              {/* Sub-view Header */}
               <div className="p-3.5 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 space-y-1.5">
-                <span className="font-black text-sm text-cyan-950 dark:text-cyan-200">SwifLoad Help & FAQs</span>
+                <div className="flex items-center space-x-1.5">
+                  <HelpCircle className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                  <span className="font-black text-sm text-cyan-950 dark:text-cyan-200">
+                    {selectedHelpTopicId ? 'Help & Resolution' : 'Frequently Asked Questions'}
+                  </span>
+                </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                  Instant answers to common queries regarding shipping in Coimbatore.
+                  {selectedHelpTopicId
+                    ? 'Recommended solution and troubleshooting steps for your selected issue.'
+                    : 'Choose your issue below to get immediate step-by-step guidance.'}
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <details className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <summary className="font-bold cursor-pointer text-xs">How do distance slab charges work?</summary>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Charges use tiered slabs (0-1 km flat minimum base fare, 1-3 km and 3-5 km incremental per-km rates), calculated based on the farthest driver in range so you never get sudden surge surprises.
-                  </p>
-                </details>
+              {/* VIEW A: DETAILED SOLUTION FOR SELECTED PROBLEM */}
+              {selectedHelpTopicId ? (
+                (() => {
+                  const topics: { [key: string]: { title: string; category: string; steps: string[]; actionText?: string; actionTab?: any } } = {
+                    cancel_booking: {
+                      title: 'How do I cancel my order after booking is confirmed?',
+                      category: 'Booking & Cancellation',
+                      steps: [
+                        'Once a booking is confirmed, the "Cancel Order" button becomes visible directly on your live tracking screen.',
+                        'Tap "Cancel Order" and choose your reason from the prompt.',
+                        'If the driver partner has not yet arrived at the pickup location, there are zero cancellation fees.',
+                        'If you need immediate live agent assistance, you can also reach our dispatch desk at 1800-SWIF-LOAD.',
+                      ],
+                      actionText: 'View Active Tracking Screen',
+                      actionTab: 'tracking',
+                    },
+                    driver_delayed: {
+                      title: 'Driver partner is delayed or unable to find my pickup address',
+                      category: 'Trip Assistance',
+                      steps: [
+                        'Open the active tracking screen to see the live GPS marker of your driver approaching.',
+                        'Tap "Call Driver" to connect via our privacy-masked virtual phone bridge without exposing your personal phone number.',
+                        'Provide prominent nearby landmarks (e.g., Cross Cut Road bus stand, PSG Tech, Tidel Park signal).',
+                        'If the driver is unresponsive for more than 5 minutes, you can safely cancel or re-dispatch.',
+                      ],
+                      actionText: 'Open Active Tracking',
+                      actionTab: 'tracking',
+                    },
+                    otp_protocol: {
+                      title: 'Why is Two-Way OTP required and where do I find my OTP?',
+                      category: 'Security & Custody',
+                      steps: [
+                        'SwifLoad uses two-way OTP custody verification for verified cargo protection in Coimbatore.',
+                        'Pickup OTP (4 digits) is displayed on your tracking screen. Provide this to the driver when they physically load your goods.',
+                        'Delivery OTP (4 digits) is shared with the receiver. The driver enters this at destination to verify safe delivery.',
+                        'Never share OTPs over the phone prior to physical handover of cargo.',
+                      ],
+                      actionText: 'Check Active Trip OTPs',
+                      actionTab: 'tracking',
+                    },
+                    tariff_calculation: {
+                      title: 'How do distance slab charges and waiting fees work?',
+                      category: 'Tariffs & Pricing',
+                      steps: [
+                        'Fares use tiered distance slabs (0-1 km base rate, 1-3 km rate, and 3-5 km incremental rate).',
+                        'Rates are quoted transparently based on the farthest driver in range to protect you from surge surprises.',
+                        'The first 15 minutes of loading and unloading time are 100% complimentary.',
+                        'Subsequent waiting is charged nominal per-minute waiting fees based on the vehicle category.',
+                      ],
+                    },
+                    wallet_issue: {
+                      title: 'My wallet recharge or online payment was deducted but not reflected',
+                      category: 'Payments & Refunds',
+                      steps: [
+                        'Check your Passbook / Transactions tab in the side menu or bottom bar to see real-time ledger entries.',
+                        'If an online bank or UPI deduction failed to credit, our automated bank gateway reconciliation reconciles transactions within 15 minutes.',
+                        'If the balance is still not reflected after 15 minutes, message our official WhatsApp desk with your UPI UTR reference number for instant manual crediting.',
+                      ],
+                      actionText: 'Open Wallet & Passbook',
+                      actionTab: 'wallet',
+                    },
+                    multi_stop: {
+                      title: 'Can I book multi-stop pickups and drops across Coimbatore?',
+                      category: 'Dispatch Options',
+                      steps: [
+                        'Yes! On the booking screen, toggle from "1 Pick ➔ 1 Drop" to "Multi Pick" or "Multi Drop".',
+                        'Add up to 5 individual pickup or drop stops across Coimbatore localities (e.g. Peelamedu ➔ Gandhipuram ➔ RS Puram).',
+                        'Our route optimization calculates the optimal sequential route with accurate slab distance pricing.',
+                      ],
+                      actionText: 'Create a Multi-Stop Booking',
+                      actionTab: 'book',
+                    },
+                    prohibited_goods: {
+                      title: 'What goods and materials are prohibited from being transported?',
+                      category: 'Safety & Compliance',
+                      steps: [
+                        'Prohibited items include: flammable chemicals, raw fuel, hazardous industrial acids, fireworks/crackers, illegal contraband, and uncontained toxic liquids.',
+                        'Allowed items include: commercial textiles, machinery & pump parts, electronics, home decor, furniture, and packaged goods.',
+                        'Drivers have the legal authority to inspect and reject unmanifested hazardous cargo.',
+                      ],
+                    },
+                  };
 
-                <details className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <summary className="font-bold cursor-pointer text-xs">Why is two-way OTP required?</summary>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Pickup OTP authenticates physical handover to the assigned driver. Delivery OTP guarantees safe delivery to the designated receiver before trip completion.
-                  </p>
-                </details>
+                  const topic = topics[selectedHelpTopicId] || topics.cancel_booking;
 
-                <details className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <summary className="font-bold cursor-pointer text-xs">Can I book multi-stop pickups and drops?</summary>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Yes! Switch from "1 Pick ➔ 1 Drop" to "Multi Pick" or "Multi Drop" on the booking page to add additional stops across Coimbatore localities.
-                  </p>
-                </details>
+                  return (
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 space-y-2">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300">
+                          {topic.category}
+                        </span>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug">
+                          {topic.title}
+                        </h4>
+                      </div>
 
-                <details className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                  <summary className="font-bold cursor-pointer text-xs">What areas of Coimbatore are covered?</summary>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Peelamedu, Gandhipuram, RS Puram, Saravanampatti IT Corridor, Singanallur, Ganapathy, SIDCO Industrial Estate, Thudiyalur, Kurichi, and Coimbatore Airport hub.
-                  </p>
-                </details>
-              </div>
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Step-by-Step Resolution:
+                        </span>
+                        <div className="space-y-1.5">
+                          {topic.steps.map((step, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-start space-x-2"
+                            >
+                              <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <p className="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
+                                {step}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {topic.actionText && topic.actionTab && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onNavigateTab(topic.actionTab);
+                            onClose();
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition-all"
+                        >
+                          <span>{topic.actionText}</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex gap-2">
+                        <a
+                          href="tel:18007943562"
+                          className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-center font-bold text-[11px] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                          📞 1800-SWIF-LOAD
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHelpTopicId(null)}
+                          className="flex-1 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-[11px] text-slate-800 dark:text-slate-200 hover:bg-slate-300"
+                        >
+                          Other Questions
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                /* VIEW B: LIST OF FREQUENTLY ASKED QUESTIONS */
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Select a Question to View Solution:
+                  </span>
+                  {[
+                    {
+                      id: 'cancel_booking',
+                      q: 'How do I cancel my order after booking is confirmed?',
+                      cat: 'Booking & Cancellation',
+                    },
+                    {
+                      id: 'driver_delayed',
+                      q: 'Driver partner is delayed or cannot find my pickup address',
+                      cat: 'Trip Assistance',
+                    },
+                    {
+                      id: 'otp_protocol',
+                      q: 'Why is Two-Way OTP required and where do I find my OTP?',
+                      cat: 'Security & Custody',
+                    },
+                    {
+                      id: 'tariff_calculation',
+                      q: 'How do distance slab charges and waiting fees work?',
+                      cat: 'Tariffs & Pricing',
+                    },
+                    {
+                      id: 'wallet_issue',
+                      q: 'My wallet recharge or online payment failed or was delayed',
+                      cat: 'Payments & Refunds',
+                    },
+                    {
+                      id: 'multi_stop',
+                      q: 'Can I book multi-stop pickups and drops across Coimbatore?',
+                      cat: 'Dispatch Options',
+                    },
+                    {
+                      id: 'prohibited_goods',
+                      q: 'What goods and materials are prohibited from being transported?',
+                      cat: 'Safety & Compliance',
+                    },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedHelpTopicId(item.id)}
+                      className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                        darkMode
+                          ? 'bg-slate-800/80 border-slate-700 hover:bg-slate-800 text-slate-200'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2 space-y-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                          {item.cat}
+                        </span>
+                        <div className="font-bold text-xs leading-snug">
+                          {item.q}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-emerald-500 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

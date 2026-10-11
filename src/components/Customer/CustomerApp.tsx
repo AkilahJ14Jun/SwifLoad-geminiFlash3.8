@@ -510,21 +510,8 @@ export default function CustomerApp() {
           </div>
         </div>
 
-        {/* Right Edge: Quick Wallet, Notifications, Help & Theme Toggle */}
+        {/* Right Edge: Notifications, Help & Theme Toggle */}
         <div className="flex items-center space-x-1 sm:space-x-1.5">
-          {/* Quick Wallet Balance Badge */}
-          <button
-            onClick={() => {
-              setActiveTab('wallet');
-              setBookingScreenActive(false);
-            }}
-            className="px-2 py-1 text-xs bg-white/15 hover:bg-white/25 text-white font-bold rounded-lg flex items-center space-x-1 transition-all border border-white/20"
-            title="Customer Wallet Balance"
-          >
-            <Wallet className="w-3.5 h-3.5 text-emerald-300" />
-            <span>₹{(currentCustomer?.wallet?.balance || 0).toLocaleString('en-IN')}</span>
-          </button>
-
           {/* Notifications Button on Top Ribbon Right Edge */}
           <button
             onClick={() => setShowNotificationsModal(true)}
@@ -578,7 +565,7 @@ export default function CustomerApp() {
                 }`}>
                   <div className="flex items-center justify-between">
                     <span className={`text-[11px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Dashboard - Customer
+                      Dashboard - {currentCustomer?.name || 'Customer'}
                     </span>
                     <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                       Coimbatore Hub
@@ -648,6 +635,45 @@ export default function CustomerApp() {
                     </button>
                   </div>
                 </div>
+
+                {/* ================= CONFIRMED BOOKING STATUS CARD (ONLY AFTER BOOKING IS CONFIRMED) ================= */}
+                {currentTrip && ['DRIVER_ASSIGNED', 'ARRIVING_PICKUP', 'AT_PICKUP', 'IN_TRANSIT'].includes(currentTrip.status) && (
+                  <div className={`p-3 rounded-2xl border flex items-center justify-between shadow-sm transition-all ${
+                    darkMode ? 'bg-slate-900 border-emerald-500/40 text-white' : 'bg-emerald-50/90 border-emerald-300 text-slate-900'
+                  }`}>
+                    <div className="flex items-center space-x-2.5 min-w-0 flex-1 mr-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                        ✓
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-xs font-black truncate text-emerald-700 dark:text-emerald-400">
+                            Booking Confirmed • {currentTrip.bookingCode}
+                          </span>
+                        </div>
+                        <p className={`text-[10px] truncate ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          Driver: {currentTrip.driverName} ({currentTrip.driverVehicleNumber})
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('tracking')}
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-[11px] transition-colors"
+                      >
+                        Track
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCancelModal(true)}
+                        className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-[11px] transition-colors"
+                      >
+                        Cancel Order
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* ================= COMPACT SCROLLING OFFERS TICKER (MINIMAL SCREEN HEIGHT - CHANGES REQUIRED) ================= */}
                 <div className={`rounded-xl p-2 shadow-xs border transition-colors overflow-hidden ${
@@ -735,9 +761,6 @@ export default function CustomerApp() {
                         <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                           Two Wheeler
                         </h3>
-                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Courier, parcels & food up to 20kg
-                        </p>
                       </div>
                       <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -775,9 +798,6 @@ export default function CustomerApp() {
                         <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                           Three Wheeler
                         </h3>
-                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Cargo auto for boxes & textiles up to 500kg
-                        </p>
                       </div>
                       <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">
@@ -815,9 +835,6 @@ export default function CustomerApp() {
                         <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                           Four Wheeler
                         </h3>
-                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Tata Ace, Bolero Pickup up to 1000-1500kg
-                        </p>
                       </div>
                       <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
@@ -855,9 +872,6 @@ export default function CustomerApp() {
                         <h3 className={`font-bold text-xs mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                           EV Vehicles
                         </h3>
-                        <p className={`text-[10px] mt-0.5 leading-snug line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          2W, 3W & 4W zero emission green fleet
-                        </p>
                       </div>
                       <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -1799,8 +1813,26 @@ export default function CustomerApp() {
                   <span>Driver Arrived at Pickup Location • Handover Verification</span>
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-200 leading-snug">
-                  Please share your 4-digit Pickup OTP with driver partner <strong>{currentTrip.driverName}</strong> or click below to authenticate loading:
+                  Driver partner <strong>{currentTrip.driverName}</strong> has reached your pickup address. Please share your 4-digit Pickup OTP before loading goods.
                 </p>
+
+                {/* 3-Minute Standard Free Waiting Policy Notice */}
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <Clock className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Free loading window: <strong>3 minutes</strong></span>
+                  </div>
+                  {Boolean(currentTrip.fare.waitingFare && currentTrip.fare.waitingFare > 0) ? (
+                    <span className="font-bold text-rose-600 dark:text-rose-400 bg-rose-500/15 px-2 py-0.5 rounded-lg border border-rose-500/30">
+                      Excess Waiting: +₹{currentTrip.fare.waitingFare} ({currentTrip.waitingMinutes || 1} min)
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                      Standard Window Active
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800">
                   <div>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Your Pickup OTP</span>
@@ -1926,9 +1958,17 @@ export default function CustomerApp() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>Goods: {currentTrip.shipment.goodsCategory} (~{currentTrip.shipment.approxWeightKg}kg)</span>
-                  <span className="font-bold text-slate-800">Fare: ₹{currentTrip.fare.totalFare}</span>
+                <div className="pt-2 border-t border-slate-100 space-y-1 text-xs text-slate-500">
+                  <div className="flex items-center justify-between">
+                    <span>Goods: {currentTrip.shipment.goodsCategory} (~{currentTrip.shipment.approxWeightKg}kg)</span>
+                    <span className="font-bold text-slate-800">Fare: ₹{currentTrip.fare.totalFare}</span>
+                  </div>
+                  {Boolean(currentTrip.fare.waitingFare && currentTrip.fare.waitingFare > 0) && (
+                    <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 font-semibold text-[11px] bg-amber-500/10 px-2 py-1 rounded-lg">
+                      <span>Driver Waiting Charge ({currentTrip.waitingMinutes || 1} min beyond 3 mins):</span>
+                      <span>+₹{currentTrip.fare.waitingFare}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -1973,12 +2013,12 @@ export default function CustomerApp() {
 
             {/* Actions: Cancel & Feedback */}
             <div className="flex items-center space-x-3">
-              {currentTrip.status !== 'DELIVERED' && currentTrip.status !== 'CANCELLED' && (
+              {['DRIVER_ASSIGNED', 'ARRIVING_PICKUP', 'AT_PICKUP', 'IN_TRANSIT'].includes(currentTrip.status) && (
                 <button
                   onClick={() => setShowCancelModal(true)}
                   className="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition-colors"
                 >
-                  Cancel Trip
+                  Cancel Order
                 </button>
               )}
               {currentTrip.status === 'DELIVERED' && (

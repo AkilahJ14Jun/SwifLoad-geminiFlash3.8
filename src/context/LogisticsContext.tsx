@@ -27,6 +27,7 @@ import {
   DriverCancellationReason,
   DriverCancellationLockout,
   DriverCancellationSlabConfig,
+  DriverUploadedDoc,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -168,6 +169,15 @@ interface LogisticsContextType {
   cancelTripByDriver: (tripId: string, driverId: string, reason: DriverCancellationReason) => { success: boolean; lockoutHours: number; lockedUntil: string };
   waiveDriverLockout: (driverId: string) => void;
   isDriverInLockout: (driverId: string) => { isLocked: boolean; lockout?: DriverCancellationLockout; remainingMinutes: number; remainingHours: number; remainingSeconds: number };
+
+  // Document Uploads & Driver Operations
+  maxDocUploadSizeMb: number;
+  updateMaxDocUploadSizeMb: (size: number) => void;
+  markDriverReachedPickup: (tripId: string) => { success: boolean; message: string };
+  updateTripWaitingFare: (tripId: string, waitingMinutes: number, waitingFare: number) => void;
+  submitDriverFeedbackForCustomer: (tripId: string, rating: number, feedback: string, tags?: string[]) => void;
+  updateDriverProfileDetails: (driverId: string, updates: Partial<DriverPartner>) => void;
+  uploadDriverDocument: (driverId: string, doc: Omit<DriverUploadedDoc, 'id' | 'uploadedAt'>) => { success: boolean; message: string };
 }
 
 const LogisticsContext = createContext<LogisticsContextType | undefined>(undefined);
@@ -185,6 +195,7 @@ const LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT = 'swifload_dispatch_timeout_v2_cbe';
 const LOCAL_STORAGE_KEY_NOTIFICATIONS = 'swifload_driver_notifs_v2_cbe';
 const LOCAL_STORAGE_KEY_CANCELLATION_SLABS = 'swifload_driver_cancel_slabs_v2_cbe';
 const LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS = 'swifload_driver_lockouts_v2_cbe';
+const LOCAL_STORAGE_KEY_MAX_DOC_SIZE = 'swifload_max_upload_size_mb_v2_cbe';
 
 const INITIAL_CUSTOMER: CustomerUser = {
   id: 'cust_01',
@@ -264,6 +275,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [driverNotifications, setDriverNotifications] = useState<DriverNotification[]>(INITIAL_DRIVER_NOTIFICATIONS);
   const [cancellationSlabConfigs, setCancellationSlabConfigs] = useState<DriverCancellationSlabConfig[]>(DEFAULT_DRIVER_CANCELLATION_SLABS);
   const [driverLockouts, setDriverLockouts] = useState<DriverCancellationLockout[]>([]);
+  const [maxDocUploadSizeMb, setMaxDocUploadSizeMb] = useState<number>(2);
 
   // Helpers for server DB synchronization
   const syncTripToServer = useCallback(async (trip: Trip) => {
@@ -348,6 +360,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const savedLockouts = localStorage.getItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS);
       if (savedLockouts) setDriverLockouts(JSON.parse(savedLockouts));
+
+      const savedMaxDocSize = localStorage.getItem(LOCAL_STORAGE_KEY_MAX_DOC_SIZE);
+      if (savedMaxDocSize) setMaxDocUploadSizeMb(JSON.parse(savedMaxDocSize));
     } catch {
       // fallback
     }
@@ -484,6 +499,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFICATIONS, JSON.stringify(driverNotifications));
     } catch {}
   }, [driverNotifications]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_MAX_DOC_SIZE, JSON.stringify(maxDocUploadSizeMb));
+    } catch {}
+  }, [maxDocUploadSizeMb]);
 
   const addDriverNotification = useCallback(
     (notif: Omit<DriverNotification, 'id' | 'timestamp' | 'read'>) => {
@@ -2587,6 +2608,166 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [showToast]
   );
 
+  const updateMaxDocUploadSizeMb = useCallback(
+    (size: number) => {
+      setMaxDocUploadSizeMb(size);
+      showToast(`Configured document upload size limit: ${size} MB`);
+    },
+    [showToast]
+  );
+
+  const markDriverReachedPickup = useCallback(
+    (tripId: string): { success: boolean; message: string } => {
+      let result = { success: false, message: 'Trip not found' };
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.id !== tripId) return t;
+          const now = new Date().toISOString();
+          result = { success: true, message: 'Marked arrived at pickup point! 3-minute waiting clock started.' };
+          const updatedTrip: Trip = {
+            ...t,
+            status: 'AT_PICKUP',
+            driverReachedPickupAt: t.driverReachedPickupAt || now,
+            auditHistory: [
+              ...t.auditHistory,
+              {
+                timestamp: now,
+                event: 'Driver marked reached pickup location. 3-minute free waiting clock started.',
+                actor: 'Driver',
+              },
+            ],
+          };
+          updateTripOnServer(tripId, updatedTrip);
+          return updatedTrip;
+        })
+      );
+
+      addDriverNotification({
+        title: 'Reached Pickup Point',
+        message: 'Marked arrived at pickup point. 3-minute free waiting clock active.',
+        type: 'PICKUP',
+        tripId,
+      });
+
+      if (result.success) showToast(result.message);
+      return result;
+    },
+    [updateTripOnServer, addDriverNotification, showToast]
+  );
+
+  const updateTripWaitingFare = useCallback(
+    (tripId: string, waitingMinutes: number, waitingFare: number) => {
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.id !== tripId) return t;
+          const currentWaitingFare = t.fare.waitingFare || 0;
+          if (currentWaitingFare === waitingFare && t.waitingMinutes === waitingMinutes) return t;
+          const baseSubtotal = t.fare.baseFare + t.fare.distanceFare + t.fare.helperFee + t.fare.surgeFare;
+          const newGst = Math.round((baseSubtotal + waitingFare) * 0.05);
+          const newTotal = Math.round(baseSubtotal + waitingFare + newGst);
+          const updatedTrip: Trip = {
+            ...t,
+            waitingMinutes,
+            waitingCharge: waitingFare,
+            fare: {
+              ...t.fare,
+              waitingFare,
+              taxGst: newGst,
+              totalFare: newTotal,
+              driverEarnings: Math.round(newTotal * 0.82),
+            },
+          };
+          updateTripOnServer(tripId, updatedTrip);
+          return updatedTrip;
+        })
+      );
+    },
+    [updateTripOnServer]
+  );
+
+  const submitDriverFeedbackForCustomer = useCallback(
+    (tripId: string, rating: number, feedback: string, tags: string[] = []) => {
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.id !== tripId) return t;
+          const now = new Date().toISOString();
+          const updatedTrip: Trip = {
+            ...t,
+            driverFeedbackForCustomer: {
+              rating,
+              feedback,
+              tags,
+              submittedAt: now,
+            },
+            auditHistory: [
+              ...t.auditHistory,
+              {
+                timestamp: now,
+                event: `Driver rated customer ${rating}★: "${feedback || 'No comments'}"`,
+                actor: 'Driver',
+              },
+            ],
+          };
+          updateTripOnServer(tripId, updatedTrip);
+          return updatedTrip;
+        })
+      );
+      showToast('Customer feedback submitted successfully!');
+    },
+    [updateTripOnServer, showToast]
+  );
+
+  const updateDriverProfileDetails = useCallback(
+    (driverId: string, updates: Partial<DriverPartner>) => {
+      setDrivers((prev) =>
+        prev.map((d) => {
+          if (d.id !== driverId) return d;
+          const updated = {
+            ...d,
+            ...updates,
+            bankDetails: {
+              ...d.bankDetails,
+              ...(updates.bankDetails || {}),
+            },
+          };
+          updateDriverOnServer(driverId, updated);
+          return updated;
+        })
+      );
+      showToast('Driver details updated successfully!');
+    },
+    [updateDriverOnServer, showToast]
+  );
+
+  const uploadDriverDocument = useCallback(
+    (driverId: string, doc: Omit<DriverUploadedDoc, 'id' | 'uploadedAt'>): { success: boolean; message: string } => {
+      let result = { success: false, message: 'Driver not found' };
+      setDrivers((prev) =>
+        prev.map((d) => {
+          if (d.id !== driverId) return d;
+          const existingDocs = d.uploadedDocs || [];
+          const newDoc: DriverUploadedDoc = {
+            ...doc,
+            id: `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            uploadedAt: new Date().toISOString(),
+          };
+          const filtered = existingDocs.filter((x) => x.docKey !== doc.docKey);
+          const updatedDocs = [...filtered, newDoc];
+          const updated = {
+            ...d,
+            uploadedDocs: updatedDocs,
+          };
+          updateDriverOnServer(driverId, updated);
+          result = { success: true, message: `${doc.title} uploaded successfully!` };
+          return updated;
+        })
+      );
+      if (result.success) showToast(result.message);
+      return result;
+    },
+    [updateDriverOnServer, showToast]
+  );
+
   // Export CSV Data
   const exportCsvData = useCallback(
     (type: 'trips' | 'drivers' | 'finance' | 'referrals' | 'wallets') => {
@@ -2739,6 +2920,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         cancelTripByDriver,
         waiveDriverLockout,
         isDriverInLockout,
+        maxDocUploadSizeMb,
+        updateMaxDocUploadSizeMb,
+        markDriverReachedPickup,
+        updateTripWaitingFare,
+        submitDriverFeedbackForCustomer,
+        updateDriverProfileDetails,
+        uploadDriverDocument,
       }}
     >
       {children}

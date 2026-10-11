@@ -1,17 +1,14 @@
 Go through output of graphify to understand this solution.
+ 
+
+
+Need the following features  and modifications required in driver app :
+
+The text on the dashboard page below the 'Welcome to Duty..' can be removed to avoid scrolling on the page.
+
+
+
 
  
-Need the following features implemented in Customer App :
-
-On the home page the text below 'Your Referral Code' can be removed. Move the 'Copy' and 'Share' button options to that place. This will save some space on screen.
-Remove 'Sponsored Ads' heading section also to completely avoid user scrolling on the screen.
-
-
-
-
-
-
-
-
 
 

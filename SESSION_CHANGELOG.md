@@ -2,6 +2,175 @@
 
 This document tracks all technical updates, architectural additions, and feature implementations made in each development session across any LLM model.
 
+## 📅 Session: 2026-10-11 (Knowledge Graph Extraction & Architecture Graphify Run)
+
+### Objectives
+- Execute `/graphify .` across the SwifLoad repository to update codebase AST nodes, edge connections, community clusters, and architectural documentation.
+
+### Bullet-Point Changes
+- **Knowledge Graph Extraction (`graphify-out/`):**
+  - Executed `graphify extract . --code-only` on the full codebase (18 updated code files scanned, 74 cached/unchanged).
+  - Built curated graph with **407 nodes, 784 edges, and 22 architectural communities**.
+  - Generated updated [`graphify-out/GRAPH_REPORT.md`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_REPORT.md), [`graphify-out/graph.json`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.json), [`graphify-out/graph.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.html), and D3 interactive collapsible tree [`graphify-out/GRAPH_TREE.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_TREE.html).
+  - Identified top architectural God Nodes (`useLogistics()`, `getDatabase()`, `LogisticsContextType`, `saveDatabase()`, `compilerOptions`, `WebPlatform()`, `broadcastEvent()`).
+
+### Verification Status
+- Extraction & clustering completed successfully with 0 errors (Code 0).
+- `npm run build` verified.
+
+---
+
+## 📅 Session: 2026-10-11 (Driver Dashboard Clean-up: Removal of Text Below 'Welcome to Duty..')
+
+### Objectives
+- Comply with updated [`Changes Required.txt`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/Changes%20Required.txt) line 7:
+  - "The text on the dashboard page below the 'Welcome to Duty..' can be removed to avoid scrolling on the page."
+
+### Bullet-Point Changes
+- **[`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx):**
+  - Removed the subtitle paragraph (`"Access the live Coimbatore dispatch map, interactive 10-second pickup pop-ups, and active trip GPS navigation."`) beneath `<h3 className="text-lg font-black text-white">Welcome to Duty, {currentDriver.name}!</h3>` in the Prominent Welcome Card on the Driver Dashboard.
+  - Reduced vertical height of the card, eliminating unnecessary vertical scrolling on standard mobile and desktop displays.
+
+### Verification Status
+- Command Run: `npm run build`
+- Outcome: Successfully compiled (code 0) with 0 errors across all routes and TypeScript validations.
+
+---
+
+## 📅 Session: 2026-10-11 (Full Implementation of Driver App Features from 'Changes Required.txt')
+
+### Objectives
+Complete end-to-end implementation of all remaining requirements specified in [`Changes Required.txt`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/Changes%20Required.txt):
+1. **Dashboard Metrics (Lines 7-10)**:
+   - Removed description text below "Today's earnings", "Total Incentives", and "Wallet Balance".
+   - Moved "View History" under "Today's earnings" rephrased as `"History"`.
+   - Renamed "View Incentive slabs" to `"Incentives"` under "Total Incentives".
+   - Moved `"Recharge / Withdraw"` directly under "Wallet Balance".
+2. **Offers (Line 11)**:
+   - Removed descriptive text below each offer to save space and minimize vertical scrolling.
+3. **Sponsored Section (Line 12)**:
+   - Rephrased section title from "Featured Benefits and Deals" to `"Sponsored"`.
+   - Removed redundant sponsored badge (`ad.badge`) from compact ads.
+4. **Bottom Menu Bar (Lines 13-24)**:
+   - Standardized 5 persistent tabs: `Home`, `Trips`, `Ledger`, `Support`, `Settings`.
+   - `Home`: Takes driver back to dashboard.
+   - `Trips`: Dedicated view for "Today's Trips" and "Last Week Trip History" with route, earnings, and distance details.
+   - `Ledger`: Dedicated view showing amount earned by driver and payments made from company end for each trip with `#CMP-SETTLE-...` IDs.
+   - `Support`: Multilingual live support with language selection (Tamil, English, Hindi, Telugu, Malayalam, Kannada) and interactive queries for trips, payment, wallet, withdrawals, and recharge.
+   - `Settings`: 5 sub-sections: Profile (edit & save), Upload Docs (13 docs with configurable max upload size limit), Communication details, Payment details, Language preferences.
+5. **Admin Portal Standard Document Size Limit (Line 24)**:
+   - Added Panel 3 under Dispatch configuration to set standard document upload size limit (`maxDocUploadSizeMb`, default 2 MB, configurable).
+6. **Live Pickup Duty Terminal (Lines 26-31)**:
+   - Available orders list, live radar map, sliding popup with multiple order details, order value, pickup address & distance (km), drop address & distance (km), multi-stop visual indicator, admin-configured countdown timer (`dispatchTimeoutSecs`), "Skip All" button to dismiss popups, and "Accept Order" button navigating directly to active order execution.
+7. **Active Order Execution Page (Lines 33-45)**:
+   - Dedicated active order page with live map and simulated driver tracking.
+   - Booking details and pickup address card with contact person and direct call button.
+   - "Reached pickup point" button notifying customer in their app.
+   - 3-minute free waiting window, beyond which vehicle-dependent waiting charges accrue in real time and display on customer app.
+   - 4-digit pickup OTP verification from customer.
+   - Multi-stop step-by-step leg closing with individual OTP verification.
+   - Live elapsed trip time and distance covered tracker.
+   - Company QR code payment collection modal for order fare.
+   - Customer feedback collection modal upon delivery completion, redirecting driver back to dashboard.
+
+### Bullet-Point Changes
+- **[`src/types/logistics.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/types/logistics.ts):**
+  - Added `DriverDocKey` (13 keys: `VEHICLE_FRONT`, `VEHICLE_BACK`, `VEHICLE_LEFT`, `VEHICLE_RIGHT`, `DL_FRONT`, `DL_BACK`, `RC_FRONT`, `RC_BACK`, `INSURANCE`, `AADHAR_FRONT`, `AADHAR_BACK`, `PAN_CARD`, `CANCELLED_CHEQUE`), `DriverUploadedDoc`, `uploadedDocs`, `residentialAddress`, `city`, `pincode`, `emergencyContactNumber`, `emergencyContactName`, `nativeLanguage`, `spokenLanguages` to `DriverPartner`.
+  - Added `driverReachedPickupAt`, `waitingMinutes`, `waitingCharge`, `totalElapsedTripMinutes`, `totalActualDistanceKm`, `driverFeedbackForCustomer` to `Trip`.
+- **[`src/lib/data.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/data.ts):**
+  - Populated `INITIAL_DRIVERS[0]` with bank details (HDFC bank, branch), emergency contacts, native language, spoken languages, and 13 uploaded docs with sizes and verified statuses.
+- **[`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx):**
+  - Added `maxDocUploadSizeMb` state (default 2 MB) persisted in localStorage (`LOCAL_STORAGE_KEY_MAX_DOC_SIZE`).
+  - Added callbacks: `updateMaxDocUploadSizeMb`, `markDriverReachedPickup`, `updateTripWaitingFare`, `submitDriverFeedbackForCustomer`, `updateDriverProfileDetails`, `uploadDriverDocument`.
+  - Exported all in `LogisticsContextType` and provider value.
+- **[`src/components/Admin/AdminPortal.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Admin/AdminPortal.tsx):**
+  - Added Panel 3 under Dispatch configuration to configure standard document upload size limit (1 MB, 2 MB, 3 MB, 5 MB, or custom input).
+  - Added `FileText` import from `lucide-react`.
+- **[`src/components/Customer/CustomerApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerApp.tsx):**
+  - Added driver arrival notice and 3-minute free waiting window banner when trip is at `AT_PICKUP`.
+  - Added real-time waiting charges display (`currentTrip.fare.waitingFare`) in fare breakdown and tracking cards.
+- **[`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx):**
+  - Updated metric cards (History, Incentives, Recharge / Withdraw; stripped description text).
+  - Stripped offer descriptions and updated sponsored section.
+  - Implemented Live Duty Terminal page (`driverPage === 'duty'`) with radar map, available orders list, sliding popup carousel, countdown timer, multi-stop indicator, "Skip All" and "Accept Order" buttons.
+  - Implemented Dedicated Active Order Execution page (`driverPage === 'active_order'`) with live GPS simulation, pickup contact with call button, "Reached pickup point" button, 3-minute free waiting window with real-time excess waiting fare accrual, OTP verification, individual multi-stop closing, distance/time tracker, Company QR modal, and feedback collection modal.
+  - Implemented Trips History page (`driverPage === 'trips'`) with Today vs Last Week filters.
+  - Implemented Ledger page (`driverPage === 'ledger'`) showing driver earnings and company settlements.
+  - Implemented Support page (`driverPage === 'support'`) with 6-language switcher (Tamil, English, Hindi, Telugu, Malayalam, Kannada) and category FAQs.
+  - Implemented Settings page (`driverPage === 'settings'`) with 5 tabs (Profile, Upload Docs with 13 docs and size validation against `maxDocUploadSizeMb`, Communication details, Payment details, Language preferences).
+  - Standardized bottom navigation bar with 5 persistent tabs (`Home`, `Trips`, `Ledger`, `Support`, `Settings`).
+
+### Verification Status
+- Command Run: `npm run build`
+- Outcome: Successfully compiled (code 0) with 0 TypeScript and Next.js errors; all 8 static and dynamic routes validated.
+
+---
+
+## 📅 Session: 2026-10-11 (Comprehensive Implementation of 'Changes Required.txt' for Customer & Driver Apps)
+
+### Objectives
+1. **Customer App Enhancements**:
+   - Remove wallet balance value from top ribbon near notifications.
+   - Display customer name near the "Dashboard" text (`Dashboard - <Customer Name>`).
+   - Remove descriptive text inside vehicle cards (2W, 3W, 4W, EV) in the "Select Vehicle Category" section to reduce page scrolling.
+   - Add interactive "Help" FAQ option in the left side menu taking the user directly to step-by-step problem solutions.
+   - Ensure "Cancel Order" button is visible on-screen ONLY after a booking is confirmed.
+2. **Driver App Enhancements**:
+   - Add animated Flower Shower splash screen on driver launch matching the Customer App.
+   - Update welcome banner on home screen to "Welcome to Duty, <Driver Name>!".
+   - Modernize Top Ribbon to match Customer App (gradient style, notifications, help, theme switcher, and duty toggle; remove noticeboard and refer buttons).
+   - Modernize Bottom Ribbon to match Customer App 5-tab layout (Home, Live Duty, Wallet, Earnings, Help).
+   - Display "Cancel Order" button on-screen ONLY after a booking is confirmed (both on Home and Live Duty terminal).
+   - Restructure Side Menu Drawer with comprehensive items:
+     - Header: Driver Name with ID, rating, and direct link to view wallet details.
+     - Profile: Name, contact, vehicle number, DL number + validity end date, DOB, blood group, address, email.
+     - Notifications: Trip-related (orders available, orders confirmed, orders cancelled, driver suspended with admin-configurable cancellation reasons from `cancellationSlabConfigs`).
+     - Wallet: Driver's balance + prominent minimum recharge amount required when balance is negative.
+     - Earnings: Revenue earned for each trip today + link to view full history + bonus amounts.
+     - Referral: Number and details of successful referrals shown.
+     - Trainings: Attended count + pending mandatory trainings status.
+     - Help: Frequently asked questions with click-to-resolve interactive solutions.
+     - Privacy Policy.
+   - Prominently display Company Offers for drivers on home screen (`DRIVER_COMPANY_OFFERS`).
+   - Restrict Sponsored Partner Ads on the driver home screen to strictly 2 compact ads.
+
+### Bullet-Point Changes
+- **[`src/components/Customer/FlowerShowerSplash.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/FlowerShowerSplash.tsx):**
+  - Enhanced to support `role?: 'customer' | 'driver'` and `userName?: string`.
+  - Added driver-tailored welcome copy: `"வணக்கம் • Driver Partner Welcome"`, `"SwiftLoad Driver Partner"`, and `"Start Duty ➔"`.
+- **[`src/types/logistics.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/types/logistics.ts) & [`src/lib/data.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/data.ts):**
+  - Added driver profile fields to `DriverPartner`: `drivingLicenseNumber`, `dlValidityEndDate`, `dateOfBirth`, `bloodGroup`, `address`, `trainingsAttended`, `trainingsPending`, `successfulReferralsCount`, and `successfulReferralsList`.
+  - Populated `INITIAL_DRIVERS` data for realistic Coimbatore fleet partners with DL validity, DOB, blood group, and successful referrals list.
+- **[`src/components/Customer/CustomerApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerApp.tsx):**
+  - Removed wallet value from top ribbon near notifications.
+  - Updated overview header to `Dashboard - ${currentCustomer?.name || 'Customer'}`.
+  - Stripped descriptive paragraph text from 2W, 3W, 4W, and EV cards in "Select Vehicle Category" to eliminate unnecessary scrolling.
+  - Added confirmed booking status check (`['DRIVER_ASSIGNED', 'ARRIVING_PICKUP', 'AT_PICKUP', 'IN_TRANSIT'].includes(currentTrip.status)`) for the "Cancel Order" button on both Home and Tracking views.
+- **[`src/components/Customer/CustomerSideMenu.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerSideMenu.tsx):**
+  - Added interactive "Help & FAQs" feature in the side menu.
+  - Clicking each FAQ topic opens the dedicated solution resolution screen with step-by-step guidance and direct action triggers.
+- **[`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx):**
+  - Rendered `<FlowerShowerSplash>` on launch with driver role and driver name.
+  - Redesigned Top Ribbon to match Customer App styling with Hamburger, Driver name & ID, Notifications with unread badge, Help icon, Theme switcher, and Online/Offline toggle; removed Noticeboard and Refer buttons.
+  - Updated home greeting to `Welcome to Duty, ${currentDriver.name}!`.
+  - Added prominent SwifLoad Partner Offers section (`DRIVER_COMPANY_OFFERS`) directly on the home page.
+  - Restricted Sponsored Ads to strictly 2 compact ads side-by-side (`DRIVER_SPONSORED_ADS.slice(0, 2)`).
+  - Ensured "Cancel Order" button is only displayed for confirmed orders on both Home and Live Duty terminal.
+  - Standardized bottom navigation bar to 5 items: Home, Live Duty, Wallet, Earnings, and Help matching Customer App layout.
+  - Reordered Side Menu Drawer:
+    - Driver Name header with ID, rating, and direct "View Wallet Details ➔" link.
+    - Menu items: Profile, Notifications, Wallet, Earnings, Referral, Trainings, Help, Privacy Policy, and Replay Splash.
+  - Updated Profile Modal to display DL Number, DL Validity End Date, DOB, Blood Group, and Residential Address.
+  - Updated Notifications Modal to display admin-configurable cancellation reasons and standby lockout cooldowns from `cancellationSlabConfigs`.
+  - Updated Wallet Modal to calculate and highlight the minimum recharge amount required when balance is negative.
+  - Updated Earnings Modal to link directly to full transaction history and highlight bonus amounts.
+  - Updated Referral Modal to display the count and detailed list of successful referrals.
+  - Added Trainings Modal displaying attended modules count, pending mandatory training status, and order eligibility.
+  - Added Help Modal with clickable FAQs taking the driver directly to interactive step-by-step solutions with direct action triggers.
+
+### Verification Status
+- Executed `npm run build`: Exit code 0, 0 TypeScript errors, all static and dynamic routes compiled and generated successfully.
+
 ## 📅 Session: 2026-10-10 (Customer App Feature Overhaul & 'Changes Required.txt' Implementations)
 
 ### Objectives

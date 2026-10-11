@@ -246,6 +246,17 @@ export interface Trip {
   cancellationCharge?: number;
   customerRating?: number;
   customerFeedback?: string;
+  driverFeedbackForCustomer?: {
+    rating: number;
+    feedback: string;
+    tags?: string[];
+    submittedAt: string;
+  };
+  driverReachedPickupAt?: string;
+  waitingMinutes?: number;
+  waitingCharge?: number;
+  totalElapsedTripMinutes?: number;
+  totalActualDistanceKm?: number;
   internalNotes?: string[];
   auditHistory: {
     timestamp: string;
@@ -271,6 +282,32 @@ export interface DriverKycDoc {
   verified: boolean;
 }
 
+export type DriverDocKey =
+  | 'RC_FRONT'
+  | 'RC_BACK'
+  | 'INSURANCE'
+  | 'VEHICLE_FRONT'
+  | 'VEHICLE_BACK'
+  | 'VEHICLE_LEFT'
+  | 'VEHICLE_RIGHT'
+  | 'DL_FRONT'
+  | 'DL_BACK'
+  | 'AADHAR_FRONT'
+  | 'AADHAR_BACK'
+  | 'PAN_CARD'
+  | 'CANCELLED_CHEQUE';
+
+export interface DriverUploadedDoc {
+  id: string;
+  docKey: DriverDocKey;
+  title: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSizeMb?: number;
+  uploadedAt?: string;
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+}
+
 export interface DriverPartner {
   id: string;
   name: string;
@@ -291,13 +328,32 @@ export interface DriverPartner {
   acceptanceRate: number;
   kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   kycDocuments: DriverKycDoc[];
+  uploadedDocs?: DriverUploadedDoc[];
   bankDetails: {
     accountName: string;
     accountNumber: string;
+    bankName?: string;
+    branchName?: string;
     ifscCode: string;
     upiId: string;
   };
   referralCode: string;
+  drivingLicenseNumber?: string;
+  dlValidityEndDate?: string;
+  dateOfBirth?: string;
+  bloodGroup?: string;
+  address?: string;
+  residentialAddress?: string;
+  city?: string;
+  pincode?: string;
+  emergencyContactNumber?: string;
+  emergencyContactName?: string;
+  nativeLanguage?: string;
+  spokenLanguages?: string[];
+  trainingsAttended?: number;
+  trainingsPending?: string[];
+  successfulReferralsCount?: number;
+  successfulReferralsList?: { id: string; name: string; date: string; bonus: number; role: string }[];
   wallet: {
     balance: number; // Negative balance permitted up to -negativeBalanceLimit
     negativeBalanceLimit: number; // Pre-determined limit fixed for each driver

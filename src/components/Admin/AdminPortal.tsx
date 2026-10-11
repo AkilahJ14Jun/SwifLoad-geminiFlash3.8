@@ -38,6 +38,7 @@ import {
   Timer,
   AlertOctagon,
   AlertTriangle,
+  FileText,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import {
@@ -97,6 +98,8 @@ export default function AdminPortal() {
     driverLockouts,
     waiveDriverLockout,
     cancelTripByDriver,
+    maxDocUploadSizeMb,
+    updateMaxDocUploadSizeMb,
   } = useLogistics();
 
   // Admin Navigation Tab
@@ -1439,6 +1442,73 @@ export default function AdminPortal() {
                   </div>
                   <p className="text-[11px] text-slate-500">
                     This determines the visible countdown seconds shown on the driver's order pop-up card.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 3: Driver Document Upload Standard Size Limit Configuration */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+                    <FileText className="w-5 h-5 text-emerald-600" />
+                    <span>Driver Document Upload Limit Configuration</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure standard maximum upload file size per KYC/vehicle document (RC, DL, Insurance, Photos, Aadhar, PAN, Cheque)
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-slate-500 font-medium">Standard Limit:</span>
+                  <span className="text-sm font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-xl font-mono">
+                    {maxDocUploadSizeMb} MB
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                  <div className="font-bold text-slate-700">Standard Presets</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[1, 2, 3, 5].map((mb) => (
+                      <button
+                        key={mb}
+                        type="button"
+                        onClick={() => updateMaxDocUploadSizeMb(mb)}
+                        className={`py-2 px-2 rounded-xl font-bold border transition-all text-center cursor-pointer ${
+                          maxDocUploadSizeMb === mb
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {mb} MB {mb === 2 ? '(Standard)' : ''}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Standard limit is 2 MB. Uploads exceeding this threshold will be blocked with an alert on the Driver App.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                  <div className="font-bold text-slate-700">Custom Size Limit</div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={25}
+                      value={maxDocUploadSizeMb}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        if (val >= 1 && val <= 25) updateMaxDocUploadSizeMb(val);
+                      }}
+                      className="w-28 p-2 bg-white border border-slate-300 rounded-xl font-mono font-bold text-center text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                    <span className="font-semibold text-slate-600">MB per document</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Applies to RC Front/Back, Insurance, 4-side photos, DL Front/Back, Aadhar Front/Back, PAN, and Cancelled Cheque.
                   </p>
                 </div>
               </div>
