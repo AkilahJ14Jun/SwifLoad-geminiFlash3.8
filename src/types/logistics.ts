@@ -255,6 +255,9 @@ export interface Trip {
   driverReachedPickupAt?: string;
   waitingMinutes?: number;
   waitingCharge?: number;
+  driverReachedDropAt?: string;
+  dropWaitingMinutes?: number;
+  dropWaitingCharge?: number;
   totalElapsedTripMinutes?: number;
   totalActualDistanceKm?: number;
   internalNotes?: string[];
@@ -454,3 +457,16 @@ export interface DriverCancellationSlabConfig {
   icon: string;
 }
 
+export interface BrandConfig {
+  appName: string;
+  appShortName: string;
+  companyName: string;
+  tagline: string;
+  codePrefix: string;
+  supportPhone: string;
+  supportEmail: string;
+  defaultCity: string;
+  defaultState: string;
+  currencySymbol: string;
+  websiteUrl: string;
+}

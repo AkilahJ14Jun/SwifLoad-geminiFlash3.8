@@ -20,7 +20,7 @@ interface PackersMoversSectionProps {
 }
 
 export default function PackersMoversSection({ onBookMove }: PackersMoversSectionProps) {
-  const { showToast } = useLogistics();
+  const { showToast, brandConfig } = useLogistics();
   const [selectedHomeType, setSelectedHomeType] = useState<'1bhk' | '2bhk' | '3bhk' | 'villa'>('2bhk');
   const [includeAssembly, setIncludeAssembly] = useState(true);
   const [includeFragileWrap, setIncludeFragileWrap] = useState(true);
@@ -45,7 +45,7 @@ export default function PackersMoversSection({ onBookMove }: PackersMoversSectio
           <div className="lg:col-span-6 space-y-6">
             <div className="inline-flex items-center space-x-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
               <Package className="w-3.5 h-3.5 text-emerald-600" />
-              <span>SwifLoad Packers & Movers</span>
+              <span>{brandConfig.appName} Packers & Movers</span>
             </div>
 
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">

@@ -21,7 +21,7 @@ interface DriverPartnerSectionProps {
 }
 
 export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerSectionProps) {
-  const { registerDriver, setSelectedDriverId, showToast } = useLogistics();
+  const { registerDriver, setSelectedDriverId, showToast, brandConfig } = useLogistics();
 
   // Registration form
   const [partnerName, setPartnerName] = useState('');
@@ -50,7 +50,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
       const driverId = registerDriver({
         name: partnerName,
         phone: partnerPhone.startsWith('+91') ? partnerPhone : `+91 ${partnerPhone}`,
-        email: `${partnerName.toLowerCase().replace(/\s+/g, '')}@partner.swifload.in`,
+        email: `${partnerName.toLowerCase().replace(/\s+/g, '')}@partner.${brandConfig.appShortName.toLowerCase() || 'logix'}.in`,
         vehicleCategory: selectedVehicle,
         vehicleModel:
           selectedVehicle === 'tata_ace'
@@ -87,7 +87,7 @@ export default function DriverPartnerSection({ onOpenDriverApp }: DriverPartnerS
         <div className="max-w-2xl mb-14 space-y-3">
           <div className="inline-flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             <Truck className="w-3.5 h-3.5" />
-            <span>Drive With SwifLoad</span>
+            <span>Drive With {brandConfig.appName}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
             Turn Your Vehicle Into a Reliable Daily Income Machine

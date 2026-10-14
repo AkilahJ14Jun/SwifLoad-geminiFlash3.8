@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 interface LeafletMapProps {
   pickup?: { lat: number; lng: number; label?: string } | null;
   drop?: { lat: number; lng: number; label?: string } | null;
-  driver?: { lat: number; lng: number; label?: string; vehicleCategory?: string } | null;
+  driver?: { lat: number; lng: number; label?: string; vehicleCategory?: string; markerColor?: 'amber' | 'red' } | null;
   targetDestination?: 'pickup' | 'drop';
   zones?: Array<{ id: string; name: string; center: { lat: number; lng: number }; radiusKm: number; isActive: boolean }>;
   interactive?: boolean;
@@ -213,31 +213,38 @@ export default function LeafletMap({
 
     const driverLatLng: [number, number] = [driver.lat, driver.lng];
 
-    // If marker exists, glide marker smoothly with setLatLng without resetting map bounds!
+    const isRed = driver.markerColor === 'red';
+    const pingBg = isRed ? 'bg-red-500' : 'bg-amber-400';
+    const dotBg = isRed ? 'bg-red-600' : 'bg-amber-500';
+    const iconBorder = isRed ? 'border-red-500 ring-red-500/30' : 'border-amber-400 ring-amber-400/25';
+    const textStyle = isRed ? 'text-red-300 border-red-500/50 bg-red-950/95' : 'text-amber-300 border-amber-400/40 bg-slate-900/95';
+    const circleBg = isRed ? 'bg-red-950 text-red-300' : 'bg-slate-950 text-amber-300';
+
+    const drvIcon = L.divIcon({
+      className: 'leaflet-driver-marker',
+      html: `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute -top-1 -right-1 flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${pingBg} opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 ${dotBg}"></span>
+          </span>
+          <div class="w-10 h-10 rounded-full ${circleBg} font-bold flex items-center justify-center shadow-2xl border-2 ${iconBorder} ring-4 text-base">
+            🚚
+          </div>
+          <div class="absolute -bottom-6 whitespace-nowrap px-2 py-0.5 ${textStyle} text-[10px] font-black rounded-full shadow-lg border pointer-events-none">
+            ${driver.label || 'Driver (Live)'}
+          </div>
+        </div>
+      `,
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+
+    // If marker exists, glide marker smoothly with setLatLng and update icon
     if (driverMarkerRef.current) {
       driverMarkerRef.current.setLatLng(driverLatLng);
+      driverMarkerRef.current.setIcon(drvIcon);
     } else {
-      // Create Driver Marker with custom pulsating Uber-style vehicle
-      const drvIcon = L.divIcon({
-        className: 'leaflet-driver-marker',
-        html: `
-          <div class="relative flex items-center justify-center">
-            <span class="absolute -top-1 -right-1 flex h-3 w-3">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-            </span>
-            <div class="w-10 h-10 rounded-full bg-slate-950 text-amber-300 font-bold flex items-center justify-center shadow-2xl border-2 border-amber-400 ring-4 ring-amber-400/25 text-base">
-              🚚
-            </div>
-            <div class="absolute -bottom-6 whitespace-nowrap px-2 py-0.5 bg-slate-900/95 text-amber-300 text-[10px] font-black rounded-full shadow-lg border border-amber-400/40 pointer-events-none">
-              ${driver.label || 'Driver (Live)'}
-            </div>
-          </div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-      });
-
       driverMarkerRef.current = L.marker(driverLatLng, {
         icon: drvIcon,
         zIndexOffset: 1000,
@@ -250,6 +257,9 @@ export default function LeafletMap({
           if (drop) allPoints.push([drop.lat, drop.lng]);
           map.fitBounds(allPoints, { padding: [50, 50], maxZoom: 14 });
         } catch {}
+      } else if (!hasFittedBoundsRef.current) {
+        map.setView(driverLatLng, zoom || 13);
+        hasFittedBoundsRef.current = true;
       }
     }
 
@@ -285,7 +295,7 @@ export default function LeafletMap({
   // Update live driver marker whenever driver coordinates or target change
   useEffect(() => {
     renderDriverLayer();
-  }, [driver?.lat, driver?.lng, driver?.label, targetDestination]);
+  }, [driver?.lat, driver?.lng, driver?.label, driver?.markerColor, targetDestination]);
 
   return (
     <div className={`relative overflow-hidden rounded-xl border border-gray-200 bg-slate-100 ${className}`}>

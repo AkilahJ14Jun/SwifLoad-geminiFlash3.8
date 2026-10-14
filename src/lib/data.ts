@@ -13,6 +13,7 @@ import {
   WalletTransaction,
   IncentiveSlab,
   DriverCancellationSlabConfig,
+  BrandConfig,
 } from '@/types/logistics';
 
 export const DRIVER_GROUPS: DriverGroup[] = [
@@ -1392,4 +1393,18 @@ export const DEFAULT_DRIVER_CANCELLATION_SLABS: DriverCancellationSlabConfig[] =
     icon: '🚨',
   },
 ];
+
+export const DEFAULT_BRAND_CONFIG: BrandConfig = {
+  appName: 'Logi-X',
+  appShortName: 'Logi-X',
+  companyName: 'Logi-X Freight Systems',
+  tagline: 'Intelligent On-Demand Freight & Multi-Stop City Logistics',
+  codePrefix: 'LGX',
+  supportPhone: '1800-564-4900',
+  supportEmail: 'support@logi-x.app',
+  defaultCity: 'Coimbatore',
+  defaultState: 'Tamil Nadu',
+  currencySymbol: '₹',
+  websiteUrl: 'https://logi-x.app',
+};
 

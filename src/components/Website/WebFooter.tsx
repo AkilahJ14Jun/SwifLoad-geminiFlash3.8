@@ -2,12 +2,14 @@
 
 import React from 'react';
 import { Phone, Mail, MapPin, ShieldCheck, Heart } from 'lucide-react';
+import { useLogistics } from '@/context/LogisticsContext';
 
 interface WebFooterProps {
   onOpenProhibited: () => void;
 }
 
 export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
+  const { brandConfig } = useLogistics();
   const cities = [
     'Coimbatore',
     'Tiruppur',
@@ -47,7 +49,7 @@ export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
               <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm">
                 ⚡
               </div>
-              <span className="font-black text-lg text-white tracking-tight">SwifLoad Logistics</span>
+              <span className="font-black text-lg text-white tracking-tight">{brandConfig.appName} Logistics</span>
             </div>
 
             <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
@@ -57,15 +59,15 @@ export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
             <div className="space-y-2 text-xs">
               <div className="flex items-center space-x-2 text-slate-300">
                 <Phone className="w-3.5 h-3.5 text-blue-400" />
-                <span>24/7 Customer Care: <strong>0422 4410 4410</strong></span>
+                <span>24/7 Customer Care: <strong>{brandConfig.supportPhone}</strong></span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
                 <Mail className="w-3.5 h-3.5 text-blue-400" />
-                <span>Email Support: <strong>help@swifload.in</strong></span>
+                <span>Email Support: <strong>{brandConfig.supportEmail}</strong></span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
                 <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                <span>Central Hub: Avinashi Road, Near Tidel Park & Peelamedu, Coimbatore 641014, Tamil Nadu</span>
+                <span>Central Hub: Peelamedu & SIDCO, {brandConfig.defaultCity}, {brandConfig.defaultState}</span>
               </div>
             </div>
           </div>
@@ -78,7 +80,7 @@ export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
               <li><a href="#booking-hero" className="hover:text-white transition-colors">2-Wheeler Express Parcel</a></li>
               <li><a href="#packers-movers" className="hover:text-white transition-colors">Packers & Movers</a></li>
               <li><a href="#fleet" className="hover:text-white transition-colors">Fleet Specifications</a></li>
-              <li><a href="#enterprise" className="hover:text-white transition-colors">SwifLoad Enterprise</a></li>
+              <li><a href="#enterprise" className="hover:text-white transition-colors">{brandConfig.appName} Enterprise</a></li>
               <li><a href="#driver-partner" className="hover:text-white transition-colors">Driver Partner Onboarding</a></li>
             </ul>
           </div>
@@ -123,7 +125,7 @@ export default function WebFooter({ onOpenProhibited }: WebFooterProps) {
         {/* Bottom Legal bar */}
         <div className="mt-12 pt-8 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-[11px] text-slate-500">
           <div>
-            © 2026 SwifLoad Technologies India Pvt. Ltd. CIN: U74999KA2024PTC198421. All Rights Reserved.
+            © 2026 {brandConfig.companyName}. All Rights Reserved.
           </div>
           <div className="flex items-center space-x-4">
             <span>GST Registered Intra-City Transporter</span>

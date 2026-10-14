@@ -2,7 +2,242 @@
 
 This document tracks all technical updates, architectural additions, and feature implementations made in each development session across any LLM model.
 
-## 📅 Session: 2026-10-11 (Knowledge Graph Extraction & Architecture Graphify Run)
+## 📅 Session: 2026-10-14 (Codebase Knowledge Graph Refresh via Graphify)
+
+### Objectives
+- Execute `/graphify .` to re-extract and refresh the architectural knowledge graph for SwifLoad (Logi-X).
+- Regenerate graph community clusters, God nodes, call flow diagrams, and collapsible tree visualization.
+
+### Bullet-Point Changes
+- **Graph Re-extraction & Incremental Clustering (`graphify update .`):**
+  - Updated AST representation across codebase components and routes without LLM token cost.
+  - Rebuilt graph with 444 nodes, 851 edges, and 33 communities.
+  - Backed up prior graph state to [`graphify-out/2026-10-14/`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/2026-10-14/).
+- **Visual Artifacts & Report Generation (`graphify-out/`):**
+  - Generated [`graphify-out/graph.json`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.json), [`graphify-out/graph.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.html), and [`graphify-out/GRAPH_REPORT.md`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_REPORT.md).
+  - Regenerated D3 collapsible tree visualization in [`graphify-out/GRAPH_TREE.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_TREE.html).
+  - Updated callflow diagram in [`graphify-out/SwifLoad-geminiFlash3.8-callflow.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/SwifLoad-geminiFlash3.8-callflow.html).
+
+### Verification Status
+- Graph compilation: Succeeded (`Rebuilt: 444 nodes, 851 edges, 33 communities`).
+- Production build: `npm run build` executed successfully with 0 errors across all routes (`/`, `/admin`, `/customer`, `/driver`, `/downloads`, and API endpoints).
+
+
+
+## 📅 Session: 2026-10-14 (Brand Renaming to 'Logi-X' & White-Label Configurable Platform Engine)
+
+### Objectives
+- Modify the platform branding from 'SwiftLoad' / 'SwifLoad' to **'Logi-X'**.
+- Implement a flexible, configurable White-Label Brand Settings architecture so the solution can be seamlessly rebranded, customized, and marketed to multiple clients across diverse geographic locations without code modification.
+- Guarantee real-time multi-tab synchronization of brand names, logos, regional hubs, and waybill prefixes via Server-Sent Events (SSE).
+
+### Bullet-Point Changes
+- **White-Label Brand Domain Model & Presets ([`src/types/logistics.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/types/logistics.ts) & [`src/lib/data.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/data.ts)):**
+  - Added `BrandConfig` interface with `appName`, `appShortName`, `companyName`, `tagline`, `codePrefix`, `supportPhone`, `supportEmail`, `defaultCity`, `defaultState`, `currencySymbol`, and `websiteUrl`.
+  - Defined `DEFAULT_BRAND_CONFIG` defaulting to **`Logi-X`** (`LGX`, `Logi-X Logistics Technologies Private Limited`, `On-Demand Intra-City Logistics & Fleet Network`, `Coimbatore, Tamil Nadu`).
+- **Server Database & Real-Time Sync ([`src/lib/server/db.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/server/db.ts) & [`src/app/api/config/route.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/app/api/config/route.ts)):**
+  - Added `brandConfig` to `DatabaseSchema` and initialized defaults.
+  - Implemented `brandConfig` handler in `/api/config` with real-time SSE event dispatch (`CONFIG_UPDATED`) to all connected client tabs.
+- **Context Engine & Dynamic Identifiers ([`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx)):**
+  - Exposed `brandConfig` and `updateBrandConfig` via `LogisticsContextType` and `useLogistics()`.
+  - Added localStorage persistence (`logix_brand_config_v1`) with hydration from `/api/state` and live SSE updates.
+  - Dynamically formatted booking codes (`${brandConfig.codePrefix}-CBE-...`), customer referral codes (`${brandConfig.codePrefix}-...`), UPI payment strings, and dispatch audit log actor attribution (`${brandConfig.appName} Express Dispatch`).
+- **Admin Portal White-Label Suite ([`src/components/Admin/AdminPortal.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Admin/AdminPortal.tsx)):**
+  - Added **"Brand & White-Label"** management tab with `Globe` icon.
+  - Created 5 one-click geographic white-label presets:
+    - `Coimbatore Hub (Logi-X / LGX)`
+    - `Chennai Metro (Chennai Haul / CHN)`
+    - `Bengaluru Tech (BlrCargo / BLR)`
+    - `Mumbai Western (BombayLogix / BOM)`
+    - `Pan-India SaaS (LogiGlobal / LGL)`
+  - Added full live customization form for App Name, Short Name, Legal Company Name, Tagline, Tracking Prefix, Support Phone/Email, City, and State.
+  - Built interactive live preview cards showing real-time impact on Customer Navigation, Driver Dispatch Alert, and Shipper Waybill SMS.
+- **PWA & Layout Metadata ([`src/app/layout.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/app/layout.tsx)):**
+  - Updated application title to `Logi-X - On-Demand City Logistics Platform (Coimbatore, Tamil Nadu)` and apple-mobile-web-app title to `Logi-X`.
+- **Cross-Portal UI Refactoring:**
+  - Customer App ([`src/components/Customer/CustomerApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerApp.tsx) & [`src/components/Customer/CustomerSideMenu.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerSideMenu.tsx)): Dynamic header, express wallet, referral code, receipts, and helpline.
+  - Driver App ([`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx)):
+    - Refactored persistent top navigation ribbon to display clean brand logo and title (`⚡ ${brandConfig.appName} Driver`), matching Customer App design language and eliminating element overlapping with notification, help, theme, and duty toggle buttons.
+    - Removed redundant secondary brand banner with flashing 'Live On Duty'.
+    - Swapped driver identity card (avatar with online dot, driver name, ID badge, vehicle number, rating, and Profile button) to the prominent section directly below the top ribbon.
+    - Added brand identity header with logo to the left-side navigation drawer (`${brandConfig.appName} Driver Partner • ${brandConfig.defaultCity} Operations`).
+    - Dynamic vehicle registration, noticeboard alerts, dynamic UPI QR modal (`${brandConfig.companyName}` / `${brandConfig.appName}`), partner referral rewards, and privacy terms.
+  - Flower Shower Splash Screen ([`src/components/Customer/FlowerShowerSplash.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/FlowerShowerSplash.tsx)):
+    - Replaced hardcoded 'SwiftLoad Driver Partner' and 'SwiftLoad Coimbatore' titles with dynamic `{brandConfig.appName} Driver Partner` and `{brandConfig.appName} {brandConfig.defaultCity}`.
+    - Updated festive welcome greeting to dynamic `{brandConfig.defaultCity}`.
+  - Downloads Portal ([`src/app/downloads/page.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/app/downloads/page.tsx)): Dynamic APK headers, badges, download triggers, and installation guides.
+  - Website Suite ([`src/components/Website/WebNavbar.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/WebNavbar.tsx), [`src/components/Website/WebFooter.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/WebFooter.tsx), [`src/components/Website/EnterpriseSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/EnterpriseSection.tsx), [`src/components/Website/HeroBookingWidget.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/HeroBookingWidget.tsx), [`src/components/Website/DriverPartnerSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/DriverPartnerSection.tsx), [`src/components/Website/PackersMoversSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/PackersMoversSection.tsx), [`src/components/Website/CustomerReviewsSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/CustomerReviewsSection.tsx), [`src/components/Website/ProhibitedGoodsModal.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/ProhibitedGoodsModal.tsx), [`src/components/Website/WebFaqSection.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Website/WebFaqSection.tsx)): All brand mentions now render dynamically from `brandConfig`.
+
+### Verification Status
+- Build verification: `npm run build` executed and passed with exit code 0 (8/8 static pages generated, 0 TypeScript/lint errors).
+
+---
+
+## 📅 Session: 2026-10-14 (Configurable Driver Cancellation Lockout & Automatic Order Dispatch Resumption)
+
+### Objectives
+- Fix driver cancellation lockout in Driver App: replace permanent lockout upon order cancellation with a temporary cooldown strictly adhering to the duration configured in the Admin Portal for the specific cancellation reason (Illness, Vehicle breakdown, Priority personal work, Emergency).
+- Implement automatic duty restoration: as soon as the configured lockout timer completes (or when waived by Admin), the driver is automatically restored ONLINE and eligible to receive new order dispatches without manual intervention.
+- Sync cancellation slab configurations and active lockouts across the cloud database and real-time SSE stream.
+
+### Bullet-Point Changes
+- **Server DB & Config Persistence ([`src/lib/server/db.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/lib/server/db.ts) & [`src/app/api/config/route.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/app/api/config/route.ts)):**
+  - Added `cancellationSlabConfigs` and `driverLockouts` to `DatabaseSchema` and initialized defaults.
+  - Added `cancellationSlabs` and `driverLockouts` handlers in `api/config/route.ts` with real-time SSE broadcasting (`CONFIG_UPDATED`).
+- **Logistics Context & Automatic Resumption ([`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx)):**
+  - Added background auto-unlock ticker effect running every second: detects expired lockouts (`Date.now() >= lockedUntil`), marks them completed, restores the driver to `isOnline: true` and `currentStatus: 'IDLE'`, dispatches in-app notification, and shows celebratory toast.
+  - Updated `waiveDriverLockout()`: immediately restores the driver to `isOnline: true`, `currentStatus: 'IDLE'`, notifies the driver, and syncs across server & client storage.
+  - Updated `cancelTripByDriver()`: respects Admin Portal configured `lockoutHours` (supporting fractional hours down to minutes), sets `lockedUntil` timestamp, marks duty temporarily suspended, and persists lockout to server.
+  - Updated `updateCancellationSlabConfig()` and `resetCancellationSlabsToDefault()`: supports fine-grained duration settings (from 0.02h / ~1 minute to 72 hours) and saves to `/api/config`.
+  - Updated `createBooking()` auto-assignment: ensures drivers currently on cancellation standby or offline are excluded from dispatch assignment.
+- **Admin Portal Configuration ([`src/components/Admin/AdminPortal.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Admin/AdminPortal.tsx)):**
+  - Added quick-preset chips (`5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`) and fine-grained increment/decrement controls (`±15m`) for each cancellation reason.
+  - Added minute/hour formatted badges and real-time active restriction previews.
+  - Enhanced active lockouts monitor table with live countdown, remaining time, and instant waiver controls.
+- **Driver App Experience ([`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx)):**
+  - Added live Lockout / Standby Countdown Banner to Dashboard, Live Calls Radar, and Available Orders pages.
+  - Displays reason, penalty duration configured in Admin Portal, live countdown ticker, expected unlock time, and notice that duty will automatically resume online.
+  - Available Orders queue disables Accept button with clear "Locked" state and tooltip while driver is on standby.
+  - Sliding popups are suppressed during standby and immediately resume when the lockout expires.
+  - Added "Cancel Order" emergency trigger directly in Active Order execution header.
+  - Cancellation modal displays dynamic minutes/hours and informs driver of exact Admin standby rule before confirmation.
+
+### Verification Status
+- Build verification: `npm run build` completed successfully (Exit code: 0, 8/8 static pages compiled, 0 TypeScript/lint errors).
+
+---
+
+## 📅 Session: 2026-10-14 (Codebase Knowledge Graph & AST Extraction — /graphify .)
+
+### Objectives
+- Execute `/graphify .` across the SwifLoad repository to extract codebase AST nodes, update edge relationships, community clusters, and call flows.
+- Generate updated graph artifacts: `graph.json`, `graph.html`, `GRAPH_TREE.html`, `GRAPH_REPORT.md`, and `SwifLoad-geminiFlash3.8-callflow.html`.
+- Identify primary architectural hubs (God Nodes) and verify build stability.
+
+### Bullet-Point Changes
+- **Knowledge Graph Extraction (`graphify-out/`):**
+  - Executed `graphify extract . --code-only` on the repository (13 changed/re-extracted code files, 79 cached/unchanged, 0 deleted).
+  - Built graph comprising **407 nodes, 783 edges, and 22 architectural communities**.
+  - Generated and refreshed all visualization and reporting outputs:
+    - Interactive graph: [`graphify-out/graph.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.html)
+    - D3 collapsible tree view: [`graphify-out/GRAPH_TREE.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_TREE.html)
+    - Full analysis report: [`graphify-out/GRAPH_REPORT.md`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/GRAPH_REPORT.md)
+    - Mermaid-based call flows & sequence maps: [`graphify-out/SwifLoad-geminiFlash3.8-callflow.html`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/SwifLoad-geminiFlash3.8-callflow.html)
+    - JSON graph model: [`graphify-out/graph.json`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/graphify-out/graph.json)
+- **Architectural Hubs Identified:**
+  - `useLogistics()` (31 edges) — Primary state & hook coordinator in [`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx).
+  - `getDatabase()` (23 edges) & `saveDatabase()` (18 edges) — Central database persistence abstraction.
+  - `LogisticsContextType` (22 edges) — Central domain contract.
+  - `compilerOptions` (16 edges) — TypeScript configuration node.
+  - `WebPlatform()` (15 edges) & `broadcastEvent()` (15 edges) — Platform dispatch & telemetry synchronization.
+  - `calculateDistanceKm()` (13 edges) & `VehicleCategory` (12 edges) — Geospatial calculation & pricing classifications.
+
+### Verification Status
+- Commands run: `graphify extract . --code-only`, `graphify cluster-only . --no-label`, `graphify tree`, `graphify export callflow-html` — all completed with exit code 0.
+- Build verification: `npm run build` completed successfully with 0 errors across all 8 static pages and dynamic API routes.
+
+---
+
+## 📅 Session: 2026-10-12 (Production Cloud Deployment to Azure App Service & Native APKs Distribution)
+
+### Objectives
+- Deploy the SwifLoad platform to Azure App Service at `https://swifload-cbe.azurewebsites.net/`.
+- Ensure the Customer App, Driver App, Operations Admin, and Android APK binaries (`SwifLoad-Customer.apk`, `SwifLoad-Driver.apk`) are all up to date in cloud production.
+
+### Bullet-Point Changes
+- **Android APK Compilation & Signing ([`scripts/rebuild_apks.py`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/scripts/rebuild_apks.py)):**
+  - Executed Gradle assemble tasks `assembleCustomerRelease` and `assembleDriverRelease` with release keystore (`v1` and `v2` signature schemes enabled).
+  - Generated fresh APK binaries and copied them to distribution directory:
+    - Customer APK: [`public/downloads/SwifLoad-Customer.apk`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/public/downloads/SwifLoad-Customer.apk) (2,979,228 bytes).
+    - Driver APK: [`public/downloads/SwifLoad-Driver.apk`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/public/downloads/SwifLoad-Driver.apk) (2,979,234 bytes).
+  - Verified v1 + v2 scheme signatures via `apksigner`.
+- **Cloud Docker Container Build (Azure Container Registry `acrswifload`):**
+  - Triggered cloud build `cu5` in ACR packaging Next.js standalone runner, updated web application routes, and newly compiled APK binaries.
+  - Tagged images `acrswifload.azurecr.io/swifload:latest` and `acrswifload.azurecr.io/swifload:v3`.
+- **Azure App Service Activation (`swifload-cbe`):**
+  - Updated container configuration to `acrswifload.azurecr.io/swifload:v3`.
+  - Restarted Web App container to trigger fresh pull and startup.
+- **Live Endpoint Verification:**
+  - `GET /`: `HTTP 200 OK` (94,935 bytes)
+  - `GET /customer`: `HTTP 200 OK` (42,920 bytes)
+  - `GET /driver`: `HTTP 200 OK` (36,474 bytes)
+  - `GET /admin`: `HTTP 200 OK` (23,443 bytes)
+  - `GET /downloads`: `HTTP 200 OK` (23,155 bytes)
+  - `GET /api/state`: `HTTP 200 OK` (24,676 bytes)
+  - `HEAD /downloads/SwifLoad-Customer.apk`: `HTTP 200 OK` (Content-Length: 2,979,228 bytes)
+  - `HEAD /downloads/SwifLoad-Driver.apk`: `HTTP 200 OK` (Content-Length: 2,979,234 bytes)
+- **Deployment & Acceptance Testing Documentation ([`docs/AZURE_DEPLOYMENT_AND_TESTING_GUIDE.md`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/docs/AZURE_DEPLOYMENT_AND_TESTING_GUIDE.md)):**
+  - Created end-to-end technical operational guide covering prerequisites, APK rebuild and v1+v2 signing, ACR cloud container build, App Service configuration and activation.
+  - Authored comprehensive verification testing suite: App Service health check, route verification, binary APK download & size validation, real-time REST + SSE state sync testing, and end-to-end operational acceptance lifecycle testing.
+
+### Verification Status
+- Build Command: `npm run build` — 0 TypeScript and compilation errors across all routes.
+- APK Signing: `apksigner verify -v` — verified with v1 and v2 signature schemes.
+- ACR Build: Run ID `cu5` completed with status `Succeeded`.
+- Live Azure Deployment: All routes and binary endpoints verified live with `HTTP 200 OK`.
+
+---
+
+## 📅 Session: 2026-10-12 (Driver & Customer Live Calls Terminal, Available Orders, Sliding Popup & Real-Time Transit Tracking)
+
+### Objectives
+- Fully implement all requirements in [`Changes Required.txt`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/Changes%20Required.txt):
+  1. Rename button `'Welcome / Enter Live Pickup Calls Terminal'` to `'Welcome / Live Calls'`.
+  2. Clicking button takes user to a page showing GPS map with driver location in **RED**.
+  3. Prominent button named `'Available Orders'` below the map.
+  4. Clicking `'Available Orders'` takes user to another page displaying all available orders.
+  5. Any new incoming order displays in a sliding popup window.
+  6. Popup window displays: Total charge on top, pickup locality with distance from driver in km `(X km)`, drop locality with distance from pickup in km `(Y km)`.
+  7. Timer clock with seconds countdown happening from 10 seconds by default.
+  8. Skip option for driver to immediately close the popup.
+  9. Accepting popup or list order opens active order map with driver location. Clicking `'Start Pickup'` displays elapsed timer and distance travelled tracker, and driver moves on map in real time.
+  10. Reaching pickup displays `'Pickup point reached'` button. 3-minute waiting timer countdown starts. Excess waiting beyond 3 minutes is chargeable extra and displays on driver and customer apps simultaneously.
+  11. 4-digit OTP confirmation completes pickup.
+  12. Completed pickup immediately reflects on map with current driver location at pickup.
+  13. Clicking `'Start Drop'` displays elapsed timer and distance still pending.
+  14. Reaching drop displays `'Reached drop location'` (or `'Reached drop destination'` if last drop of a multi-drop order).
+  15. Transit timer and distance tracker stop upon reaching drop.
+  16. 3-minute waiting countdown at drop. Excess waiting beyond 3 minutes displays on driver and customer apps simultaneously.
+  17. Drop activity completed based on 4-digit OTP confirmation.
+  18. Customer scans company payment QR code for payment to company account.
+  19. Driver records feedback about customer.
+  20. Feedback submission diverts driver back to `'Available Orders'` page.
+
+### Bullet-Point Changes
+- **[`src/types/logistics.ts`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/types/logistics.ts):**
+  - Added `driverReachedDropAt?: string;`, `dropWaitingMinutes?: number;`, and `dropWaitingCharge?: number;` to the `Trip` interface.
+- **[`src/context/LogisticsContext.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/context/LogisticsContext.tsx):**
+  - Extended `updateTripWaitingFare` to accept optional `dropWaitingMinutes` and `dropWaitingCharge`.
+  - Added timestamp recording for `driverReachedDropAt` when status advances from `IN_TRANSIT` to `ARRIVED_DESTINATION`.
+- **[`src/components/Map/LeafletMap.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Map/LeafletMap.tsx):**
+  - Added `markerColor?: 'amber' | 'red'` support to `driver` prop.
+  - Implemented pulsing red marker style (`bg-red-500`, `bg-red-600`, `border-red-500`, `text-red-300`, `bg-red-950`) when `markerColor === 'red'`.
+- **[`src/components/Customer/CustomerApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Customer/CustomerApp.tsx):**
+  - Added standard 3-minute free unloading banner and live excess drop waiting fee indicator synced with driver app.
+- **[`src/components/Driver/DriverApp.tsx`](file:///G:/bobby/GitHub/SwifLoad-geminiFlash3.8/src/components/Driver/DriverApp.tsx):**
+  - Renamed home dashboard button to `'Welcome / Live Calls'` navigating to `'live_calls'`.
+  - Built dedicated `live_calls` page with Leaflet GPS map showing driver in RED and prominent `'Available Orders'` button below.
+  - Built dedicated `available_orders` page with:
+    - Queue list showing `pickup (dist to driver) ➔ drop (dist from pickup)` with total fare.
+    - Sliding popup window showing Total Charge on top, pickup locality with `(X km)` from driver, drop locality with `(Y km)` from pickup, 10s countdown timer, Skip button (closes immediately), and Accept button.
+  - Built complete active order execution flow:
+    - `'Start Pickup'` button advancing status, starting live elapsed time and distance travelled trackers, and moving driver on map.
+    - `'Pickup point reached'` button starting 3-minute free waiting countdown, with real-time excess waiting fee accrual synced to customer app.
+    - 4-digit OTP confirmation completing pickup and immediately positioning driver at pickup location.
+    - `'Start Drop'` button displaying elapsed time and distance still pending tracker.
+    - Dynamic button `'Reached drop location'` (or `'Reached drop destination'` for final drop) stopping transit timers and distance trackers.
+    - 3-minute waiting countdown at drop with excess charge synced with customer app.
+    - Recipient 4-digit OTP verification.
+    - Company Payment QR code modal.
+    - Driver feedback modal submitting rating & notes, automatically redirecting driver back to `'Available Orders'` page.
+
+### Verification Status
+- Command Run: `npm run build`
+- Outcome: Successfully compiled (code 0) with 0 TypeScript / Next.js compilation errors across all static and dynamic routes.
+
+---
+
+
 
 ### Objectives
 - Execute `/graphify .` across the SwifLoad repository to update codebase AST nodes, edge connections, community clusters, and architectural documentation.

@@ -1,0 +1,76 @@
+ A comprehensive deployment and testing guide has been created:
+
+  • Repository Documentation: AZURE_DEPLOYMENT_AND_TESTING_GUIDE.md
+  • Interactive Artifact: Azure Cloud Deployment & Testing Procedure Guide
+
+  ### 📋 Guide Structure & Summary
+
+  • Phase 1: Local Codebase Verification: Running npm run build to confirm 0 TypeScript / compilation errors.
+  • Phase 2: Android APK Compilation & Dual-Flavor Signing: Executing rebuild_apks.py with Gradle
+  assembleCustomerRelease and assembleDriverRelease, enforcing Android 11+ v1 and v2 signature schemes via swifload-
+  release.keystore, and publishing binaries to .
+  • Phase 3: Docker Cloud Build via ACR: Building swifload:v3 and swifload:latest in Azure Container Registry
+  (acrswifload.azurecr.io) with $env:PYTHONIOENCODING="utf-8".
+  • Phase 4: App Service Activation: Linking swifload-cbe to the new image, configuring port 8080, and restarting the
+  web app.
+  • Testing Suite (Tests 1–5):
+      1. Warm-Up & Health Check: Handling Linux Basic B1 cold start.
+      2. Portal Verification: Testing / https://swifload-cbe.azurewebsites.net/, /customer https://swifload-cbe.
+      azurewebsites.net/customer, /driver https://swifload-cbe.azurewebsites.net/driver, /admin https://swifload-cbe.
+      azurewebsites.net/admin, and /downloads https://swifload-cbe.azurewebsites.net/downloads.
+      3. APK Binary Downloads & Signatures: Verifying HTTP HEAD status, Content-Length (~2.98 MB), and apksigner
+      output.
+      4. Multi-Client Central State & SSE Sync: Validating /api/trips https://swifload-cbe.azurewebsites.net/api/trips,
+      /api/state https://swifload-cbe.azurewebsites.net/api/state, and /api/events https://swifload-cbe.azurewebsites.
+      net/api/events.
+      5. End-to-End Operational Lifecycle: Walkthrough of booking, driver sliding popup, GPS transit tracking, 3-
+      minute waiting timer, OTP verification, QR payment, and feedback diversion.
+
+The build completed successfully, removing build-related concerns. Considering the user's question about live endpo..
+  Yes, the testing of all live endpoints is included in the deployment guide.
+
+  The updated AZURE_DEPLOYMENT_AND_TESTING_GUIDE.md and the Azure Cloud Deployment & Testing Procedure Guide artifact
+  now feature a Complete Live Endpoints Verification Suite (Test 2) that includes:
+
+  ### 1. Ready-to-Run PowerShell Test Script
+
+  • Automatically iterates across all live endpoints and reports [OK] / [FAIL] with status codes and payload sizes.
+
+  ### 2. Comprehensive Acceptance Matrix Across All Categories
+
+   Category    │ Endpoint / Path     │ HTTP Meth… │ Expected Sta… │ Description & Payload
+  ─────────────┼─────────────────────┼────────────┼───────────────┼───────────────────────────────────────────────────
+   Web Portals │ /[1]                │ GET        │ 200 OK        │ Production landing page (~95 KB)
+   Web Portals │ /customer[2]        │ GET        │ 200 OK        │ Customer booking portal (~43 KB)
+   Web Portals │ /driver[3]          │ GET        │ 200 OK        │ Driver partner terminal & live radar (~36 KB)
+   Web Portals │ /admin[4]           │ GET        │ 200 OK        │ Operations Admin dashboard & ledger (~23 KB)
+   Web Portals │ /downloads[5]       │ GET        │ 200 OK        │ Mobile APK & PWA distribution hub (~23 KB)
+   REST APIs   │ /api/state[6]       │ GET        │ 200 OK        │ Central JSON database snapshot (~25 KB)
+   REST APIs   │ /api/trips[7]       │ GET / POST │ 200 OK        │ Trip queue retrieval and booking mutations
+   REST APIs   │ /api/drivers[8]     │ GET / POST │ 200 OK        │ Driver fleet roster and status management
+   REST APIs   │ /api/wallets        │ POST       │ 200 OK        │ Balance adjustments, top-ups, and overdraft
+               │                     │            │               │ limits
+   REST APIs   │ /api/config         │ POST       │ 200 OK        │ Slab pricing and dispatch configuration changes
+   Telemetry   │ /api/events[9]       │ GET        │ 200 OK        │ Live SSE stream (text/event-stream with : ping
+               │                      │            │               │ heartbeats)
+   PWAs        │ /manifest.json[10],  │ GET        │ 200 OK        │ Progressive Web App install manifests
+               │ manifest-*.json      │            │               │
+   PWAs        │ /sw.js[11]           │ GET        │ 200 OK        │ Service Worker caching script
+   Binary APKs │ /downloads/SwifLoad- │ HEAD / GET │ 200 OK        │ Signed Customer APK (2,979,228 bytes)
+               │ Customer.apk[12]     │            │               │
+   Binary APKs │ /downloads/SwifLoad- │ HEAD / GET │ 200 OK        │ Signed Driver APK (2,979,234 bytes)
+               │ Driver.apk[13]       │            │               │
+
+   [1]: / https://swifload-cbe.azurewebsites.net/
+   [2]: /customer https://swifload-cbe.azurewebsites.net/customer
+   [3]: /driver https://swifload-cbe.azurewebsites.net/driver
+   [4]: /admin https://swifload-cbe.azurewebsites.net/admin
+   [5]: /downloads https://swifload-cbe.azurewebsites.net/downloads
+   [6]: /api/state https://swifload-cbe.azurewebsites.net/api/state
+   [7]: /api/trips https://swifload-cbe.azurewebsites.net/api/trips
+   [8]: /api/drivers https://swifload-cbe.azurewebsites.net/api/drivers
+   [9]: /api/events https://swifload-cbe.azurewebsites.net/api/events
+  [10]: /manifest.json https://swifload-cbe.azurewebsites.net/manifest.json
+  [11]: /sw.js https://swifload-cbe.azurewebsites.net/sw.js
+  [12]: /downloads/SwifLoad-Customer.apk https://swifload-cbe.azurewebsites.net/downloads/SwifLoad-Customer.apk
+  [13]: /downloads/SwifLoad-Driver.apk https://swifload-cbe.azurewebsites.net/downloads/SwifLoad-Driver.apk

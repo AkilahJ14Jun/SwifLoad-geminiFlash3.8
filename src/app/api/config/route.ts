@@ -23,6 +23,12 @@ export async function POST(req: Request) {
       db.incentiveSlabs = body.incentiveSlabs;
     } else if (body.type === 'dispatchSettings') {
       db.dispatchTimeoutSecs = Number(body.dispatchTimeoutSecs) || 10;
+    } else if (body.type === 'cancellationSlabs') {
+      db.cancellationSlabConfigs = body.cancellationSlabs;
+    } else if (body.type === 'driverLockouts') {
+      db.driverLockouts = body.driverLockouts;
+    } else if (body.type === 'brandConfig') {
+      db.brandConfig = body.brandConfig;
     }
 
     saveDatabase(db);

@@ -83,6 +83,7 @@ export default function CustomerApp() {
     topUpCustomerWallet,
     updateCustomerType,
     updateCustomerProfile,
+    brandConfig,
   } = useLogistics();
 
   // Active sub-tab in Customer App: 'book' | 'tracking' | 'history' | 'transactions' | 'wallet' | 'referrals' | 'profile' | 'support'
@@ -505,7 +506,7 @@ export default function CustomerApp() {
               ⚡
             </div>
             <h1 className="font-bold text-sm sm:text-base tracking-tight whitespace-nowrap leading-none">
-              SwiftLoad Coimbatore
+              {brandConfig.appName} {brandConfig.defaultCity}
             </h1>
           </div>
         </div>
@@ -1380,7 +1381,7 @@ export default function CustomerApp() {
                       },
                       {
                         id: 'WALLET',
-                        name: 'SwifLoad Wallet',
+                        name: `${brandConfig.appName} Wallet`,
                         icon: '👛',
                         sub: `Bal: ₹${currentCustomer?.wallet?.balance || 0}`,
                       },
@@ -1890,6 +1891,23 @@ export default function CustomerApp() {
                 <p className="text-xs text-slate-700 dark:text-slate-200 leading-snug">
                   Vehicle has arrived at the drop address. Share the 4-digit Delivery OTP with driver or confirm safe receipt below:
                 </p>
+
+                {/* 3-Minute Standard Free Waiting Policy Notice for Drop Destination */}
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <Clock className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span>Free unloading window: <strong>3 minutes</strong></span>
+                  </div>
+                  {Boolean((currentTrip.dropWaitingCharge && currentTrip.dropWaitingCharge > 0) || (currentTrip.fare.waitingFare && currentTrip.fare.waitingFare > 0)) ? (
+                    <span className="font-bold text-rose-600 dark:text-rose-400 bg-rose-500/15 px-2 py-0.5 rounded-lg border border-rose-500/30">
+                      Excess Waiting: +₹{currentTrip.dropWaitingCharge || currentTrip.fare.waitingFare} ({currentTrip.dropWaitingMinutes || currentTrip.waitingMinutes || 1} min)
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                      Standard Window Active
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800">
                   <div>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Your Delivery OTP</span>
@@ -2470,7 +2488,7 @@ export default function CustomerApp() {
                   📦
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Welcome to SwifLoad Shipper Portal</h3>
+                  <h3 className="text-base font-bold text-slate-900">Welcome to {brandConfig.appName} Shipper Portal</h3>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
                     Register your business or personal account to book freight vehicles, track live GPS deliveries, and generate tax receipts.
                   </p>
@@ -2743,7 +2761,7 @@ export default function CustomerApp() {
                   🎁
                 </div>
                 <div>
-                  <h3 className="font-bold text-base">SwifLoad Refer & Earn</h3>
+                  <h3 className="font-bold text-base">{brandConfig.appName} Refer & Earn</h3>
                   <p className="text-[11px] text-emerald-200">Earn wallet credits for every friend & business you invite</p>
                 </div>
               </div>
@@ -3555,7 +3573,7 @@ export default function CustomerApp() {
           <div className="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl text-slate-900 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center space-x-2">
-                <span className="font-black text-emerald-600 text-lg">⚡ SwifLoad</span>
+                <span className="font-black text-emerald-600 text-lg">⚡ {brandConfig.appName}</span>
                 <span className="text-[10px] bg-slate-100 font-bold px-2 py-0.5 rounded">TAX INVOICE</span>
               </div>
               <button onClick={() => setViewInvoiceTripId(null)} className="text-slate-400 hover:text-slate-600">
@@ -3906,7 +3924,7 @@ export default function CustomerApp() {
                   <Megaphone className="w-4 h-4" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-base">Advertise on SwifLoad Coimbatore</h3>
+                  <h3 className="font-bold text-base">Advertise on {brandConfig.appName} {brandConfig.defaultCity}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Earmarked Home Screen Partner Spaces</p>
                 </div>
               </div>

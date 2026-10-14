@@ -25,6 +25,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { CustomerUser } from '@/types/logistics';
+import { useLogistics } from '@/context/LogisticsContext';
 
 interface CustomerSideMenuProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export default function CustomerSideMenu({
   darkMode = false,
   showToast,
 }: CustomerSideMenuProps) {
+  const { brandConfig } = useLogistics();
   const [activeSection, setActiveSection] = useState<
     'menu' | 'profile' | 'address' | 'payment' | 'referral' | 'support' | 'feedback' | 'help'
   >('menu');
@@ -102,14 +104,14 @@ export default function CustomerSideMenu({
   if (!isOpen) return null;
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(customer?.referralCode || 'SWIF-KAVITHA-20');
+    navigator.clipboard.writeText(customer?.referralCode || `${brandConfig.codePrefix}-KAVITHA-20`);
     setCopiedCode(true);
     showToast('Referral code copied to clipboard!');
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const handleCopyLink = () => {
-    const link = `https://swifload-cbe.azurewebsites.net/customer?ref=${customer?.referralCode || 'SWIF-KAVITHA-20'}`;
+    const link = `${brandConfig.websiteUrl}/customer?ref=${customer?.referralCode || `${brandConfig.codePrefix}-KAVITHA-20`}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(true);
     showToast('Referral link copied to clipboard!');
@@ -117,7 +119,7 @@ export default function CustomerSideMenu({
   };
 
   const handleShareWhatsApp = () => {
-    const text = `Book instant trucks & 3-wheelers in Coimbatore with SwifLoad! Use my referral code ${customer?.referralCode || 'SWIF-KAVITHA-20'} for ₹100 discount: https://swifload-cbe.azurewebsites.net/customer`;
+    const text = `Book instant trucks & 3-wheelers in ${brandConfig.defaultCity} with ${brandConfig.appName}! Use my referral code ${customer?.referralCode || `${brandConfig.codePrefix}-KAVITHA-20`} for ${brandConfig.currencySymbol}100 discount: ${brandConfig.websiteUrl}/customer`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -448,7 +450,7 @@ export default function CustomerSideMenu({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                  Registered shipper details for SwifLoad intra-city dispatches.
+                  Registered shipper details for {brandConfig.appName} intra-city dispatches.
                 </p>
               </div>
 
@@ -796,11 +798,11 @@ export default function CustomerSideMenu({
                   <Phone className="w-4 h-4 text-emerald-600" />
                   <div>
                     <div className="font-bold text-xs">24x7 Shipper Helpline</div>
-                    <div className="text-[10px] text-slate-500">1800-SWIF-LOAD / +91 422 291 0000</div>
+                    <div className="text-[10px] text-slate-500">{brandConfig.supportPhone}</div>
                   </div>
                 </a>
                 <a
-                  href="https://wa.me/919842200000?text=Hi%20SwifLoad%20Support"
+                  href={`https://wa.me/919842200000?text=${encodeURIComponent(`Hi ${brandConfig.appName} Support`)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center space-x-2.5 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -828,7 +830,7 @@ export default function CustomerSideMenu({
               <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 space-y-1.5">
                 <span className="font-black text-sm text-indigo-950 dark:text-indigo-200">Customer Feedback</span>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                  Help us improve SwifLoad freight operations across Coimbatore.
+                  Help us improve {brandConfig.appName} freight operations across {brandConfig.defaultCity}.
                 </p>
               </div>
 
@@ -1159,7 +1161,7 @@ export default function CustomerSideMenu({
         <div className={`p-3 border-t text-center text-[10px] font-mono ${
           darkMode ? 'bg-slate-950 border-slate-800 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
         }`}>
-          SwifLoad v2.4 • Coimbatore Intra-City Freight Hub
+          {brandConfig.appName} v2.4 • {brandConfig.defaultCity} Intra-City Freight Hub
         </div>
       </div>
     </div>

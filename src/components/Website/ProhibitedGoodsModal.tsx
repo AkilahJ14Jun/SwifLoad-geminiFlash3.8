@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, AlertTriangle, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { useLogistics } from '@/context/LogisticsContext';
 
 interface ProhibitedGoodsModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface ProhibitedGoodsModalProps {
 }
 
 export default function ProhibitedGoodsModal({ isOpen, onClose }: ProhibitedGoodsModalProps) {
+  const { brandConfig } = useLogistics();
   if (!isOpen) return null;
 
   const prohibitedList = [
@@ -33,7 +35,7 @@ export default function ProhibitedGoodsModal({ isOpen, onClose }: ProhibitedGood
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900">Prohibited Goods & Safety Policy</h3>
-              <p className="text-xs text-rose-700 font-medium">As per Central Motor Vehicles Act & SwifLoad Safety Mandate</p>
+              <p className="text-xs text-rose-700 font-medium">As per Central Motor Vehicles Act & {brandConfig.appName} Safety Mandate</p>
             </div>
           </div>
           <button
@@ -49,7 +51,7 @@ export default function ProhibitedGoodsModal({ isOpen, onClose }: ProhibitedGood
           <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-3 text-amber-800 text-xs leading-relaxed">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <span>
-              <strong>Zero Tolerance Policy:</strong> SwifLoad driver-partners are legally mandated to inspect cargo prior to loading. If any prohibited consignment is detected, the trip will be cancelled immediately and reported to civic authorities.
+              <strong>Zero Tolerance Policy:</strong> {brandConfig.appName} driver-partners are legally mandated to inspect cargo prior to loading. If any prohibited consignment is detected, the trip will be cancelled immediately and reported to civic authorities.
             </span>
           </div>
 

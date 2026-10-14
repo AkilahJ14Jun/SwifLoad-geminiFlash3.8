@@ -1,28 +1,29 @@
-# Graph Report - SwifLoad-geminiFlash3.8  (2026-10-11)
+# Graph Report - SwifLoad-geminiFlash3.8  (2026-10-14)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 73 files · ~599,289 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 407 nodes · 784 edges · 22 communities (20 shown, 2 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 29 edges (avg confidence: 0.93)
+- 444 nodes · 851 edges · 33 communities (24 shown, 9 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 29 edges (avg confidence: 0.93)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `010adb6d`
+- Built from commit: `0177ba5b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - LogisticsContext.tsx
-- useLogistics
+- WebPlatform.tsx
 - getDatabase
 - dependencies
 - compilerOptions
 - 🌐 SwifLoad — Azure Cloud Infrastructure Architecture Guide
 - generate_instagram_promo_v2.py
-- CustomerApp.tsx
 - SwifLoad Cloud Deployment & Operations Manual
+- Two-Way Pickup and Delivery OTP Verification
 - DriverApp.tsx
 - devDependencies
 - SwifLoad Project Overview
@@ -32,18 +33,27 @@
 - layout.tsx
 - Software Outsourcing Cost Estimate
 - next.config.mjs
+- useLogistics
+- 📘 SwifLoad — Azure Cloud Deployment & Testing Procedure Guide
+- LeafletMap.tsx
+- BookingSuccessModal.tsx
+- DriverPartnerSection.tsx
+- PackersMoversSection.tsx
+- WebFooter.tsx
+- End-to-End Shipper to Delivery Cycle
+- Discrete Trip State Machine Transitions
 
 ## God Nodes (most connected - your core abstractions)
-1. `useLogistics()` - 31 edges
-2. `getDatabase()` - 23 edges
-3. `LogisticsContextType` - 22 edges
+1. `useLogistics()` - 43 edges
+2. `LogisticsContextType` - 23 edges
+3. `getDatabase()` - 23 edges
 4. `saveDatabase()` - 18 edges
 5. `compilerOptions` - 16 edges
-6. `WebPlatform()` - 15 edges
-7. `broadcastEvent()` - 15 edges
-8. `🌐 SwifLoad — Azure Cloud Infrastructure Architecture Guide` - 13 edges
-9. `VehicleCategory` - 12 edges
-10. `DatabaseSchema` - 11 edges
+6. `broadcastEvent()` - 15 edges
+7. `DatabaseSchema` - 14 edges
+8. `calculateDistanceKm()` - 13 edges
+9. `🌐 SwifLoad — Azure Cloud Infrastructure Architecture Guide` - 13 edges
+10. `VehicleCategory` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `End-to-End Shipper to Delivery Cycle` --implements--> `CreateTripPayload`  [INFERRED]
@@ -66,51 +76,47 @@
 - **Urban Fare Calculation and Dispatch Engine Flow** — readme_fare_engine [INFERRED 0.85]
 - **Realtime Cloud State Synchronization & Telemetry Pipeline** — deployment_guide_realtime_sse, docs_swifload_telemetry_sse_dataflow, docs_swifload_trip_state_transitions [INFERRED 0.95]
 
-## Communities (22 total, 2 thin omitted)
+## Communities (33 total, 9 thin omitted)
 
 ### Community 0 - "LogisticsContext.tsx"
 Cohesion: 0.10
-Nodes (56): End-to-End Shipper to Delivery Cycle, Booking and Fulfillment Workflow Diagram, Trip State Machine Lifecycle Diagram, Discrete Trip State Machine Transitions, ref_fs, ref_path, CreateTripPayload, INITIAL_CUSTOMER (+48 more)
+Nodes (68): ref_fs, ref_path, CustomerApp(), HeroBookingWidget(), HeroBookingWidgetProps, CreateTripPayload, INITIAL_CUSTOMER, LogisticsContext (+60 more)
 
-### Community 1 - "useLogistics"
-Cohesion: 0.07
-Nodes (32): AdminPage(), CustomerPage(), DriverPage(), Home(), AdminPortal(), DriverApp(), BookingSuccessModal(), BookingSuccessModalProps (+24 more)
+### Community 1 - "WebPlatform.tsx"
+Cohesion: 0.13
+Nodes (13): CustomerReviewsSection(), EnterpriseSection(), FleetComparison(), FleetComparisonProps, ProhibitedGoodsModal(), ProhibitedGoodsModalProps, TrustAndSafetySection(), TrustAndSafetySectionProps (+5 more)
 
 ### Community 2 - "getDatabase"
-Cohesion: 0.11
-Nodes (31): Real-Time Telemetry SSE Dataflow Engine, Telemetry and Trip State Dataflow Diagram, ref_events, dynamic, POST(), dynamic, GET(), PATCH() (+23 more)
+Cohesion: 0.10
+Nodes (35): Changes Required Specification, Driver Mobile Workflow UX Refinements, Customer Tariff Distance Slabs, Driver Negative Balance Limit Rules, Real-Time Telemetry SSE Dataflow Engine, Telemetry and Trip State Dataflow Diagram, ref_events, dynamic (+27 more)
 
 ### Community 3 - "dependencies"
-Cohesion: 0.05
-Nodes (36): @capacitor/android, @capacitor/cli, @capacitor/core, @capacitor/ios, clsx, leaflet, lucide-react, next (+28 more)
+Cohesion: 0.09
+Nodes (23): @capacitor/android, @capacitor/cli, @capacitor/core, @capacitor/ios, clsx, lucide-react, dependencies, @capacitor/android (+15 more)
 
 ### Community 4 - "compilerOptions"
 Cohesion: 0.07
 Nodes (27): dom, dom.iterable, esnext, .next/dev/types/**/*.ts, next-env.d.ts, .next/types/**/*.ts, node_modules, **/*.ts (+19 more)
 
 ### Community 5 - "🌐 SwifLoad — Azure Cloud Infrastructure Architecture Guide"
-Cohesion: 0.08
-Nodes (25): 1. Database Configuration Schema (`SystemConfig.maps`), 1. Database Configuration Schema (`SystemConfig.payments`), 1. Workload Profile & Concurrency Analysis (1,000 Users), 2. Google Pay (GPay) Deep Integration Architecture, 2. Provider Strengths for Coimbatore Launch:, 2. Target Azure Geographic Regions (Coimbatore Focus), 3. Architecture Option 1: Basic Infrastructure (Cost-Effective / MVP), 3. Dynamic Rendering in Admin & Apps: (+17 more)
+Cohesion: 0.07
+Nodes (26): 1. Database Configuration Schema (`SystemConfig.maps`), 1. Database Configuration Schema (`SystemConfig.payments`), 1. Workload Profile & Concurrency Analysis (1,000 Users), 2. Google Pay (GPay) Deep Integration Architecture, 2. Provider Strengths for Coimbatore Launch:, 2. Target Azure Geographic Regions (Coimbatore Focus), 3. Architecture Option 1: Basic Infrastructure (Cost-Effective / MVP), 3. Dynamic Rendering in Admin & Apps: (+18 more)
 
 ### Community 6 - "generate_instagram_promo_v2.py"
 Cohesion: 0.13
 Nodes (20): cv2, imageio_ffmpeg, numpy, os, pil, playwright_sync_api, scipy_io_wavfile, create_video() (+12 more)
 
-### Community 7 - "CustomerApp.tsx"
-Cohesion: 0.16
-Nodes (21): Changes Required Specification, Driver Mobile Workflow UX Refinements, Customer Tariff Distance Slabs, Driver Negative Balance Limit Rules, Two-Way Pickup and Delivery OTP Verification, Trip Dispatch and OTP Handshake Sequence Diagram, CustomerApp(), CustomerSideMenu() (+13 more)
-
-### Community 8 - "SwifLoad Cloud Deployment & Operations Manual"
+### Community 7 - "SwifLoad Cloud Deployment & Operations Manual"
 Cohesion: 0.09
 Nodes (21): Build Verification Rule, SwifLoad Agent Mandatory Rules, Mandatory Session Changelog Requirement, config, Project CLI and Build Commands, Claude Development Guide, Cloud Release Milestones and Task Order, Deployment Chronological Execution Log (+13 more)
 
 ### Community 9 - "DriverApp.tsx"
-Cohesion: 0.12
-Nodes (16): LeafletMap, LeafletMap, FLOWERS, FlowerShowerSplash(), FlowerShowerSplashProps, Petal, DRIVER_13_DOCS, DRIVER_COMPANY_OFFERS (+8 more)
+Cohesion: 0.14
+Nodes (14): DriverPage(), FLOWERS, FlowerShowerSplash(), FlowerShowerSplashProps, Petal, DRIVER_13_DOCS, DRIVER_COMPANY_OFFERS, DRIVER_HELP_TOPICS (+6 more)
 
 ### Community 10 - "devDependencies"
-Cohesion: 0.12
-Nodes (17): autoprefixer, devDependencies, autoprefixer, postcss, tailwindcss, @types/leaflet, @types/node, @types/react (+9 more)
+Cohesion: 0.06
+Nodes (30): autoprefixer, description, devDependencies, autoprefixer, postcss, tailwindcss, @types/leaflet, @types/node (+22 more)
 
 ### Community 11 - "SwifLoad Project Overview"
 Cohesion: 0.18
@@ -132,25 +138,37 @@ Nodes (7): Bengaluru AIS-140 Dedicated Fleet Hardware, Bengaluru Setup and Hardw
 Cohesion: 0.33
 Nodes (4): src_app_globals, metadata, viewport, PwaRegister()
 
+### Community 18 - "useLogistics"
+Cohesion: 0.23
+Nodes (9): AdminPage(), CustomerPage(), DownloadsPage(), Home(), AdminPortal(), CustomerSideMenu(), CustomerSideMenuProps, WebPlatform() (+1 more)
+
+### Community 22 - "📘 SwifLoad — Azure Cloud Deployment & Testing Procedure Guide"
+Cohesion: 0.06
+Nodes (30): 1. Overview & Architecture, 2. Prerequisites & Environment Setup, 3.1 HTTP Header & Size Verification:, 3.2 Direct Download & Byte Verification:, 3. Step-by-Step Deployment Procedure, 4. Step-by-Step Testing & Acceptance Verification, 5. Troubleshooting & Operational Runbook, Phase 1: Local Codebase Build & Verification (+22 more)
+
+### Community 23 - "LeafletMap.tsx"
+Cohesion: 0.29
+Nodes (6): LeafletMap, LeafletMap, LeafletMap(), LeafletMapProps, LiveTrackingModal(), LiveTrackingModalProps
+
 ## Knowledge Gaps
-- **146 isolated node(s):** `DriverKycDoc`, `BookingSuccessModalProps`, `DriverPartnerSectionProps`, `LiveTrackingModalProps`, `PackersMoversSectionProps` (+141 more)
+- **170 isolated node(s):** `config`, `nextConfig`, `name`, `version`, `description` (+165 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `useLogistics()` connect `useLogistics` to `LogisticsContext.tsx`, `WebPlatform.tsx`, `DriverApp.tsx`, `LeafletMap.tsx`, `BookingSuccessModal.tsx`, `DriverPartnerSection.tsx`, `PackersMoversSection.tsx`, `WebFooter.tsx`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **Why does `Next.js and Leaflet Project Conventions` connect `SwifLoad Cloud Deployment & Operations Manual` to `LogisticsContext.tsx`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Why does `useLogistics()` connect `useLogistics` to `LogisticsContext.tsx`, `DriverApp.tsx`, `CustomerApp.tsx`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **What connects `DriverKycDoc`, `BookingSuccessModalProps`, `DriverPartnerSectionProps` to the rest of the system?**
-  _146 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **What connects `config`, `nextConfig`, `name` to the rest of the system?**
+  _170 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `LogisticsContext.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.1041776837652036 - nodes in this community are weakly interconnected._
-- **Should `useLogistics` be split into smaller, more focused modules?**
-  _Cohesion score 0.07312925170068027 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09824561403508772 - nodes in this community are weakly interconnected._
+- **Should `WebPlatform.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.12857142857142856 - nodes in this community are weakly interconnected._
 - **Should `getDatabase` be split into smaller, more focused modules?**
-  _Cohesion score 0.11219512195121951 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09696969696969697 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.05405405405405406 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected._

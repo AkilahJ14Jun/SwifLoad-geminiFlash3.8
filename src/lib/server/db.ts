@@ -11,6 +11,9 @@ import {
   ReferralRecord,
   CustomerUser,
   IncentiveSlab,
+  DriverCancellationSlabConfig,
+  DriverCancellationLockout,
+  BrandConfig,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -23,6 +26,8 @@ import {
   INITIAL_REFERRALS,
   DEFAULT_INCENTIVE_SLABS,
   DEFAULT_DISPATCH_TIMEOUT_SECS,
+  DEFAULT_DRIVER_CANCELLATION_SLABS,
+  DEFAULT_BRAND_CONFIG,
 } from '@/lib/data';
 
 export interface DatabaseSchema {
@@ -37,6 +42,9 @@ export interface DatabaseSchema {
   incentiveSlabs: IncentiveSlab[];
   dispatchTimeoutSecs: number;
   customer: CustomerUser;
+  cancellationSlabConfigs?: DriverCancellationSlabConfig[];
+  driverLockouts?: DriverCancellationLockout[];
+  brandConfig?: BrandConfig;
   lastUpdated: string;
 }
 
@@ -121,7 +129,18 @@ export function getDatabase(): DatabaseSchema {
     try {
       const content = fs.readFileSync(dbPath, 'utf-8');
       inMemoryDb = JSON.parse(content);
-      return inMemoryDb!;
+      if (inMemoryDb) {
+        if (!inMemoryDb.cancellationSlabConfigs) {
+          inMemoryDb.cancellationSlabConfigs = DEFAULT_DRIVER_CANCELLATION_SLABS;
+        }
+        if (!inMemoryDb.driverLockouts) {
+          inMemoryDb.driverLockouts = [];
+        }
+        if (!inMemoryDb.brandConfig) {
+          inMemoryDb.brandConfig = DEFAULT_BRAND_CONFIG;
+        }
+        return inMemoryDb;
+      }
     } catch (err) {
       console.error('Error reading DB file, reinitializing default:', err);
     }
@@ -139,6 +158,9 @@ export function getDatabase(): DatabaseSchema {
     incentiveSlabs: DEFAULT_INCENTIVE_SLABS,
     dispatchTimeoutSecs: DEFAULT_DISPATCH_TIMEOUT_SECS,
     customer: INITIAL_CUSTOMER,
+    cancellationSlabConfigs: DEFAULT_DRIVER_CANCELLATION_SLABS,
+    driverLockouts: [],
+    brandConfig: DEFAULT_BRAND_CONFIG,
     lastUpdated: new Date().toISOString(),
   };
 
@@ -177,6 +199,9 @@ export function resetDatabase(): DatabaseSchema {
     incentiveSlabs: DEFAULT_INCENTIVE_SLABS,
     dispatchTimeoutSecs: DEFAULT_DISPATCH_TIMEOUT_SECS,
     customer: INITIAL_CUSTOMER,
+    cancellationSlabConfigs: DEFAULT_DRIVER_CANCELLATION_SLABS,
+    driverLockouts: [],
+    brandConfig: DEFAULT_BRAND_CONFIG,
     lastUpdated: new Date().toISOString(),
   };
   saveDatabase(inMemoryDb);

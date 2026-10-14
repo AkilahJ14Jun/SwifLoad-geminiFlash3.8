@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Database, ShieldCheck } from 'lucide-react';
 
 export default function AdminPage() {
-  const { setRole } = useLogistics();
+  const { setRole, brandConfig } = useLogistics();
 
   useEffect(() => {
     setRole('admin');
@@ -22,7 +22,7 @@ export default function AdminPage() {
             className="flex items-center space-x-1.5 text-slate-400 hover:text-white transition-colors text-xs font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>SwifLoad Home</span>
+            <span>{brandConfig.appName} Home</span>
           </Link>
           <div className="h-4 w-px bg-slate-800" />
           <div className="flex items-center space-x-2">

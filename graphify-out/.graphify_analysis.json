@@ -8,6 +8,9 @@
       "ref_fs",
       "ref_path",
       "src_components_admin_adminportal",
+      "src_components_customer_customersidemenu",
+      "src_components_customer_customersidemenu_customersidemenu",
+      "src_components_customer_customersidemenu_customersidemenuprops",
       "src_context_logisticscontext",
       "src_context_logisticscontext_createtrippayload",
       "src_context_logisticscontext_initial_customer",
@@ -88,9 +91,7 @@
       "src_components_website_fleetcomparison",
       "src_components_website_fleetcomparison_fleetcomparison",
       "src_components_website_fleetcomparison_fleetcomparisonprops",
-      "src_components_website_livetrackingmodal",
       "src_components_website_livetrackingmodal_livetrackingmodal",
-      "src_components_website_livetrackingmodal_livetrackingmodalprops",
       "src_components_website_packersmoverssection",
       "src_components_website_packersmoverssection_packersmoverssection",
       "src_components_website_packersmoverssection_packersmoverssectionprops",
@@ -284,32 +285,6 @@
       "time"
     ],
     "7": [
-      "changes_required_document",
-      "changes_required_driver_experience",
-      "changes_required_tariff_slabs",
-      "changes_required_wallet_limits",
-      "docs_swifload_trip_dispatch_otp_flow",
-      "docs_swifload_trip_dispatch_sequence_diagram",
-      "src_components_customer_customerapp",
-      "src_components_customer_customerapp_customerapp",
-      "src_components_customer_customersidemenu",
-      "src_components_customer_customersidemenu_customersidemenu",
-      "src_components_customer_customersidemenu_customersidemenuprops",
-      "src_components_website_herobookingwidget",
-      "src_components_website_herobookingwidget_herobookingwidget",
-      "src_components_website_herobookingwidget_herobookingwidgetprops",
-      "src_context_logisticscontext_logisticsprovider",
-      "src_lib_pricing_calculatecustomerquotedslabfare",
-      "src_lib_pricing_calculatedistancekm",
-      "src_lib_pricing_calculatedrivertaskpayout",
-      "src_lib_pricing_calculatemultistopdistancekm",
-      "src_lib_pricing_calculateslabdistancefare",
-      "src_lib_pricing_detectzonesurge",
-      "src_lib_pricing_estimatedurationmins",
-      "src_types_logistics_goodscategory",
-      "src_types_logistics_paymentmethod"
-    ],
-    "8": [
       "agents_build_verification_rule",
       "agents_instructions",
       "agents_session_changelog_rule",
@@ -333,6 +308,29 @@
       "session_changelog_cloud_deployment_session",
       "session_changelog_log"
     ],
+    "8": [
+      "changes_required_document",
+      "changes_required_driver_experience",
+      "changes_required_tariff_slabs",
+      "changes_required_wallet_limits",
+      "docs_swifload_trip_dispatch_otp_flow",
+      "docs_swifload_trip_dispatch_sequence_diagram",
+      "src_components_customer_customerapp",
+      "src_components_customer_customerapp_customerapp",
+      "src_components_website_herobookingwidget",
+      "src_components_website_herobookingwidget_herobookingwidget",
+      "src_components_website_herobookingwidget_herobookingwidgetprops",
+      "src_context_logisticscontext_logisticsprovider",
+      "src_lib_pricing_calculatecustomerquotedslabfare",
+      "src_lib_pricing_calculatedistancekm",
+      "src_lib_pricing_calculatedrivertaskpayout",
+      "src_lib_pricing_calculatemultistopdistancekm",
+      "src_lib_pricing_calculateslabdistancefare",
+      "src_lib_pricing_detectzonesurge",
+      "src_lib_pricing_estimatedurationmins",
+      "src_types_logistics_goodscategory",
+      "src_types_logistics_paymentmethod"
+    ],
     "9": [
       "src_components_admin_adminportal_leafletmap",
       "src_components_customer_customerapp_leafletmap",
@@ -351,6 +349,8 @@
       "src_components_map_leafletmap",
       "src_components_map_leafletmap_leafletmap",
       "src_components_map_leafletmap_leafletmapprops",
+      "src_components_website_livetrackingmodal",
+      "src_components_website_livetrackingmodal_livetrackingmodalprops",
       "src_lib_pricing_calculatedriverincentives",
       "src_types_logistics_driverdockey"
     ],
@@ -453,16 +453,16 @@
     ]
   },
   "cohesion": {
-    "0": 0.1041776837652036,
-    "1": 0.07312925170068027,
+    "0": 0.09711538461538462,
+    "1": 0.07585568917668825,
     "2": 0.11219512195121951,
     "3": 0.05405405405405406,
     "4": 0.07142857142857142,
     "5": 0.08,
     "6": 0.13230769230769232,
-    "7": 0.15579710144927536,
-    "8": 0.09090909090909091,
-    "9": 0.11695906432748537,
+    "7": 0.09090909090909091,
+    "8": 0.18571428571428572,
+    "9": 0.10476190476190476,
     "10": 0.11764705882352941,
     "11": 0.1794871794871795,
     "12": 0.18181818181818182,
@@ -513,6 +513,11 @@
       "degree": 15
     },
     {
+      "id": "src_lib_pricing_calculatedistancekm",
+      "label": "calculateDistanceKm()",
+      "degree": 13
+    },
+    {
       "id": "azure_infrastructure_architecture_swifload_azure_cloud_infrastructure_architecture_guide",
       "label": "🌐 SwifLoad — Azure Cloud Infrastructure Architecture Guide",
       "degree": 13
@@ -521,11 +526,6 @@
       "id": "src_types_logistics_vehiclecategory",
       "label": "VehicleCategory",
       "degree": 12
-    },
-    {
-      "id": "src_lib_server_db_databaseschema",
-      "label": "DatabaseSchema",
-      "degree": 11
     }
   ],
   "surprises": [
@@ -588,28 +588,23 @@
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `Next.js and Leaflet Project Conventions` connect `SwifLoad Cloud Deployment & Operations Manual` to `LogisticsContext.tsx`?",
-      "why": "High betweenness centrality (0.031) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `useLogistics()` connect `useLogistics` to `LogisticsContext.tsx`, `DriverApp.tsx`, `CustomerApp.tsx`?",
-      "why": "High betweenness centrality (0.031) - this node is a cross-community bridge."
+      "question": "Why does `devDependencies` connect `devDependencies` to `dependencies`?",
+      "why": "High betweenness centrality (0.056) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
       "question": "What connects `DriverKycDoc`, `BookingSuccessModalProps`, `DriverPartnerSectionProps` to the rest of the system?",
-      "why": "146 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "why": "145 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
       "question": "Should `LogisticsContext.tsx` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.1041776837652036 - nodes in this community are weakly interconnected."
+      "why": "Cohesion score 0.09711538461538462 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
       "question": "Should `useLogistics` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.07312925170068027 - nodes in this community are weakly interconnected."
+      "why": "Cohesion score 0.07585568917668825 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
@@ -620,6 +615,11 @@
       "type": "low_cohesion",
       "question": "Should `dependencies` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.05405405405405406 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `compilerOptions` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected."
     }
   ]
 }

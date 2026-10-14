@@ -28,6 +28,7 @@ import {
   DriverCancellationLockout,
   DriverCancellationSlabConfig,
   DriverUploadedDoc,
+  BrandConfig,
 } from '@/types/logistics';
 import {
   INITIAL_DRIVERS,
@@ -43,6 +44,7 @@ import {
   DEFAULT_DISPATCH_TIMEOUT_SECS,
   INITIAL_DRIVER_NOTIFICATIONS,
   DEFAULT_DRIVER_CANCELLATION_SLABS,
+  DEFAULT_BRAND_CONFIG,
 } from '@/lib/data';
 import {
   calculateDistanceKm,
@@ -174,10 +176,14 @@ interface LogisticsContextType {
   maxDocUploadSizeMb: number;
   updateMaxDocUploadSizeMb: (size: number) => void;
   markDriverReachedPickup: (tripId: string) => { success: boolean; message: string };
-  updateTripWaitingFare: (tripId: string, waitingMinutes: number, waitingFare: number) => void;
+  updateTripWaitingFare: (tripId: string, waitingMinutes: number, waitingFare: number, dropWaitingMinutes?: number, dropWaitingCharge?: number) => void;
   submitDriverFeedbackForCustomer: (tripId: string, rating: number, feedback: string, tags?: string[]) => void;
   updateDriverProfileDetails: (driverId: string, updates: Partial<DriverPartner>) => void;
   uploadDriverDocument: (driverId: string, doc: Omit<DriverUploadedDoc, 'id' | 'uploadedAt'>) => { success: boolean; message: string };
+
+  // Brand & White-Label Configuration
+  brandConfig: BrandConfig;
+  updateBrandConfig: (config: BrandConfig) => void;
 }
 
 const LogisticsContext = createContext<LogisticsContextType | undefined>(undefined);
@@ -196,6 +202,7 @@ const LOCAL_STORAGE_KEY_NOTIFICATIONS = 'swifload_driver_notifs_v2_cbe';
 const LOCAL_STORAGE_KEY_CANCELLATION_SLABS = 'swifload_driver_cancel_slabs_v2_cbe';
 const LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS = 'swifload_driver_lockouts_v2_cbe';
 const LOCAL_STORAGE_KEY_MAX_DOC_SIZE = 'swifload_max_upload_size_mb_v2_cbe';
+const LOCAL_STORAGE_KEY_BRAND_CONFIG = 'logix_brand_config_v1';
 
 const INITIAL_CUSTOMER: CustomerUser = {
   id: 'cust_01',
@@ -276,6 +283,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [cancellationSlabConfigs, setCancellationSlabConfigs] = useState<DriverCancellationSlabConfig[]>(DEFAULT_DRIVER_CANCELLATION_SLABS);
   const [driverLockouts, setDriverLockouts] = useState<DriverCancellationLockout[]>([]);
   const [maxDocUploadSizeMb, setMaxDocUploadSizeMb] = useState<number>(2);
+  const [brandConfig, setBrandConfig] = useState<BrandConfig>(DEFAULT_BRAND_CONFIG);
 
   // Helpers for server DB synchronization
   const syncTripToServer = useCallback(async (trip: Trip) => {
@@ -363,6 +371,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const savedMaxDocSize = localStorage.getItem(LOCAL_STORAGE_KEY_MAX_DOC_SIZE);
       if (savedMaxDocSize) setMaxDocUploadSizeMb(JSON.parse(savedMaxDocSize));
+
+      const savedBrandConfig = localStorage.getItem(LOCAL_STORAGE_KEY_BRAND_CONFIG);
+      if (savedBrandConfig) setBrandConfig(JSON.parse(savedBrandConfig));
     } catch {
       // fallback
     }
@@ -383,6 +394,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           if (data.customer) setCurrentCustomer(data.customer);
           if (data.vehicleConfigs) setVehicleConfigs(data.vehicleConfigs);
           if (data.serviceZones) setServiceZones(data.serviceZones);
+          if (data.cancellationSlabConfigs) setCancellationSlabConfigs(data.cancellationSlabConfigs);
+          if (data.driverLockouts) setDriverLockouts(data.driverLockouts);
+          if (data.brandConfig) setBrandConfig(data.brandConfig);
         }
       } catch (err) {
         // network offline fallback
@@ -430,6 +444,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setIncentiveSlabs(payload.data.incentiveSlabs);
             } else if (payload.data.type === 'dispatchSettings' && payload.data.dispatchTimeoutSecs) {
               setDispatchTimeoutSecs(payload.data.dispatchTimeoutSecs);
+            } else if (payload.data.type === 'cancellationSlabs' && payload.data.cancellationSlabs) {
+              setCancellationSlabConfigs(payload.data.cancellationSlabs);
+            } else if (payload.data.type === 'driverLockouts' && payload.data.driverLockouts) {
+              setDriverLockouts(payload.data.driverLockouts);
+            } else if (payload.data.type === 'brandConfig' && payload.data.brandConfig) {
+              setBrandConfig(payload.data.brandConfig);
             }
           } else if (payload.type === 'STATE_SYNC' || payload.type === 'SYSTEM_RESET') {
             if (payload.data) {
@@ -441,6 +461,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               if (payload.data.incentiveSlabs) setIncentiveSlabs(payload.data.incentiveSlabs);
               if (payload.data.dispatchTimeoutSecs) setDispatchTimeoutSecs(payload.data.dispatchTimeoutSecs);
               if (payload.data.customer) setCurrentCustomer(payload.data.customer);
+              if (payload.data.cancellationSlabConfigs) setCancellationSlabConfigs(payload.data.cancellationSlabConfigs);
+              if (payload.data.driverLockouts) setDriverLockouts(payload.data.driverLockouts);
+              if (payload.data.brandConfig) setBrandConfig(payload.data.brandConfig);
             }
           }
         } catch {
@@ -506,6 +529,12 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch {}
   }, [maxDocUploadSizeMb]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_BRAND_CONFIG, JSON.stringify(brandConfig));
+    } catch {}
+  }, [brandConfig]);
+
   const addDriverNotification = useCallback(
     (notif: Omit<DriverNotification, 'id' | 'timestamp' | 'read'>) => {
       const newNotif: DriverNotification = {
@@ -537,6 +566,77 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setToastMessage((prev) => (prev === msg ? null : prev));
     }, 4000);
   }, []);
+
+  // Auto-Unlock Drivers when their Cancellation Lockout Expires
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const expiredLockouts = driverLockouts.filter(
+        (l) => !l.isWaived && new Date(l.lockedUntil).getTime() <= now
+      );
+
+      if (expiredLockouts.length > 0) {
+        // Mark expired lockouts as completed/waived
+        setDriverLockouts((prev) => {
+          const updated = prev.map((l) =>
+            !l.isWaived && new Date(l.lockedUntil).getTime() <= now
+              ? { ...l, isWaived: true, waivedAt: new Date().toISOString(), waivedBy: 'System (Auto-Timer Expired)' }
+              : l
+          );
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS, JSON.stringify(updated));
+            fetch('/api/config', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'driverLockouts', driverLockouts: updated }),
+            }).catch(() => {});
+          } catch {}
+          return updated;
+        });
+
+        // Automatically restore each unlocked driver to ONLINE & IDLE
+        expiredLockouts.forEach((expired) => {
+          const targetDriver = drivers.find((d) => d.id === expired.driverId);
+          setDrivers((prev) =>
+            prev.map((d) => {
+              if (d.id === expired.driverId) {
+                const updated = {
+                  ...d,
+                  isOnline: true,
+                  currentStatus: 'IDLE' as const,
+                };
+                updateDriverOnServer(d.id, updated);
+                return updated;
+              }
+              return d;
+            })
+          );
+
+          // Add notification to driver
+          setDriverNotifications((prev) => {
+            const notif: DriverNotification = {
+              id: `notif_${Date.now()}_unlocked_${expired.driverId}`,
+              driverId: expired.driverId,
+              title: `Duty Resumed: Standby Concluded`,
+              message: `Standby period for "${expired.reason}" has ended. You are now automatically ONLINE and ready to receive customer orders!`,
+              type: 'SYSTEM',
+              timestamp: new Date().toISOString(),
+              read: false,
+            };
+            const updated = [notif, ...prev];
+            try {
+              localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+
+          showToast(`Duty resumed for ${targetDriver?.name || 'Driver'}! Standby cooldown has completed.`);
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [driverLockouts, drivers, updateDriverOnServer, showToast]);
 
   // Customer Slab Config Update
   const updateCustomerSlabConfig = useCallback(
@@ -589,6 +689,23 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     (newConfig: ReferralProgramConfig) => {
       setReferralConfig(newConfig);
       showToast('Referral program bonus settings updated');
+    },
+    [showToast]
+  );
+
+  // Brand & White-Label Config Update
+  const updateBrandConfig = useCallback(
+    async (newConfig: BrandConfig) => {
+      setBrandConfig(newConfig);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_BRAND_CONFIG, JSON.stringify(newConfig));
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'brandConfig', brandConfig: newConfig }),
+        });
+      } catch {}
+      showToast(`Brand identity updated to "${newConfig.appName}"`);
     },
     [showToast]
   );
@@ -792,7 +909,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return { success: true, message: `Code valid! ₹${welcomeCredit} credited to wallet.` };
       }
 
-      if (cleanCode.startsWith('SWIF-') || cleanCode.includes('CUST')) {
+      if (cleanCode.startsWith('SWIF-') || cleanCode.startsWith(`${brandConfig.codePrefix}-`) || cleanCode.includes('CUST')) {
         const welcomeCredit = referralConfig.customerToCustomerRefereeBonus;
         setCurrentCustomer((prev) => {
           const newBal = prev.wallet.balance + welcomeCredit;
@@ -1007,7 +1124,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       customerType?: CustomerType;
       referralCodeApplied?: string;
     }) => {
-      const code = `SWIF-${data.name.split(' ')[0].toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`;
+      const code = `${brandConfig.codePrefix}-${data.name.split(' ')[0].toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`;
       const welcomeCredit = data.referralCodeApplied ? referralConfig.customerToCustomerRefereeBonus : 0;
       const initialTransactions: WalletTransaction[] = welcomeCredit > 0
         ? [
@@ -1039,9 +1156,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         },
       };
       setCurrentCustomer(newCust);
-      showToast(`Welcome ${data.name}! Registered with SwifLoad Wallet (₹${welcomeCredit} balance).`);
+      showToast(`Welcome ${data.name}! Registered with ${brandConfig.appName} Wallet (₹${welcomeCredit} balance).`);
     },
-    [referralConfig, showToast]
+    [brandConfig, referralConfig, showToast]
   );
 
   const loginCustomer = useCallback(
@@ -1365,7 +1482,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       allPickups.forEach((p, idx) => {
         const charge = Math.round((totalFare / totalStops) * 10) / 10;
-        const qrData = `upi://pay?pa=swifload.ops@icici&pn=SwifLoad%20Logistics&am=${charge}&cu=INR&tn=SwifLoad_${tripData.bookingCode || 'TRIP'}_Stop_${seq}`;
+        const brandSlug = brandConfig.appName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const qrData = `upi://pay?pa=ops@${brandSlug}&pn=${encodeURIComponent(brandConfig.companyName)}&am=${charge}&cu=INR&tn=${encodeURIComponent(brandConfig.appName)}_${tripData.bookingCode || 'TRIP'}_Stop_${seq}`;
         stops.push({
           id: `stop_p_${idx + 1}_${seq}`,
           type: 'PICKUP',
@@ -1387,7 +1505,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       allDrops.forEach((d, idx) => {
         const charge = Math.round((totalFare / totalStops) * 10) / 10;
-        const qrData = `upi://pay?pa=swifload.ops@icici&pn=SwifLoad%20Logistics&am=${charge}&cu=INR&tn=SwifLoad_${tripData.bookingCode || 'TRIP'}_Stop_${seq}`;
+        const brandSlug = brandConfig.appName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const qrData = `upi://pay?pa=ops@${brandSlug}&pn=${encodeURIComponent(brandConfig.companyName)}&am=${charge}&cu=INR&tn=${encodeURIComponent(brandConfig.appName)}_${tripData.bookingCode || 'TRIP'}_Stop_${seq}`;
         stops.push({
           id: `stop_d_${idx + 1}_${seq}`,
           type: 'DROP',
@@ -1409,7 +1528,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       return stops;
     },
-    []
+    [brandConfig]
   );
 
   // Create a new booking: dispatches to nearest driver group using slab distance rates
@@ -1488,7 +1607,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const pickupOtp = Math.floor(1000 + Math.random() * 9000).toString();
       const deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString();
       const tripId = `trip_cbe_${Date.now()}`;
-      const bookingCode = `SWF-CBE-${Math.floor(1000 + Math.random() * 9000)}`;
+      const bookingCode = `${brandConfig.codePrefix}-CBE-${Math.floor(1000 + Math.random() * 9000)}`;
 
       // Calculate ordered driver groups by proximity to pickup
       const orderedGroups = [...DRIVER_GROUPS].sort((a, b) => {
@@ -1568,9 +1687,17 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const currentTrip = prevTrips.find((t) => t.id === tripId);
           if (!currentTrip || currentTrip.status !== 'SEARCHING') return prevTrips;
 
+          const isDriverAvailable = (d: DriverPartner) => {
+            if (d.currentStatus === 'BUSY' || !d.isOnline) return false;
+            const lockout = driverLockouts.find(
+              (l) => l.driverId === d.id && !l.isWaived && new Date(l.lockedUntil).getTime() > Date.now()
+            );
+            return !lockout;
+          };
+
           const assignedDriver =
-            drivers.find((d) => d.vehicleCategory === payload.vehicleCategory && d.currentStatus !== 'BUSY') ||
-            drivers[0];
+            drivers.find((d) => d.vehicleCategory === payload.vehicleCategory && isDriverAvailable(d)) ||
+            drivers.find((d) => isDriverAvailable(d));
           if (!assignedDriver) return prevTrips;
 
           // Position driver ~1.2 km away from pickup point
@@ -1596,7 +1723,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   {
                     timestamp: new Date().toISOString(),
                     event: `Order accepted by driver ${assignedDriver.name} (${assignedDriver.vehicleNumber}). Driver en route to pickup.`,
-                    actor: 'SwifLoad Express Dispatch',
+                    actor: `${brandConfig.appName} Express Dispatch`,
                   },
                 ],
               };
@@ -1609,7 +1736,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast(`Trip ${bookingCode} created! Dispatched to ${nearestGroup.name}`);
       return tripId;
     },
-    [currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, dispatchTimeoutSecs, syncTripToServer, showToast, buildTripStops, syncWalletToServer]
+    [brandConfig, currentCustomer, drivers, customerSlabConfigs, vehicleConfigs, serviceZones, dispatchTimeoutSecs, syncTripToServer, showToast, buildTripStops, syncWalletToServer]
   );
 
   // Driver Accepts a pickup task: Task payout is calculated from this driver's specific distance to pickup + trip distance!
@@ -1798,7 +1925,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ? 4
         : 6;
       const lockedAt = new Date().toISOString();
-      const lockedUntil = new Date(Date.now() + lockoutHours * 3600 * 1000).toISOString();
+      const lockedUntil = new Date(Date.now() + Math.round(lockoutHours * 3600 * 1000)).toISOString();
 
       const newLockout: DriverCancellationLockout = {
         driverId,
@@ -1815,11 +1942,16 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const updated = [newLockout, ...prev.filter((l) => !(l.driverId === driverId && !l.isWaived))];
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS, JSON.stringify(updated));
+          fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'driverLockouts', driverLockouts: updated }),
+          }).catch(() => {});
         } catch {}
         return updated;
       });
 
-      // Update driver to OFFLINE
+      // Update driver to OFFLINE during the temporary lockout window
       setDrivers((prev) =>
         prev.map((d) => {
           if (d.id === driverId) {
@@ -1840,16 +1972,17 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         prev.map((t) => {
           if (t.id === tripId) {
             const charge = calculateCancellationFee(t.status, t.vehicleCategory);
+            const durationLabel = lockoutHours < 1 ? `${Math.round(lockoutHours * 60)}m` : `${lockoutHours}h`;
             const updated = {
               ...t,
               status: 'CANCELLED' as TripStatus,
-              cancellationReason: `Driver Cancelled: ${reason} (${lockoutHours}h lockout penalty)`,
+              cancellationReason: `Driver Cancelled: ${reason} (${durationLabel} lockout penalty)`,
               cancellationCharge: charge,
               auditHistory: [
                 ...t.auditHistory,
                 {
                   timestamp: new Date().toISOString(),
-                  event: `Trip cancelled by Driver (${driver?.name || driverId}). Reason: ${reason}. Cooldown penalty: ${lockoutHours} hour(s) until ${new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+                  event: `Trip cancelled by Driver (${driver?.name || driverId}). Reason: ${reason}. Cooldown penalty: ${durationLabel} until ${new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
                   actor: 'Driver',
                 },
               ],
@@ -1862,13 +1995,14 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       );
 
       // Add driver notification
+      const durationLabel = lockoutHours < 1 ? `${Math.round(lockoutHours * 60)} min(s)` : `${lockoutHours} hr(s)`;
       setDriverNotifications((prev) => {
         const notif: DriverNotification = {
           id: `notif_${Date.now()}_cancel`,
           driverId,
           tripId,
           title: `Duty Suspended: ${reason}`,
-          message: `Booking #${trip.bookingCode} cancelled. You are on mandatory standby for ${lockoutHours} hr(s) until ${new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+          message: `Booking #${trip.bookingCode} cancelled. You are on mandatory standby for ${durationLabel} until ${new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} as configured in Admin Portal.`,
           type: 'CANCELLATION',
           timestamp: new Date().toISOString(),
           read: false,
@@ -1880,13 +2014,13 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return updatedNotifs;
       });
 
-      showToast(`Trip cancelled. Order taking suspended for ${lockoutHours} hr(s) (${reason}).`);
+      showToast(`Trip cancelled. Order taking suspended for ${durationLabel} (${reason}).`);
       return { success: true, lockoutHours, lockedUntil };
     },
     [drivers, trips, cancellationSlabConfigs, updateDriverOnServer, updateTripOnServer, showToast]
   );
 
-  // Waive Driver Lockout (Admin Action)
+  // Waive Driver Lockout (Admin Action or Demo Reset)
   const waiveDriverLockout = useCallback(
     (driverId: string) => {
       setDriverLockouts((prev) => {
@@ -1897,35 +2031,83 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         );
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY_DRIVER_LOCKOUTS, JSON.stringify(updated));
+          fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'driverLockouts', driverLockouts: updated }),
+          }).catch(() => {});
         } catch {}
         return updated;
       });
-      showToast('Driver cancellation lockout waived by Admin!');
+
+      // Automatically restore driver to ONLINE and IDLE
+      setDrivers((prev) =>
+        prev.map((d) => {
+          if (d.id === driverId) {
+            const updated = {
+              ...d,
+              isOnline: true,
+              currentStatus: 'IDLE' as const,
+            };
+            updateDriverOnServer(driverId, updated);
+            return updated;
+          }
+          return d;
+        })
+      );
+
+      setDriverNotifications((prev) => {
+        const notif: DriverNotification = {
+          id: `notif_${Date.now()}_waived_${driverId}`,
+          driverId,
+          title: `Lockout Waived by Admin`,
+          message: `Your duty suspension has been waived. You are now ONLINE and ready to receive bookings.`,
+          type: 'SYSTEM',
+          timestamp: new Date().toISOString(),
+          read: false,
+        };
+        const updated = [notif, ...prev];
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY_NOTIFICATIONS, JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      showToast('Driver cancellation lockout waived. Driver is now ONLINE!');
     },
-    [showToast]
+    [updateDriverOnServer, showToast]
   );
 
   // Update Cancellation Hour Slabs (Configurable from Admin Portal)
   const updateCancellationSlabConfig = useCallback(
-    (reason: DriverCancellationReason, hours: number) => {
-      const sanitized = Math.max(0.5, Math.min(72, Number(hours)));
-      setCancellationSlabConfigs((prev) => {
-        const updated = prev.map((s) => (s.reason === reason ? { ...s, lockoutHours: sanitized } : s));
-        try {
-          localStorage.setItem(LOCAL_STORAGE_KEY_CANCELLATION_SLABS, JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-      showToast(`Lockout penalty for '${reason}' updated to ${sanitized} hour(s)`);
+    async (reason: DriverCancellationReason, hours: number) => {
+      const sanitized = Math.max(0.02, Math.min(72, Math.round(Number(hours) * 100) / 100));
+      const updatedSlabs = cancellationSlabConfigs.map((s) => (s.reason === reason ? { ...s, lockoutHours: sanitized } : s));
+      setCancellationSlabConfigs(updatedSlabs);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_CANCELLATION_SLABS, JSON.stringify(updatedSlabs));
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'cancellationSlabs', cancellationSlabs: updatedSlabs }),
+        });
+      } catch {}
+      const timeStr = sanitized < 1 ? `${Math.round(sanitized * 60)} min(s)` : `${sanitized} hr(s)`;
+      showToast(`Lockout penalty for '${reason}' updated to ${timeStr}`);
     },
-    [showToast]
+    [cancellationSlabConfigs, showToast]
   );
 
   // Reset Cancellation Slabs to Factory Defaults
-  const resetCancellationSlabsToDefault = useCallback(() => {
+  const resetCancellationSlabsToDefault = useCallback(async () => {
     setCancellationSlabConfigs(DEFAULT_DRIVER_CANCELLATION_SLABS);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY_CANCELLATION_SLABS, JSON.stringify(DEFAULT_DRIVER_CANCELLATION_SLABS));
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'cancellationSlabs', cancellationSlabs: DEFAULT_DRIVER_CANCELLATION_SLABS }),
+      });
     } catch {}
     showToast('Reset cancellation slabs to defaults (1, 2, 4, 6 hrs)');
   }, [showToast]);
@@ -2059,14 +2241,16 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           // 4. IN_TRANSIT -> ARRIVED_DESTINATION
           if (t.status === 'IN_TRANSIT') {
-            result = { success: true, message: 'Driver reached destination drop address' };
+            const now = new Date().toISOString();
+            result = { success: true, message: 'Driver reached destination drop address. 3-minute waiting clock started.' };
             return {
               ...t,
               status: 'ARRIVED_DESTINATION',
               driverLocation: t.drop,
+              driverReachedDropAt: t.driverReachedDropAt || now,
               auditHistory: [
                 ...t.auditHistory,
-                { timestamp: new Date().toISOString(), event: 'Driver reached destination drop location', actor: 'Driver' },
+                { timestamp: now, event: 'Driver reached destination drop location. 3-minute waiting window active.', actor: 'Driver' },
               ],
             };
           }
@@ -2457,9 +2641,9 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return t;
         })
       );
-      showToast(`Thank you for rating! 50 Reward Points (₹50) credited to your SwifLoad Wallet!`);
+      showToast(`Thank you for rating! 50 Reward Points (₹50) credited to your ${brandConfig.appName} Wallet!`);
     },
-    [currentCustomer, updateTripOnServer, syncWalletToServer, showToast]
+    [brandConfig, currentCustomer, updateTripOnServer, syncWalletToServer, showToast]
   );
 
   // Toggle Driver Online / Offline
@@ -2656,12 +2840,19 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   const updateTripWaitingFare = useCallback(
-    (tripId: string, waitingMinutes: number, waitingFare: number) => {
+    (tripId: string, waitingMinutes: number, waitingFare: number, dropWaitingMinutes?: number, dropWaitingCharge?: number) => {
       setTrips((prev) =>
         prev.map((t) => {
           if (t.id !== tripId) return t;
           const currentWaitingFare = t.fare.waitingFare || 0;
-          if (currentWaitingFare === waitingFare && t.waitingMinutes === waitingMinutes) return t;
+          if (
+            currentWaitingFare === waitingFare &&
+            t.waitingMinutes === waitingMinutes &&
+            (dropWaitingMinutes === undefined || t.dropWaitingMinutes === dropWaitingMinutes) &&
+            (dropWaitingCharge === undefined || t.dropWaitingCharge === dropWaitingCharge)
+          ) {
+            return t;
+          }
           const baseSubtotal = t.fare.baseFare + t.fare.distanceFare + t.fare.helperFee + t.fare.surgeFare;
           const newGst = Math.round((baseSubtotal + waitingFare) * 0.05);
           const newTotal = Math.round(baseSubtotal + waitingFare + newGst);
@@ -2669,6 +2860,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             ...t,
             waitingMinutes,
             waitingCharge: waitingFare,
+            dropWaitingMinutes: dropWaitingMinutes ?? t.dropWaitingMinutes,
+            dropWaitingCharge: dropWaitingCharge ?? t.dropWaitingCharge,
             fare: {
               ...t.fare,
               waitingFare,
@@ -2804,13 +2997,14 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `swifload_${type}_export_${Date.now()}.csv`);
+      const fileSlug = brandConfig.appName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      link.setAttribute('download', `${fileSlug}_${type}_export_${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       showToast(`Exported ${type}.csv successfully!`);
     },
-    [trips, drivers, referrals, currentCustomer, showToast]
+    [brandConfig, trips, drivers, referrals, currentCustomer, showToast]
   );
 
   const resetToDemoData = useCallback(() => {
@@ -2825,6 +3019,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.removeItem(LOCAL_STORAGE_KEY_INCENTIVE_SLABS);
     localStorage.removeItem(LOCAL_STORAGE_KEY_DISPATCH_TIMEOUT);
     localStorage.removeItem(LOCAL_STORAGE_KEY_NOTIFICATIONS);
+    localStorage.removeItem(LOCAL_STORAGE_KEY_BRAND_CONFIG);
     setTrips(INITIAL_TRIPS);
     setDrivers(INITIAL_DRIVERS);
     setVehicleConfigs(VEHICLE_CONFIGS);
@@ -2836,6 +3031,7 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIncentiveSlabs(DEFAULT_INCENTIVE_SLABS);
     setDispatchTimeoutSecs(DEFAULT_DISPATCH_TIMEOUT_SECS);
     setDriverNotifications(INITIAL_DRIVER_NOTIFICATIONS);
+    setBrandConfig(DEFAULT_BRAND_CONFIG);
     setActiveTripId('trip_cbe_1001');
 
     fetch('/api/state', {
@@ -2927,6 +3123,8 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         submitDriverFeedbackForCustomer,
         updateDriverProfileDetails,
         uploadDriverDocument,
+        brandConfig,
+        updateBrandConfig,
       }}
     >
       {children}

@@ -16,7 +16,7 @@ import {
 import { useLogistics } from '@/context/LogisticsContext';
 
 export default function EnterpriseSection() {
-  const { showToast } = useLogistics();
+  const { showToast, brandConfig } = useLogistics();
 
   // Calculator sliders
   const [monthlyOrders, setMonthlyOrders] = useState<number>(350);
@@ -31,9 +31,9 @@ export default function EnterpriseSection() {
 
   // Calculations
   const metrics = useMemo(() => {
-    // Estimated SwifLoad cost: ~₹380 average trip for 14km
-    const swifloadAvgTripCost = Math.round(180 + avgKm * 18);
-    const monthlySwifloadSpend = monthlyOrders * swifloadAvgTripCost;
+    // Estimated platform cost: ~₹380 average trip for 14km
+    const platformAvgTripCost = Math.round(180 + avgKm * 18);
+    const monthlyPlatformSpend = monthlyOrders * platformAvgTripCost;
 
     // Owning dedicated fleet cost: Vehicle EMI/depreciation, full-time driver salaries, fuel, maintenance, idle deadheads
     const estimatedTrucksNeeded = Math.max(2, Math.ceil(monthlyOrders / 90));
@@ -41,11 +41,11 @@ export default function EnterpriseSection() {
     const fuelAndMaintPerTrip = Math.round(avgKm * 28);
     const monthlyOwnedSpend = estimatedTrucksNeeded * fixedCostPerTruck + monthlyOrders * fuelAndMaintPerTrip;
 
-    const monthlySavings = Math.max(0, monthlyOwnedSpend - monthlySwifloadSpend);
+    const monthlySavings = Math.max(0, monthlyOwnedSpend - monthlyPlatformSpend);
     const savingsPercent = Math.round((monthlySavings / monthlyOwnedSpend) * 100);
 
     return {
-      monthlySwifloadSpend,
+      monthlyPlatformSpend,
       monthlyOwnedSpend,
       monthlySavings,
       savingsPercent: isNaN(savingsPercent) ? 35 : Math.min(55, Math.max(20, savingsPercent)),
@@ -77,13 +77,13 @@ export default function EnterpriseSection() {
         <div className="max-w-3xl mb-14 space-y-3">
           <div className="inline-flex items-center space-x-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             <Building2 className="w-3.5 h-3.5" />
-            <span>SwifLoad For Enterprise</span>
+            <span>{brandConfig.appName} For Enterprise</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
             Streamline City Deliveries with On-Demand Bulk Fleet & APIs
           </h2>
           <p className="text-sm text-slate-400 leading-relaxed">
-            Eliminate fixed fleet overheads. Scale delivery capacity on demand across Coimbatore with priority driver dispatches, multi-stop routing, and automated webhook order injection.
+            Eliminate fixed fleet overheads. Scale delivery capacity on demand across {brandConfig.defaultCity} with priority driver dispatches, multi-stop routing, and automated webhook order injection.
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export default function EnterpriseSection() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-base font-black text-white">Interactive Fleet ROI Calculator</h3>
-                <p className="text-xs text-slate-400">Compare SwifLoad on-demand vs owning captive trucks</p>
+                <p className="text-xs text-slate-400">Compare {brandConfig.appName} on-demand vs owning captive trucks</p>
               </div>
               <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30 font-bold">
                 ESTIMATED ~{metrics.savingsPercent}% SAVINGS
@@ -203,9 +203,9 @@ export default function EnterpriseSection() {
               </div>
 
               <div>
-                <span className="text-[10px] text-slate-400 block uppercase">With SwifLoad On-Demand</span>
+                <span className="text-[10px] text-slate-400 block uppercase">With {brandConfig.appName} On-Demand</span>
                 <div className="text-base font-extrabold text-emerald-400">
-                  ₹{metrics.monthlySwifloadSpend.toLocaleString()}
+                  ₹{metrics.monthlyPlatformSpend.toLocaleString()}
                 </div>
                 <span className="text-[10px] text-emerald-300/80">Pay only per completed km</span>
               </div>
@@ -246,7 +246,7 @@ export default function EnterpriseSection() {
                 <Building2 className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">SwifLoad Enterprise Access</h3>
+                <h3 className="text-base font-bold text-white">{brandConfig.appName} Enterprise Access</h3>
                 <p className="text-xs text-slate-400">Get customized pricing, API keys & credit terms</p>
               </div>
             </div>

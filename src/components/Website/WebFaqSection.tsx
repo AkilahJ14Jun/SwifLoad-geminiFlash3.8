@@ -2,17 +2,19 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, HelpCircle, ShieldAlert } from 'lucide-react';
+import { useLogistics } from '@/context/LogisticsContext';
 
 interface WebFaqSectionProps {
   onOpenProhibited: () => void;
 }
 
 export default function WebFaqSection({ onOpenProhibited }: WebFaqSectionProps) {
+  const { brandConfig } = useLogistics();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const faqs = [
     {
-      q: 'What items are prohibited by SwifLoad for transport?',
+      q: `What items are prohibited by ${brandConfig.appName} for transport?`,
       a: 'Prohibited items include: flammable items (firecrackers, arms, ammunition, paint cans, fuel), corrosive chemicals, toxic substances, biological or medical waste, contraband, narcotics, precious metals/cash, loose glass displays, and livestock. All shipments are subject to physical inspection by driver partners before loading.',
       action: 'View Prohibited Goods List',
     },
@@ -21,20 +23,20 @@ export default function WebFaqSection({ onOpenProhibited }: WebFaqSectionProps) 
       a: 'The fare is calculated transparently based on: 1) Base fare for initial kilometers, 2) Per-km rate for additional distance, 3) Optional helper loading assistance, and 4) 5% GST. The fare shown upfront before booking is guaranteed with no hidden driver surcharges.',
     },
     {
-      q: 'Does SwifLoad provide Packers and Movers for home shifting?',
-      a: 'Yes! SwifLoad Packers & Movers provides complete intracity and intercity relocation for 1 BHK, 2 BHK, 3 BHK, and office setups. Services include trained shifting labor, multi-layer corrugated bubble wrap packing, furniture dismantling/assembly, and transit insurance coverage.',
+      q: `Does ${brandConfig.appName} provide Packers and Movers for home shifting?`,
+      a: `Yes! ${brandConfig.appName} Packers & Movers provides complete intracity and intercity relocation for 1 BHK, 2 BHK, 3 BHK, and office setups. Services include trained shifting labor, multi-layer corrugated bubble wrap packing, furniture dismantling/assembly, and transit insurance coverage.`,
     },
     {
       q: 'How does live GPS tracking and dual OTP verification work?',
       a: 'Every booking generates a real-time tracking link with live Leaflet GPS telemetry. For security, a 4-digit Pickup OTP must be verified by the driver before loading goods, and a 4-digit Delivery OTP must be entered by the recipient upon safe drop-off.',
     },
     {
-      q: 'Does SwifLoad provide vehicles like Tata Ace on monthly lease?',
-      a: 'SwifLoad provides instant on-demand availability of vehicles without lock-in contracts. For regular high-volume deliveries, businesses can utilize SwifLoad Enterprise which provides prioritized vehicle allocation, dedicated account managers, and consolidated monthly billing.',
+      q: `Does ${brandConfig.appName} provide vehicles like Tata Ace on monthly lease?`,
+      a: `${brandConfig.appName} provides instant on-demand availability of vehicles without lock-in contracts. For regular high-volume deliveries, businesses can utilize ${brandConfig.appName} Enterprise which provides prioritized vehicle allocation, dedicated account managers, and consolidated monthly billing.`,
     },
     {
       q: 'How does an API integration work for e-commerce and retail businesses?',
-      a: 'SwifLoad provides developer-friendly REST APIs and webhooks. Your order management system or website (Shopify, WooCommerce, custom ERP) can automatically trigger pickups, receive live location telemetry, and verify deliveries seamlessly.',
+      a: `${brandConfig.appName} provides developer-friendly REST APIs and webhooks. Your order management system or website (Shopify, WooCommerce, custom ERP) can automatically trigger pickups, receive live location telemetry, and verify deliveries seamlessly.`,
     },
   ];
 
@@ -48,7 +50,7 @@ export default function WebFaqSection({ onOpenProhibited }: WebFaqSectionProps) 
           </div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Got Questions? We’ve Got Answers</h2>
           <p className="text-xs text-slate-500">
-            Everything you need to know about SwifLoad goods transport, pricing, and security.
+            Everything you need to know about {brandConfig.appName} goods transport, pricing, and security.
           </p>
         </div>
 

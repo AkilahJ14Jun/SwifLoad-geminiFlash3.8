@@ -1,10 +1,33 @@
 Go through output of graphify to understand this solution.
- 
-
 
 Need the following features  and modifications required in driver app :
 
-The text on the dashboard page below the 'Welcome to Duty..' can be removed to avoid scrolling on the page.
+Change 'Welcome / Enter Live Pickup Calls Terminal' button name to 'Welcome / Live Calls'
+Clicking on this buttom to take the user to another page which show the GPS map with driver location showing in red on the map.
+Below this map another button named 'Available Orders' should be there.
+On clicking this button it should take the user to another page which will display all aviable orders.
+Any new order coming into the order queue at that moment should show up in a sliding popup window.
+The popup window should display the total charge on top followed by pickup locality with distance from driver location to pickup point , in brackets, in kilometres. This should followed by the drop locality and its distance from pickup point , in brackets in kilometres
+The should be followed by a timer clock with seconds countdown happening from 10 seconds , by default,
+Finally there should be an option for the driver to skip it which will close the popup immediately.
+If user accepts the popup order or anyone order from the list then the page should show a map with driver location showing up on the map. Once the user clicks on 'Start Pickup' then a timer and distance tracker shoud appear on the screen which will show the time elapsed and distance travelled respectively.The driver when on the move should reflect in the map also.
+On reaching the pickup point the driver should click on 'Pickup point reached' button. The standard waiting time is fixed as 3 minutes for waiting. The timer countdown should be displaying on screen. When the waiting time exceeds this time , then that time is chargeable extra. That extra chargeable time and charge associated should also be displayed on driver app as well as in customer app screen also at the same time.
+An OTP confirmation should happen for the pcikup to be completed.
+Once pickup is done then it should immediately reflect on the maps with the current driver location.
+Once the user clicks on 'Start Drop' button the timer and distance should be displayed on screen to show the time elapsed and the distance stil pending.
+On reaching the destination the driver should click on the 'I Have Reached Drop Destination' button. Change this button name to 'Reached drop location'. In case of last drop in a multi-drop order it should show as 'Reached drop destination'.
+On reaching the drop location the timer and distance which was showing earlier should stop.
+The drop also the standard waiting is for 3 minutes. If it exceeds that time then the time exceeding and the associated charge should show up in driver and customer app should show at the same time.
+The drop activity also to be completed based on OTP confiration.
+Once drop comleted the user can ask the customer to scan the QR code to scan for making the payment to the company account
+Once payment is received the driver should be able record his feedback about the customer.
+Then the user should again be diverted to the available orders page for continuing for another order.
+
+
+
+
+
+ 
 
 
 

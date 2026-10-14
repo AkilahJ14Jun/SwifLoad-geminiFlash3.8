@@ -42,6 +42,7 @@ export default function HeroBookingWidget({
     createBooking,
     currentCustomer,
     showToast,
+    brandConfig,
   } = useLogistics();
 
   // Tab: 'trucks' | '2wheeler' | 'packers' | 'track'
@@ -656,7 +657,7 @@ export default function HeroBookingWidget({
                 onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                 className="bg-slate-800 border border-slate-700 text-white text-xs font-medium px-3 py-3 rounded-xl focus:outline-none"
               >
-                <option value="WALLET">SwifLoad Express Wallet (₹{currentCustomer?.wallet?.balance || 0})</option>
+                <option value="WALLET">{brandConfig.appName} Express Wallet (₹{currentCustomer?.wallet?.balance || 0})</option>
                 <option value="UPI_GPAY">UPI (GPay / PhonePe)</option>
                 <option value="NETBANKING_IMPS">Netbanking IMPS</option>
                 <option value="CASH_ON_DELIVERY">Cash on Delivery</option>

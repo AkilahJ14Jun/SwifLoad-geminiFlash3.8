@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Truck, Download, ArrowLeft } from 'lucide-react';
 
 export default function DriverPage() {
-  const { setRole } = useLogistics();
+  const { setRole, brandConfig } = useLogistics();
 
   useEffect(() => {
     setRole('driver');
@@ -26,7 +26,7 @@ export default function DriverPage() {
           className="flex items-center space-x-1.5 text-slate-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>SwifLoad Home</span>
+          <span>{brandConfig.appName} Home</span>
         </Link>
         <div className="flex items-center space-x-3">
           <span className="flex items-center space-x-1 text-emerald-400 font-mono text-[11px]">

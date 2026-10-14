@@ -3,13 +3,13 @@ import './globals.css';
 import { LogisticsProvider } from '@/context/LogisticsContext';
 
 export const metadata: Metadata = {
-  title: 'SwifLoad - On-Demand City Logistics Platform (Coimbatore, Tamil Nadu)',
+  title: 'Logi-X - On-Demand City Logistics Platform (Coimbatore, Tamil Nadu)',
   description: 'Enterprise & consumer goods transport mobile solution for Coimbatore, Tamil Nadu with Customer, Driver-Partner, and Operations Admin portals.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'SwifLoad',
+    title: 'Logi-X',
   },
 };
 

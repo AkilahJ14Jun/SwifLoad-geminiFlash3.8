@@ -21,8 +21,10 @@ import {
   X,
   Lock,
 } from 'lucide-react';
+import { useLogistics } from '@/context/LogisticsContext';
 
 export default function DownloadsPage() {
+  const { brandConfig } = useLogistics();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [pwaInstalled, setPwaInstalled] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function DownloadsPage() {
   }, []);
 
   const triggerApkDownload = (app: 'customer' | 'driver') => {
-    const filename = app === 'driver' ? 'SwifLoad-Driver.apk' : 'SwifLoad-Customer.apk';
+    const filename = app === 'driver' ? `${brandConfig.appName}-Driver.apk` : `${brandConfig.appName}-Customer.apk`;
     const link = document.createElement('a');
     link.href = `/downloads/${filename}`;
     link.download = filename;
@@ -175,7 +177,7 @@ export default function DownloadsPage() {
       const targetPage = app === 'driver' ? '/driver' : '/customer';
       const appName = app === 'driver' ? 'Driver-Partner App' : 'Customer App';
       alert(
-        `SwifLoad ${appName} (v1.2.0 Latest):\n\n` +
+        `${brandConfig.appName} ${appName} (v1.2.0 Latest):\n\n` +
         `• Direct Mobile Web: Open ${targetPage} in Chrome/Safari\n` +
         `• Android (Chrome): Tap browser menu ⋮ ➔ "Add to Home screen" or "Install App"\n` +
         `• iOS (Safari): Tap Share button ➔ "Add to Home Screen"\n` +
@@ -208,7 +210,7 @@ export default function DownloadsPage() {
           className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to SwifLoad Hub</span>
+          <span>Back to {brandConfig.appName} Hub</span>
         </Link>
         <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-mono flex items-center space-x-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -224,7 +226,7 @@ export default function DownloadsPage() {
             <span>Mobile Distribution Center</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Download SwifLoad Mobile Apps
+            Download {brandConfig.appName} Mobile Apps
           </h1>
           <p className="mt-3 text-slate-400 text-sm sm:text-base leading-relaxed">
             Get the dedicated mobile versions for Customers and Driver-Partners. Fully synchronized in real-time with the cloud database and operations admin.
@@ -540,8 +542,8 @@ export default function DownloadsPage() {
                 : 'bg-blue-950/40 border-blue-900/40'
             }`}>
               {targetApp === 'driver'
-                ? 'The SwifLoad Driver App requires the mobile number of the phone where it will be installed. An OTP confirmation is required before download.'
-                : 'The SwifLoad Customer App requires the mobile number of the device where it will be installed. An OTP will be sent to confirm before initiating the download.'}
+                ? `The ${brandConfig.appName} Driver App requires the mobile number of the phone where it will be installed. An OTP confirmation is required before download.`
+                : `The ${brandConfig.appName} Customer App requires the mobile number of the device where it will be installed. An OTP will be sent to confirm before initiating the download.`}
             </p>
 
             {otpError && (

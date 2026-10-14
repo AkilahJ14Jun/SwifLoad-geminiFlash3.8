@@ -9,7 +9,7 @@ export default function CustomerReviewsSection() {
       name: 'Ravi Teja',
       designation: 'Store Manager, Royal Hardware & Foundry Supplies',
       content:
-        'We ship 15-20 consignments of industrial pump components and fittings daily. SwifLoad’s 8ft pickup trucks arrive in less than 15 minutes in Kurichi SIDCO, and their GST invoices make reconciliation seamless.',
+        'We ship 15-20 consignments of industrial pump components and fittings daily. The platform’s 8ft pickup trucks arrive in less than 15 minutes in Kurichi SIDCO, and their GST invoices make reconciliation seamless.',
       rating: 5,
       vehicle: '8ft Large Pickup',
       city: 'Kurichi SIDCO, Coimbatore',

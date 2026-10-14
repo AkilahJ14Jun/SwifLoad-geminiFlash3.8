@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import {
   BarChart3,
@@ -39,6 +39,9 @@ import {
   AlertOctagon,
   AlertTriangle,
   FileText,
+  Globe,
+  Building2,
+  Save,
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import {
@@ -54,7 +57,9 @@ import {
   WalletTransaction,
   IncentiveSlab,
   DriverCancellationReason,
+  BrandConfig,
 } from '@/types/logistics';
+import { DEFAULT_BRAND_CONFIG } from '@/lib/data';
 import { calculateSlabDistanceFare } from '@/lib/pricing';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
@@ -100,6 +105,8 @@ export default function AdminPortal() {
     cancelTripByDriver,
     maxDocUploadSizeMb,
     updateMaxDocUploadSizeMb,
+    brandConfig,
+    updateBrandConfig,
   } = useLogistics();
 
   // Admin Navigation Tab
@@ -117,7 +124,14 @@ export default function AdminPortal() {
     | 'pricing-zones'
     | 'finance'
     | 'audit'
+    | 'brand-config'
   >('dashboard');
+
+  // Brand & White-Label Form State
+  const [brandForm, setBrandForm] = useState<BrandConfig>(brandConfig);
+  useEffect(() => {
+    setBrandForm(brandConfig);
+  }, [brandConfig]);
 
   // Driver Incentives & Dispatch Timeout State (Changes Required Items 14 & 16)
   const [editingIncentiveSlab, setEditingIncentiveSlab] = useState<IncentiveSlab | null>(null);
@@ -323,9 +337,9 @@ export default function AdminPortal() {
           </div>
           <div>
             <h1 className="font-extrabold text-sm tracking-tight flex items-center space-x-2">
-              <span>SwifLoad Ops Command Portal</span>
+              <span>{brandConfig.appName} Ops Command Portal</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono font-normal">
-                Coimbatore Central Hub (Tamil Nadu)
+                {brandConfig.defaultCity} Central Hub ({brandConfig.defaultState})
               </span>
             </h1>
             <p className="text-[11px] text-slate-400">Real-time marketplace monitoring, dispatch & governance</p>
@@ -376,6 +390,7 @@ export default function AdminPortal() {
           { id: 'pricing-zones', label: 'Vehicle Matrix & Zones', icon: Settings },
           { id: 'finance', label: 'Finance & Reconciliation', icon: DollarSign },
           { id: 'audit', label: 'Audit Trail', icon: Shield },
+          { id: 'brand-config', label: 'Brand & White-Label', icon: Globe },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = adminTab === tab.id;
@@ -1700,57 +1715,94 @@ export default function AdminPortal() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {cancellationSlabConfigs.map((slab) => (
-                  <div
-                    key={slab.reason}
-                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-3 flex flex-col justify-between hover:border-slate-300 transition-all shadow-xs"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl">{slab.icon}</span>
-                        <span className="text-xs font-mono font-black px-2 py-0.5 rounded-full bg-slate-200 text-slate-800">
-                          {slab.lockoutHours} Hour{slab.lockoutHours !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <h5 className="font-black text-sm text-slate-900 mt-2">{slab.reason}</h5>
-                      <p className="text-[11px] text-slate-500 mt-1 leading-snug">{slab.description}</p>
-                    </div>
+                {cancellationSlabConfigs.map((slab) => {
+                  const displayBadge = slab.lockoutHours < 1
+                    ? `${Math.round(slab.lockoutHours * 60)} Mins`
+                    : `${slab.lockoutHours} Hr${slab.lockoutHours !== 1 ? 's' : ''}`;
 
-                    <div className="pt-2 border-t border-slate-200 space-y-2">
-                      <label className="text-[11px] font-bold text-slate-600 block">Lockout Penalty (Hours):</label>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => updateCancellationSlabConfig(slab.reason, Math.max(0.5, slab.lockoutHours - 0.5))}
-                          className="w-8 h-8 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition-colors"
-                          title="Decrease hours"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="0.5"
-                          max="72"
-                          value={slab.lockoutHours}
-                          onChange={(e) => updateCancellationSlabConfig(slab.reason, parseFloat(e.target.value) || 1)}
-                          className="flex-1 py-1.5 px-2 bg-white border border-slate-300 rounded-lg text-center font-mono font-bold text-sm text-slate-900 focus:outline-none focus:border-emerald-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateCancellationSlabConfig(slab.reason, Math.min(72, slab.lockoutHours + 0.5))}
-                          className="w-8 h-8 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition-colors"
-                          title="Increase hours"
-                        >
-                          +
-                        </button>
+                  const displayDesc = slab.lockoutHours < 1
+                    ? `${Math.round(slab.lockoutHours * 60)} minute(s)`
+                    : `${slab.lockoutHours} hour(s)`;
+
+                  return (
+                    <div
+                      key={slab.reason}
+                      className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-3 flex flex-col justify-between hover:border-slate-300 transition-all shadow-xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xl">{slab.icon}</span>
+                          <span className="text-xs font-mono font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            {displayBadge}
+                          </span>
+                        </div>
+                        <h5 className="font-black text-sm text-slate-900 mt-2">{slab.reason}</h5>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">{slab.description}</p>
                       </div>
-                      <div className="text-[10px] text-slate-400 text-center">
-                        Active restriction: <strong>{slab.lockoutHours} hr(s)</strong> standby
+
+                      <div className="pt-2 border-t border-slate-200 space-y-2">
+                        <label className="text-[11px] font-bold text-slate-600 block">Lockout Penalty (Hours / Presets):</label>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            type="button"
+                            onClick={() => updateCancellationSlabConfig(slab.reason, Math.max(0.05, slab.lockoutHours - 0.25))}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition-colors text-xs"
+                            title="Decrease hours (-15m)"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.02"
+                            max="72"
+                            value={slab.lockoutHours}
+                            onChange={(e) => updateCancellationSlabConfig(slab.reason, parseFloat(e.target.value) || 0.1)}
+                            className="flex-1 py-1 px-1.5 bg-white border border-slate-300 rounded-lg text-center font-mono font-bold text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateCancellationSlabConfig(slab.reason, Math.min(72, slab.lockoutHours + 0.25))}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-center transition-colors text-xs"
+                            title="Increase hours (+15m)"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Quick Presets for Admin testing and fleet policies */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {[
+                            { label: '5m', val: 0.083 },
+                            { label: '15m', val: 0.25 },
+                            { label: '30m', val: 0.5 },
+                            { label: '1h', val: 1 },
+                            { label: '2h', val: 2 },
+                            { label: '4h', val: 4 },
+                            { label: '6h', val: 6 },
+                          ].map((chip) => (
+                            <button
+                              key={chip.label}
+                              type="button"
+                              onClick={() => updateCancellationSlabConfig(slab.reason, chip.val)}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                                Math.abs(slab.lockoutHours - chip.val) < 0.04
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {chip.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="text-[10px] text-slate-500 text-center pt-0.5">
+                          Active restriction: <strong className="text-slate-800">{displayDesc}</strong> standby
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -2482,6 +2534,435 @@ export default function AdminPortal() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ================= 8. BRAND & WHITE-LABEL CONFIGURATION ================= */}
+        {adminTab === 'brand-config' && (
+          <div className="space-y-6">
+            {/* Header Card */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800 font-bold">
+                    <Globe className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base text-slate-900">
+                      White-Label Brand & Regional Deployment Configuration
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Configure platform name, legal entities, order prefix, and regional hub on the fly without code changes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-semibold px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Active Brand: <strong>{brandConfig.appName}</strong> ({brandConfig.codePrefix})</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Regional Presets */}
+            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Quick Geographic Deployment Presets
+                  </h4>
+                  <p className="text-[11px] text-slate-300">
+                    Switch deployment localization for clients or multi-geographic franchises with one click:
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5">
+                {[
+                  {
+                    name: 'Coimbatore Hub',
+                    appName: 'Logi-X',
+                    short: 'Logi-X',
+                    company: 'Logi-X Technologies Pvt Ltd',
+                    city: 'Coimbatore',
+                    state: 'Tamil Nadu',
+                    prefix: 'LGX',
+                    phone: '1800-564-4900',
+                    email: 'support@logi-x.app',
+                  },
+                  {
+                    name: 'Chennai Metro',
+                    appName: 'Logi-X Chennai',
+                    short: 'Logi-X MAA',
+                    company: 'Logi-X Coastal Freight Ltd',
+                    city: 'Chennai',
+                    state: 'Tamil Nadu',
+                    prefix: 'LGX-MAA',
+                    phone: '044-4900-5640',
+                    email: 'support.maa@logi-x.app',
+                  },
+                  {
+                    name: 'Bengaluru Tech',
+                    appName: 'Logi-X Bangalore',
+                    short: 'Logi-X BLR',
+                    company: 'Logi-X Silicon Logistics Ltd',
+                    city: 'Bengaluru',
+                    state: 'Karnataka',
+                    prefix: 'LGX-BLR',
+                    phone: '080-4900-5640',
+                    email: 'support.blr@logi-x.app',
+                  },
+                  {
+                    name: 'Mumbai Western',
+                    appName: 'Logi-X Mumbai',
+                    short: 'Logi-X BOM',
+                    company: 'Logi-X Western Express Ltd',
+                    city: 'Mumbai',
+                    state: 'Maharashtra',
+                    prefix: 'LGX-BOM',
+                    phone: '022-4900-5640',
+                    email: 'support.bom@logi-x.app',
+                  },
+                  {
+                    name: 'Pan-India SaaS',
+                    appName: 'Logi-X Enterprise',
+                    short: 'Logi-X',
+                    company: 'Logi-X Global Freight Systems',
+                    city: 'National Grid',
+                    state: 'Pan-India',
+                    prefix: 'LGX',
+                    phone: '1800-LOGI-X',
+                    email: 'enterprise@logi-x.app',
+                  },
+                ].map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => {
+                      setBrandForm((prev) => ({
+                        ...prev,
+                        appName: preset.appName,
+                        appShortName: preset.short,
+                        companyName: preset.company,
+                        defaultCity: preset.city,
+                        defaultState: preset.state,
+                        codePrefix: preset.prefix,
+                        supportPhone: preset.phone,
+                        supportEmail: preset.email,
+                      }));
+                      showToast(`Loaded preset for ${preset.name}`);
+                    }}
+                    className="p-3 rounded-xl bg-slate-800/80 hover:bg-emerald-950/40 border border-slate-700 hover:border-emerald-500/50 text-left transition-all group"
+                  >
+                    <div className="text-xs font-bold text-white group-hover:text-emerald-400 flex items-center justify-between">
+                      <span>{preset.name}</span>
+                      <span className="text-[10px] font-mono text-emerald-400">{preset.prefix}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">{preset.city}, {preset.state}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Main Configuration Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Form Settings (2 Cols) */}
+              <div className="lg:col-span-2 space-y-5">
+                {/* 1. Identity */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                  <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                    <Building2 className="w-4 h-4 text-emerald-600" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      Brand & Solution Identity
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Solution Brand Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.appName}
+                        onChange={(e) => setBrandForm({ ...brandForm, appName: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none font-semibold text-slate-900"
+                        placeholder="e.g. Logi-X"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Displayed on navigation, titles, login screens</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Short Brand Mark / Logo Text <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.appShortName}
+                        onChange={(e) => setBrandForm({ ...brandForm, appShortName: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none font-semibold text-slate-900"
+                        placeholder="e.g. Logi-X"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Short badge for driver and mobile app bars</p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Legal Entity / Company Name
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.companyName}
+                        onChange={(e) => setBrandForm({ ...brandForm, companyName: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800"
+                        placeholder="e.g. Logi-X Technologies Pvt Ltd"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Used on invoices, QR receipts, terms & conditions</p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Marketing Tagline / Slogan
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.tagline}
+                        onChange={(e) => setBrandForm({ ...brandForm, tagline: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800"
+                        placeholder="e.g. Intelligent On-Demand Freight & Multi-Stop City Logistics"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Localization & Prefix */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                  <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                    <MapPin className="w-4 h-4 text-emerald-600" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      Localization, Geography & Code Prefix
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Booking & Referral Prefix <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.codePrefix}
+                        onChange={(e) => setBrandForm({ ...brandForm, codePrefix: e.target.value.toUpperCase().trim() })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none font-mono font-bold text-emerald-700"
+                        placeholder="e.g. LGX"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Prefix for orders (e.g. #{brandForm.codePrefix}-CBE-1024) and referral codes</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Currency Symbol
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.currencySymbol}
+                        onChange={(e) => setBrandForm({ ...brandForm, currencySymbol: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none font-bold text-slate-800"
+                        placeholder="e.g. ₹"
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Symbol for pricing and driver earnings</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Primary City / Operational Hub <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.defaultCity}
+                        onChange={(e) => setBrandForm({ ...brandForm, defaultCity: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800 font-semibold"
+                        placeholder="e.g. Coimbatore"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        State / Region / Province <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.defaultState}
+                        onChange={(e) => setBrandForm({ ...brandForm, defaultState: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800 font-semibold"
+                        placeholder="e.g. Tamil Nadu"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Support & Helpline */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                  <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                    <Share2 className="w-4 h-4 text-emerald-600" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      Customer Care & Digital Links
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Support Toll-Free / Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.supportPhone}
+                        onChange={(e) => setBrandForm({ ...brandForm, supportPhone: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800 font-mono"
+                        placeholder="e.g. 1800-564-4900"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Support Email
+                      </label>
+                      <input
+                        type="email"
+                        value={brandForm.supportEmail}
+                        onChange={(e) => setBrandForm({ ...brandForm, supportEmail: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800 font-mono"
+                        placeholder="e.g. support@logi-x.app"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                        Website Domain
+                      </label>
+                      <input
+                        type="text"
+                        value={brandForm.websiteUrl}
+                        onChange={(e) => setBrandForm({ ...brandForm, websiteUrl: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none text-slate-800 font-mono"
+                        placeholder="e.g. https://logi-x.app"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Save & Reset Actions */}
+                <div className="flex items-center space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!brandForm.appName.trim()) {
+                        showToast('Please provide an App Name');
+                        return;
+                      }
+                      updateBrandConfig(brandForm);
+                    }}
+                    className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save Brand Configuration</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBrandForm(DEFAULT_BRAND_CONFIG);
+                      updateBrandConfig(DEFAULT_BRAND_CONFIG);
+                      showToast('Brand settings reset to Logi-X defaults');
+                    }}
+                    className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset to Logi-X Default</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Preview Panel (1 Col) */}
+              <div className="space-y-4">
+                <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md space-y-4">
+                  <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      Live White-Label Preview
+                    </h4>
+                  </div>
+
+                  {/* Customer Portal Mock */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      1. Customer Header & Wallet
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                            ⚡
+                          </div>
+                          <div>
+                            <div className="text-xs font-black text-white">{brandForm.appName || 'Logi-X'}</div>
+                            <div className="text-[10px] text-slate-400">{brandForm.defaultCity}, {brandForm.defaultState}</div>
+                          </div>
+                        </div>
+                        <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
+                          Wallet: {brandForm.currencySymbol}1,250
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Driver App Notification Mock */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      2. Driver Incoming Call Alert
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono font-bold text-emerald-400">
+                          #{brandForm.codePrefix || 'LGX'}-CBE-9821
+                        </span>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">
+                          8.4 km Pickup Call
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-300">
+                        Dispatch via <strong>{brandForm.appName}</strong> Express Network
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px]">
+                        <span className="text-slate-400">Guaranteed Payout</span>
+                        <span className="font-extrabold text-white text-xs">{brandForm.currencySymbol}245</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Commercial Waybill SMS Mock */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      3. Customer SMS Notification
+                    </div>
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono leading-relaxed">
+                      [{brandForm.codePrefix || 'LGX'}] Your booking #{brandForm.codePrefix || 'LGX'}-CBE-9821 is confirmed on {brandForm.appName}. Driver Murugan assigned. Support: {brandForm.supportPhone}.
+                    </div>
+                  </div>
+
+                  {/* Legal Footer Mock */}
+                  <div className="p-3 bg-slate-800/60 rounded-xl text-[10px] text-slate-400 space-y-1 border border-slate-800">
+                    <div className="font-bold text-slate-300">{brandForm.companyName}</div>
+                    <div>{brandForm.tagline}</div>
+                    <div className="text-emerald-400 font-mono">{brandForm.supportEmail} • {brandForm.websiteUrl}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

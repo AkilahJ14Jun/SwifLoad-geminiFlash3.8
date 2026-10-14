@@ -62,7 +62,7 @@ import {
 } from 'lucide-react';
 import { useLogistics } from '@/context/LogisticsContext';
 import { VehicleCategory, TripStop, DriverNotification, DriverCancellationReason, DriverDocKey, DriverUploadedDoc, DriverPartner } from '@/types/logistics';
-import { calculateDriverTaskPayout, calculateDriverIncentives } from '@/lib/pricing';
+import { calculateDriverTaskPayout, calculateDriverIncentives, calculateDistanceKm } from '@/lib/pricing';
 import FlowerShowerSplash from '@/components/Customer/FlowerShowerSplash';
 
 const LeafletMap = dynamic(() => import('@/components/Map/LeafletMap'), { ssr: false });
@@ -75,7 +75,7 @@ const DRIVER_SPONSORED_ADS = [
     id: 'ad_apollo',
     brand: 'Apollo Tyres Commercial',
     title: 'EnduMaxx LT Radial Truck Tyres - 20% Special Discount',
-    desc: 'Authorized Coimbatore Fleet Dealer at Singanallur. Free wheel balancing & nitrogen fill for SwifLoad drivers.',
+    desc: 'Authorized Fleet Dealer at Singanallur. Free wheel balancing & nitrogen fill for registered fleet drivers.',
     cta: 'Call Dealer',
     phone: '+919842211223',
     badge: 'Sponsored • Fleet Tyres',
@@ -173,7 +173,7 @@ const DRIVER_HELP_TOPICS = [
     title: 'Negative wallet balance - How do I unblock dispatch calls?',
     category: 'Wallet & Top-up',
     steps: [
-      'SwifLoad allows overdraft up to your pre-configured negative limit. Beyond -₹200, dispatch calls are temporarily paused.',
+      'The platform allows overdraft up to your pre-configured negative limit. Beyond the overdraft limit, dispatch calls are temporarily paused.',
       'Tap "Wallet" in the side menu or bottom bar to see your exact negative balance and minimum recharge amount.',
       'Recharge the minimum amount using UPI, Google Pay, or PhonePe.',
       'Your account unblocks automatically within 5 seconds of payment confirmation.',
@@ -185,7 +185,7 @@ const DRIVER_HELP_TOPICS = [
     category: 'Cancellations & Payouts',
     steps: [
       'If you already navigated to the pickup premises and the shipper cancels, you are protected.',
-      'A ₹50 dry-run cancellation reimbursement is instantly credited to your SwifLoad partner wallet.',
+      'A ₹50 dry-run cancellation reimbursement is instantly credited to your partner wallet.',
       'You will be immediately put back at the top of the queue for the next available dispatch call.',
     ],
   },
@@ -196,8 +196,8 @@ const DRIVER_HELP_TOPICS = [
     steps: [
       'Park safely on the road shoulder with hazard lights turned on.',
       'Tap "Cancel Order" on your live duty terminal and select "Vehicle Breakdown" as the reason.',
-      'Our Coimbatore fleet control room will immediately dispatch the nearest standby loader to transfer the cargo.',
-      'You will receive assistance and our fleet breakdown helpline at 1800-SWIF-LOAD will assist you.',
+      'Our central fleet control room will immediately dispatch the nearest standby loader to transfer the cargo.',
+      'You will receive assistance and our fleet breakdown helpline will assist you.',
     ],
   },
   {
@@ -518,6 +518,7 @@ export default function DriverApp() {
     submitDriverFeedbackForCustomer,
     updateDriverProfileDetails,
     uploadDriverDocument,
+    brandConfig,
   } = useLogistics();
 
   // Driver Cancellation & Lockout States
@@ -530,9 +531,14 @@ export default function DriverApp() {
     return () => clearInterval(timer);
   }, []);
 
-  // Navigation: 'home' | 'duty' | 'active_order' | 'trips' | 'ledger' | 'support' | 'settings' (Changes Required)
-  const [driverPage, setDriverPage] = useState<'home' | 'duty' | 'active_order' | 'trips' | 'ledger' | 'support' | 'settings'>('home');
+  // Navigation: 'home' | 'live_calls' | 'available_orders' | 'duty' | 'active_order' | 'trips' | 'ledger' | 'support' | 'settings' (Changes Required)
+  const [driverPage, setDriverPage] = useState<'home' | 'live_calls' | 'available_orders' | 'duty' | 'active_order' | 'trips' | 'ledger' | 'support' | 'settings'>('home');
   const [activeDriverTab, setActiveDriverTab] = useState<'trips' | 'earnings' | 'referrals' | 'kyc' | 'support'>('trips');
+  const [pickupTransitStartTime, setPickupTransitStartTime] = useState<number | null>(null);
+  const [dropTransitStartTime, setDropTransitStartTime] = useState<number | null>(null);
+  const [dropTransitStoppedTime, setDropTransitStoppedTime] = useState<number | null>(null);
+  const [isDropTransitActive, setIsDropTransitActive] = useState<boolean>(false);
+  const [driverSimCoords, setDriverSimCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Support Language state (Changes Required Item 17)
   const [supportLanguage, setSupportLanguage] = useState<'English' | 'Tamil' | 'Hindi' | 'Telugu' | 'Malayalam' | 'Kannada'>('Tamil');
@@ -705,7 +711,7 @@ export default function DriverApp() {
       ['DRIVER_ASSIGNED', 'ARRIVING_PICKUP', 'AT_PICKUP', 'IN_TRANSIT', 'ARRIVED_DESTINATION'].includes(t.status)
   );
 
-  // Waiting Fare Accrual Effect when driver has reached pickup (Changes Required)
+  // Waiting Fare Accrual Effect when driver has reached pickup (Changes Required Item 14)
   useEffect(() => {
     if (!assignedTrip || assignedTrip.status !== 'AT_PICKUP' || !assignedTrip.driverReachedPickupAt) {
       return;
@@ -733,32 +739,69 @@ export default function DriverApp() {
     return () => clearInterval(interval);
   }, [assignedTrip?.id, assignedTrip?.status, assignedTrip?.driverReachedPickupAt, assignedTrip?.waitingMinutes, assignedTrip?.waitingCharge, assignedTrip?.vehicleCategory, updateTripWaitingFare]);
 
-  // GPS Simulation Effect for active order (Changes Required)
+  // Drop Waiting Fare Accrual Effect when driver has reached drop destination (Changes Required Item 20)
+  useEffect(() => {
+    if (!assignedTrip || assignedTrip.status !== 'ARRIVED_DESTINATION' || !assignedTrip.driverReachedDropAt) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const arrivedTime = new Date(assignedTrip.driverReachedDropAt!).getTime();
+      const waitingTotalSecs = Math.max(0, Math.floor((Date.now() - arrivedTime) / 1000));
+      // 3 minutes free waiting window (180 seconds)
+      if (waitingTotalSecs > 180) {
+        const excessSecs = waitingTotalSecs - 180;
+        const excessMinutes = Math.ceil(excessSecs / 60);
+        const ratePerMin =
+          assignedTrip.vehicleCategory === '2wheeler' ? 2 :
+          assignedTrip.vehicleCategory === '3wheeler' ? 3 :
+          assignedTrip.vehicleCategory === 'pickup_8ft' ? 6 : 5;
+        const newDropWaitingFare = excessMinutes * ratePerMin;
+        const currentPickupWaiting = (assignedTrip.waitingMinutes || 0) * ratePerMin;
+        const combinedWaitingFare = currentPickupWaiting + newDropWaitingFare;
+        const combinedMinutes = (assignedTrip.waitingMinutes || 0) + excessMinutes;
+
+        if (assignedTrip.dropWaitingMinutes !== excessMinutes || assignedTrip.dropWaitingCharge !== newDropWaitingFare) {
+          updateTripWaitingFare(assignedTrip.id, combinedMinutes, combinedWaitingFare, excessMinutes, newDropWaitingFare);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [assignedTrip?.id, assignedTrip?.status, assignedTrip?.driverReachedDropAt, assignedTrip?.dropWaitingMinutes, assignedTrip?.waitingMinutes, assignedTrip?.vehicleCategory, updateTripWaitingFare]);
+
+  // GPS Simulation Effect for active order (Changes Required Items 13 & 17)
   useEffect(() => {
     if (!isSimulatingGps || !assignedTrip) return;
 
     const interval = setInterval(() => {
       const target = assignedTrip.status === 'IN_TRANSIT' ? assignedTrip.drop : assignedTrip.pickup;
-      const currentLoc = assignedTrip.driverLocation || currentDriver.currentLocation;
+      const currentLoc = driverSimCoords || assignedTrip.driverLocation || currentDriver.currentLocation;
       
-      const step = 0.0015;
+      const step = 0.0018;
       const latDiff = target.lat - currentLoc.lat;
       const lngDiff = target.lng - currentLoc.lng;
       const dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
 
       if (dist < 0.002) {
         setIsSimulatingGps(false);
+        const arrivedLoc = { lat: target.lat, lng: target.lng };
+        setDriverSimCoords(arrivedLoc);
+        assignedTrip.driverLocation = arrivedLoc;
+        currentDriver.currentLocation = arrivedLoc;
         showToast(`GPS Simulation: Driver reached ${assignedTrip.status === 'IN_TRANSIT' ? 'Destination' : 'Pickup'}!`);
       } else {
         const nextLat = currentLoc.lat + (latDiff / dist) * step;
         const nextLng = currentLoc.lng + (lngDiff / dist) * step;
-        assignedTrip.driverLocation = { lat: nextLat, lng: nextLng };
-        currentDriver.currentLocation = { lat: nextLat, lng: nextLng };
+        const nextLoc = { lat: nextLat, lng: nextLng };
+        setDriverSimCoords(nextLoc);
+        assignedTrip.driverLocation = nextLoc;
+        currentDriver.currentLocation = nextLoc;
       }
-    }, 1500);
+    }, 1200);
 
     return () => clearInterval(interval);
-  }, [isSimulatingGps, assignedTrip, currentDriver, showToast]);
+  }, [isSimulatingGps, assignedTrip, currentDriver, driverSimCoords, showToast]);
 
   // Unaccepted trips currently offered to this driver's assigned group
   const availableGroupTrips = trips.filter(
@@ -797,10 +840,39 @@ export default function DriverApp() {
   const handleAdvanceStatus = () => {
     if (!assignedTrip) return;
 
+    if (assignedTrip.status === 'DRIVER_ASSIGNED') {
+      setPickupTransitStartTime(Date.now());
+      setIsSimulatingGps(true);
+      advanceTripStatus(assignedTrip.id);
+      showToast('Started pickup navigation! Driving to pickup location.');
+      return;
+    }
+
+    if (assignedTrip.status === 'ARRIVING_PICKUP') {
+      setIsSimulatingGps(false);
+      if (assignedTrip.pickup) setDriverSimCoords(assignedTrip.pickup);
+      markDriverReachedPickup(assignedTrip.id);
+      return;
+    }
+
     if (assignedTrip.status === 'AT_PICKUP') {
       const res = advanceTripStatus(assignedTrip.id, pickupOtpInput);
       if (res.success) {
         setPickupOtpInput('');
+        setDriverSimCoords(assignedTrip.pickup);
+        showToast('Pickup completed! Location updated on map.');
+      }
+      return;
+    }
+
+    if (assignedTrip.status === 'IN_TRANSIT') {
+      setIsSimulatingGps(false);
+      setIsDropTransitActive(false);
+      setDropTransitStoppedTime(Date.now());
+      if (assignedTrip.drop) setDriverSimCoords(assignedTrip.drop);
+      const res = advanceTripStatus(assignedTrip.id);
+      if (res.success) {
+        showToast('Reached drop location. 3-minute waiting timer started.');
       }
       return;
     }
@@ -814,11 +886,25 @@ export default function DriverApp() {
       if (res.success) {
         setDeliveryOtpInput('');
         setPodPhotoUrl('');
+        showToast('Delivery verified! Please collect payment via Company QR code.');
+        setShowCompanyQrPayModal(true);
       }
       return;
     }
 
     advanceTripStatus(assignedTrip.id);
+  };
+
+  const handleStartDrop = () => {
+    if (!assignedTrip) return;
+    setDropTransitStartTime(Date.now());
+    setDropTransitStoppedTime(null);
+    setIsDropTransitActive(true);
+    setIsSimulatingGps(true);
+    if (assignedTrip.status !== 'IN_TRANSIT') {
+      advanceTripStatus(assignedTrip.id);
+    }
+    showToast('Started drop navigation! Heading towards destination.');
   };
 
   return (
@@ -836,8 +922,8 @@ export default function DriverApp() {
 
       {/* ================= TOP DRIVER RIBBON (MATCHES CUSTOMER APP) ================= */}
       <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-700 text-white px-3 py-2.5 shadow-md flex items-center justify-between sticky top-0 z-30">
-        {/* Left: Side Menu Hamburger Button & Driver Identity */}
-        <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+        {/* Left: Side Menu Hamburger Button & Brand Name */}
+        <div className="flex items-center space-x-2 shrink-0">
           <button
             type="button"
             onClick={() => setShowSideMenu(true)}
@@ -847,36 +933,13 @@ export default function DriverApp() {
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="relative shrink-0">
-            <img
-              src={currentDriver.avatar}
-              alt={currentDriver.name}
-              className="w-8 h-8 rounded-full object-cover border-2 border-white/40"
-            />
-            <span
-              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-emerald-800 ${
-                currentDriver.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'
-              }`}
-            />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center space-x-1.5">
-              <h1 className="font-bold text-sm sm:text-base tracking-tight whitespace-nowrap leading-none truncate">
-                {currentDriver.name}
-              </h1>
-              <span className="text-[10px] bg-white/20 text-white border border-white/30 px-1.5 py-0.2 rounded font-mono font-bold shrink-0">
-                {currentDriver.id}
-              </span>
-              {isDriverBlocked && (
-                <span className="text-[9px] bg-rose-600 text-white px-1.5 py-0.2 rounded font-bold uppercase shrink-0 animate-pulse">
-                  Blocked
-                </span>
-              )}
+          <div className="flex items-center space-x-1.5">
+            <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-sm shadow-inner shrink-0">
+              ⚡
             </div>
-            <p className="text-[10px] text-emerald-100 truncate">
-              {currentDriver.vehicleNumber} • ⭐ {currentDriver.rating || 4.9}
-            </p>
+            <h1 className="font-bold text-sm sm:text-base tracking-tight whitespace-nowrap leading-none">
+              {brandConfig.appName} Driver
+            </h1>
           </div>
         </div>
 
@@ -981,6 +1044,69 @@ export default function DriverApp() {
       {/* ========================================================================= */}
       {driverPage === 'home' && (
         <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4 max-w-xl mx-auto w-full">
+          {/* Driver Profile Identity Card (Transferred from top ribbon) */}
+          <div className={`p-3.5 rounded-2xl border shadow-xs flex items-center justify-between transition-colors ${
+            darkMode
+              ? 'bg-slate-950 border-slate-800'
+              : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
+              <div className="relative shrink-0">
+                <img
+                  src={currentDriver.avatar}
+                  alt={currentDriver.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-sm"
+                />
+                <span
+                  className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 ${
+                    darkMode ? 'border-slate-950' : 'border-white'
+                  } ${currentDriver.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`}
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-2">
+                  <h2 className={`font-black text-sm sm:text-base tracking-tight truncate ${
+                    darkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    {currentDriver.name}
+                  </h2>
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                    darkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-300'
+                  }`}>
+                    {currentDriver.id}
+                  </span>
+                  {isDriverBlocked && (
+                    <span className="text-[9px] bg-rose-600 text-white px-1.5 py-0.5 rounded font-bold uppercase shrink-0 animate-pulse">
+                      Blocked
+                    </span>
+                  )}
+                </div>
+                <div className={`text-xs mt-0.5 truncate flex items-center space-x-2 ${
+                  darkMode ? 'text-slate-400' : 'text-slate-600'
+                }`}>
+                  <span className="font-semibold text-emerald-500">{currentDriver.vehicleNumber}</span>
+                  <span>•</span>
+                  <span>⭐ {currentDriver.rating || 4.9}</span>
+                  <span>•</span>
+                  <span className="truncate">{currentDriver.vehicleModel}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowProfileModal(true)}
+              className={`shrink-0 ml-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+                darkMode
+                  ? 'bg-slate-900 hover:bg-slate-800 text-emerald-400 border-slate-800'
+                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+              }`}
+            >
+              Profile ➔
+            </button>
+          </div>
+
           {/* ================= TOP METRIC BUTTON CARDS ================= */}
           {/* Requirements 1, 2, 3, 4 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -1191,15 +1317,22 @@ export default function DriverApp() {
                         Order Taking Suspended
                       </span>
                       <span className="text-[10px] text-amber-300 font-mono font-bold">
-                        {lockoutInfo.lockout?.lockoutHours}h Penalty Cooldown
+                        {lockoutInfo.lockout?.lockoutHours
+                          ? lockoutInfo.lockout.lockoutHours < 1
+                            ? `${Math.round(lockoutInfo.lockout.lockoutHours * 60)}m Admin Cooldown`
+                            : `${lockoutInfo.lockout.lockoutHours}h Admin Cooldown`
+                          : 'Admin Cooldown'}
                       </span>
                     </div>
                     <h4 className="text-sm font-black text-white mt-1">
                       Standby Active: {lockoutInfo.lockout?.reason}
                     </h4>
                     <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                      Order #{lockoutInfo.lockout?.bookingCode || 'SWF-CBE'} was cancelled. Per safety & fulfillment policy, order dispatch is on hold.
+                      Order #{lockoutInfo.lockout?.bookingCode || 'SWF-CBE'} was cancelled. Per safety & fulfillment policy, order dispatch is locked for the duration configured in the Admin Portal.
                     </p>
+                    <div className="text-[11px] text-emerald-300/90 font-medium mt-1 flex items-center space-x-1">
+                      <span>✓ Duty will automatically resume ONLINE when countdown finishes.</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1208,11 +1341,13 @@ export default function DriverApp() {
               <div className="bg-slate-950/90 border border-rose-800/60 rounded-2xl p-3 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-slate-400 uppercase font-bold flex items-center space-x-1">
-                    <Clock className="w-3 h-3 text-amber-400" />
+                    <Clock className="w-3 h-3 text-amber-400 animate-spin" />
                     <span>Cooldown Remaining</span>
                   </div>
                   <div className="text-lg font-black text-amber-300 font-mono">
-                    {lockoutInfo.remainingHours}h {lockoutInfo.remainingMinutes % 60}m {lockoutInfo.remainingSeconds % 60}s
+                    {lockoutInfo.remainingHours > 0
+                      ? `${lockoutInfo.remainingHours}h ${lockoutInfo.remainingMinutes % 60}m ${lockoutInfo.remainingSeconds % 60}s`
+                      : `${lockoutInfo.remainingMinutes}m ${lockoutInfo.remainingSeconds % 60}s`}
                   </div>
                 </div>
                 <div className="text-right">
@@ -1227,13 +1362,13 @@ export default function DriverApp() {
 
               {/* Testing / Admin Waive action */}
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[10px] text-slate-400 italic">Slabs configurable on Admin Portal</span>
+                <span className="text-[10px] text-slate-400 italic">Duration configured in Admin Portal</span>
                 <button
                   type="button"
                   onClick={() => waiveDriverLockout(currentDriver.id)}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[11px] font-bold border border-slate-700 transition-colors"
                 >
-                  Waive Lockout (Demo Reset)
+                  Waive Lockout (Resume Online)
                 </button>
               </div>
             </div>
@@ -1297,10 +1432,10 @@ export default function DriverApp() {
 
             <button
               type="button"
-              onClick={() => setDriverPage('duty')}
+              onClick={() => setDriverPage('live_calls')}
               className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-sm shadow-xl flex items-center justify-center space-x-2 transition-transform active:scale-95 group"
             >
-              <span>Welcome / Enter Live Pickup Calls Terminal</span>
+              <span>Welcome / Live Calls</span>
               <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
@@ -1311,7 +1446,7 @@ export default function DriverApp() {
               <div className="flex items-center space-x-1.5">
                 <Tag className="w-4 h-4 text-emerald-400" />
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">
-                  ⚡ SwifLoad Partner Offers & Incentives
+                  ⚡ {brandConfig.appName} Partner Offers & Incentives
                 </h4>
               </div>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full">
@@ -1474,9 +1609,13 @@ export default function DriverApp() {
       {/* ================= VIEW 2: LIVE PICKUP DUTY RADAR TERMINAL =============== */}
       {/* ================= Changes Required Lines 26-31 =========================== */}
       {/* ========================================================================= */}
-      {driverPage === 'duty' && (
+      {/* ========================================================================= */}
+      {/* ================= VIEW 2: LIVE CALLS TERMINAL (GPS MAP + AVAILABLE ORDERS) */}
+      {/* ================= Changes Required Items 5-7 ============================= */}
+      {/* ========================================================================= */}
+      {(driverPage === 'live_calls' || driverPage === 'duty') && (
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-          {/* Duty Top Header with Back to Dashboard Button */}
+          {/* Header with Back to Dashboard Button */}
           <div className="bg-slate-950 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shadow z-10 shrink-0">
             <button
               type="button"
@@ -1488,9 +1627,9 @@ export default function DriverApp() {
             </button>
 
             <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                Live Duty Radar
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              <span className="text-xs font-bold text-red-400 uppercase tracking-wider">
+                Live GPS Radar
               </span>
             </div>
           </div>
@@ -1526,7 +1665,7 @@ export default function DriverApp() {
               </div>
             )}
 
-            {/* Lockout / Cooldown Banner on Duty Page */}
+            {/* Lockout / Cooldown Banner */}
             {isDriverLockedOut && (
               <div className="bg-gradient-to-r from-rose-950/90 via-slate-900 to-amber-950/80 border-2 border-rose-500/90 rounded-3xl p-4.5 space-y-3 shadow-2xl">
                 <div className="flex items-start space-x-3">
@@ -1545,14 +1684,18 @@ export default function DriverApp() {
                         Order Taking Suspended
                       </span>
                       <span className="text-[10px] text-amber-300 font-mono font-bold">
-                        {lockoutInfo.lockout?.lockoutHours}h Standby
+                        {lockoutInfo.lockout?.lockoutHours
+                          ? lockoutInfo.lockout.lockoutHours < 1
+                            ? `${Math.round(lockoutInfo.lockout.lockoutHours * 60)}m Admin Standby`
+                            : `${lockoutInfo.lockout.lockoutHours}h Admin Standby`
+                          : 'Standby'}
                       </span>
                     </div>
                     <h4 className="text-sm font-black text-white mt-1">
                       Duty Cooldown: {lockoutInfo.lockout?.reason}
                     </h4>
                     <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                      You are temporarily restricted from receiving or accepting orders. Time remaining:
+                      Dispatch is on hold for the time configured in Admin Portal. When this timer reaches 0, you will automatically be restored ONLINE to receive orders.
                     </p>
                   </div>
                 </div>
@@ -1560,11 +1703,13 @@ export default function DriverApp() {
                 <div className="bg-slate-950/90 border border-rose-800/60 rounded-2xl p-3 flex items-center justify-between">
                   <div>
                     <div className="text-[10px] text-slate-400 uppercase font-bold flex items-center space-x-1">
-                      <Clock className="w-3 h-3 text-amber-400" />
+                      <Clock className="w-3 h-3 text-amber-400 animate-spin" />
                       <span>Remaining</span>
                     </div>
                     <div className="text-lg font-black text-amber-300 font-mono">
-                      {lockoutInfo.remainingHours}h {lockoutInfo.remainingMinutes % 60}m {lockoutInfo.remainingSeconds % 60}s
+                      {lockoutInfo.remainingHours > 0
+                        ? `${lockoutInfo.remainingHours}h ${lockoutInfo.remainingMinutes % 60}m ${lockoutInfo.remainingSeconds % 60}s`
+                        : `${lockoutInfo.remainingMinutes}m ${lockoutInfo.remainingSeconds % 60}s`}
                     </div>
                   </div>
                   <div className="text-right">
@@ -1578,13 +1723,13 @@ export default function DriverApp() {
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-slate-400 italic">Order dispatch locked during cooldown</span>
+                  <span className="text-[10px] text-slate-400 italic">Auto-resumes online when timer finishes</span>
                   <button
                     type="button"
                     onClick={() => waiveDriverLockout(currentDriver.id)}
                     className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[11px] font-bold border border-slate-700 transition-colors"
                   >
-                    Waive Lockout (Demo Reset)
+                    Waive Lockout (Resume Online)
                   </button>
                 </div>
               </div>
@@ -1614,15 +1759,15 @@ export default function DriverApp() {
               </div>
             )}
 
-            {/* Live Map Radar */}
-            <div className="bg-slate-950 rounded-2xl border border-slate-800 p-2 shadow-xl space-y-2">
-              <div className="flex items-center justify-between px-2 pt-1 text-xs">
-                <div className="flex items-center space-x-1.5 font-bold text-slate-300">
-                  <Navigation className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Coimbatore Live Dispatch Radar</span>
+            {/* Live GPS Map showing Driver Location in RED (Changes Required Items 6) */}
+            <div className="bg-slate-950 rounded-2xl border border-slate-800 p-3 shadow-xl space-y-3">
+              <div className="flex items-center justify-between px-1 text-xs">
+                <div className="flex items-center space-x-1.5 font-bold text-slate-200">
+                  <Navigation className="w-4 h-4 text-red-500 animate-pulse" />
+                  <span>Live Driver GPS Map (Coimbatore)</span>
                 </div>
-                <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
-                  Zone: {currentDriver.groupName || 'Central Hub'}
+                <span className="text-[10px] text-red-400 font-mono bg-red-950/60 border border-red-800/80 px-2 py-0.5 rounded-full font-bold">
+                  ● Driver in Red
                 </span>
               </div>
 
@@ -1630,150 +1775,277 @@ export default function DriverApp() {
                 driver={{
                   lat: currentDriver.currentLocation.lat,
                   lng: currentDriver.currentLocation.lng,
-                  label: `${currentDriver.name} (Online)`,
+                  label: `${currentDriver.name} (Current Location)`,
+                  markerColor: 'red',
                 }}
-                className="h-64 w-full rounded-xl border border-slate-800"
+                className="h-80 w-full rounded-xl border border-slate-800"
               />
+
+              <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
+                <span>Coordinates: {currentDriver.currentLocation.lat.toFixed(4)}, {currentDriver.currentLocation.lng.toFixed(4)}</span>
+                <span className="font-semibold text-emerald-400">Online & Active</span>
+              </div>
             </div>
 
-            {/* Available Orders List */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
-                    Available Orders List ({availableGroupTrips.length})
-                  </h3>
-                </div>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  Timeout: {dispatchTimeoutSecs}s
+            {/* Prominent Button below Map: "Available Orders" (Changes Required Item 7) */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setDriverPage('available_orders')}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-sm shadow-xl flex items-center justify-center space-x-2 transition-transform active:scale-95"
+              >
+                <span>Available Orders</span>
+                <span className="bg-slate-950/20 text-slate-950 px-2 py-0.5 rounded-full text-xs font-mono font-bold">
+                  {availableGroupTrips.length}
                 </span>
-              </div>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {availableGroupTrips.length === 0 ? (
-                <div className="bg-slate-950 rounded-3xl border border-slate-800 p-8 text-center space-y-3 shadow-xl">
-                  <div className="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
-                    📡
+      {/* ========================================================================= */}
+      {/* ================= VIEW 2B: AVAILABLE ORDERS & SLIDING POPUP ============= */}
+      {/* ================= Changes Required Items 8-12 ============================ */}
+      {/* ========================================================================= */}
+      {driverPage === 'available_orders' && (
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Header with Back to Live Calls Radar */}
+          <div className="bg-slate-950 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shadow z-10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setDriverPage('live_calls')}
+              className="flex items-center space-x-1.5 text-xs font-bold text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 text-emerald-400" />
+              <span>← Back to Live GPS</span>
+            </button>
+
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">
+                Available Orders ({availableGroupTrips.length})
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3.5 md:p-5 space-y-4 max-w-2xl mx-auto w-full pb-28">
+            {/* Active Trip Banner if already assigned */}
+            {assignedTrip && (
+              <div className="bg-emerald-950/80 border-2 border-emerald-500 rounded-3xl p-4 flex items-center justify-between shadow-xl">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="text-xs font-black text-white uppercase tracking-wider">
+                      Active Order #{assignedTrip.bookingCode}
+                    </span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">Radar Active & Scanning Coimbatore</h4>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                      Listening for commercial freight bookings in Coimbatore fleet zone {currentDriver.groupName || 'Central Hub'}. New orders will slide up below.
+                  <div className="text-xs text-emerald-300 mt-0.5">
+                    Stage: <strong className="capitalize">{assignedTrip.status.replace(/_/g, ' ')}</strong> • Net: ₹{assignedTrip.fare.driverEarnings}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDriverPage('active_order')}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow transition-transform active:scale-95"
+                >
+                  View Active Order ➔
+                </button>
+              </div>
+            )}
+
+            {/* Lockout / Cooldown Banner in Available Orders */}
+            {isDriverLockedOut && (
+              <div className="bg-gradient-to-r from-rose-950/90 via-slate-900 to-amber-950/80 border-2 border-rose-500/90 rounded-3xl p-4 space-y-3 shadow-2xl">
+                <div className="flex items-start space-x-3">
+                  <div className="w-9 h-9 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center text-lg shrink-0">
+                    {lockoutInfo.lockout?.reason === 'Illness'
+                      ? '🤒'
+                      : lockoutInfo.lockout?.reason === 'Vehicle breakdown'
+                      ? '🚛'
+                      : lockoutInfo.lockout?.reason === 'Priority personal work'
+                      ? '💼'
+                      : '🚨'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] bg-rose-500/30 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                        Duty Standby Active
+                      </span>
+                      <span className="text-[10px] text-amber-300 font-mono font-bold">
+                        {lockoutInfo.lockout?.lockoutHours
+                          ? lockoutInfo.lockout.lockoutHours < 1
+                            ? `${Math.round(lockoutInfo.lockout.lockoutHours * 60)}m Penalty`
+                            : `${lockoutInfo.lockout.lockoutHours}h Penalty`
+                          : 'Penalty'}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-black text-white mt-1">
+                      Reason: {lockoutInfo.lockout?.reason}
+                    </h4>
+                    <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                      You are paused from accepting orders for the admin-configured cooldown. Remaining time:
                     </p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {availableGroupTrips.map((order) => {
-                    const payout = calculateDriverTaskPayout(
-                      currentDriver.currentLocation,
-                      order.pickup,
-                      order.distanceKm,
-                      order.customerType || 'regular',
-                      customerSlabConfigs
-                    );
-                    const isMulti = (order.pickups?.length || 1) > 1 || (order.drops?.length || 1) > 1;
 
-                    return (
-                      <div
-                        key={order.id}
-                        className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 hover:border-emerald-500/60 transition-all flex items-center justify-between gap-3 shadow-md"
-                      >
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-mono text-xs font-black text-white">{order.bookingCode}</span>
-                            {isMulti && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                Multi-Stop
-                              </span>
-                            )}
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {payout.driverDistanceToPickupKm} km away
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-300 font-semibold truncate">
-                            {order.pickup.area} ➔ {order.drop.area} ({order.distanceKm} km)
-                          </div>
-                          <div className="text-[11px] text-slate-500 truncate">
-                            Cargo: {order.shipment.goodsCategory} (~{order.shipment.approxWeightKg}kg)
-                          </div>
-                        </div>
-
-                        <div className="text-right shrink-0 space-y-1">
-                          <div className="text-sm font-black text-emerald-400">₹{payout.netEarnings}</div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const res = acceptTripByDriver(order.id, currentDriver.id);
-                              if (res.success) {
-                                showToast(`Accepted order ${order.bookingCode}! Opening Active Order...`);
-                                setDriverPage('active_order');
-                              }
-                            }}
-                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-[11px] shadow transition-transform active:scale-95"
-                          >
-                            Accept
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="bg-slate-950/90 border border-rose-800/60 rounded-2xl p-2.5 flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-1 text-amber-300 font-mono font-black text-sm">
+                    <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                    <span>
+                      {lockoutInfo.remainingHours > 0
+                        ? `${lockoutInfo.remainingHours}h ${lockoutInfo.remainingMinutes % 60}m ${lockoutInfo.remainingSeconds % 60}s`
+                        : `${lockoutInfo.remainingMinutes}m ${lockoutInfo.remainingSeconds % 60}s`}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 font-mono">
+                    Unlocks: {lockoutInfo.lockout?.lockedUntil ? new Date(lockoutInfo.lockout.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Soon'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => waiveDriverLockout(currentDriver.id)}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-bold border border-slate-700 transition-colors"
+                  >
+                    Waive Lockout
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Available Orders List Header */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
+                  Available Orders Queue ({availableGroupTrips.length})
+                </h3>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">
+                Timeout: 10s default
+              </span>
             </div>
 
-            {/* Sliding Popup Overlay (Changes Required Lines 27-31) */}
-            {availableGroupTrips.length > 0 && !dismissDutyPopups && (() => {
+            {/* Available Orders List */}
+            {availableGroupTrips.length === 0 ? (
+              <div className="bg-slate-950 rounded-3xl border border-slate-800 p-8 text-center space-y-3 shadow-xl">
+                <div className="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
+                  📡
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">No Orders in Queue</h4>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    Commercial freight bookings in Coimbatore fleet zone will appear here and in real-time sliding popups.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {availableGroupTrips.map((order) => {
+                  const driverDistToPickup = calculateDistanceKm(
+                    currentDriver.currentLocation,
+                    order.pickup
+                  );
+                  const pickupDistToDrop = order.distanceKm || calculateDistanceKm(
+                    order.pickup,
+                    order.drop
+                  );
+                  const isMulti = (order.pickups?.length || 1) > 1 || (order.drops?.length || 1) > 1;
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="p-4 bg-slate-950 rounded-2xl border border-slate-800 hover:border-emerald-500/60 transition-all flex items-center justify-between gap-3 shadow-md"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono text-xs font-black text-white">{order.bookingCode}</span>
+                          {isMulti && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Multi-Stop
+                            </span>
+                          )}
+                          <span className="text-[10px] text-emerald-400 font-mono">
+                            ({driverDistToPickup} km to pickup)
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-200 font-semibold truncate">
+                          {order.pickup.area} ({driverDistToPickup} km) ➔ {order.drop.area} ({pickupDistToDrop} km)
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          Cargo: {order.shipment.goodsCategory} (~{order.shipment.approxWeightKg}kg)
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 space-y-1">
+                        <div className="text-sm font-black text-emerald-400">₹{order.fare?.totalFare || order.fare?.driverEarnings}</div>
+                        <button
+                          type="button"
+                          disabled={isDriverLockedOut}
+                          onClick={() => {
+                            if (isDriverLockedOut) {
+                              const remLabel = lockoutInfo.remainingHours > 0
+                                ? `${lockoutInfo.remainingHours}h ${lockoutInfo.remainingMinutes % 60}m`
+                                : `${lockoutInfo.remainingMinutes}m ${lockoutInfo.remainingSeconds % 60}s`;
+                              showToast(`Duty suspended (${lockoutInfo.lockout?.reason}). Order dispatch unlocks in ${remLabel}.`);
+                              return;
+                            }
+                            const res = acceptTripByDriver(order.id, currentDriver.id);
+                            if (res.success) {
+                              showToast(`Accepted order ${order.bookingCode}! Opening Active Order...`);
+                              setDriverPage('active_order');
+                            }
+                          }}
+                          className={`px-3.5 py-1.5 font-black rounded-xl text-xs shadow transition-transform ${
+                            isDriverLockedOut
+                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                              : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 active:scale-95'
+                          }`}
+                        >
+                          {isDriverLockedOut ? 'Locked' : 'Accept'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Sliding Popup Overlay (Changes Required Items 9-12) */}
+            {availableGroupTrips.length > 0 && !isDriverLockedOut && !dismissDutyPopups && (() => {
               const safeIndex = Math.min(dutySlidingIndex, availableGroupTrips.length - 1);
               const order = availableGroupTrips[safeIndex];
               if (!order) return null;
 
-              const payout = calculateDriverTaskPayout(
+              // Distance from driver location to pickup in km
+              const driverDistToPickup = calculateDistanceKm(
                 currentDriver.currentLocation,
-                order.pickup,
-                order.distanceKm,
-                order.customerType || 'regular',
-                customerSlabConfigs
+                order.pickup
               );
-              const countdown = order.dispatchCountdownSecs ?? dispatchTimeoutSecs;
-              const progressPct = Math.max(0, Math.min(100, (countdown / dispatchTimeoutSecs) * 100));
-              const numPickups = order.pickups?.length || 1;
-              const numDrops = order.drops?.length || 1;
-              const isMultiStopIncoming = numPickups > 1 || numDrops > 1 || (order.stops && order.stops.length > 2);
+
+              // Distance from pickup to drop in km
+              const pickupDistToDrop = order.distanceKm || calculateDistanceKm(
+                order.pickup,
+                order.drop
+              );
+
+              // Default 10 seconds countdown
+              const countdown = order.dispatchCountdownSecs !== undefined ? Math.min(10, order.dispatchCountdownSecs) : 10;
+              const progressPct = Math.max(0, Math.min(100, (countdown / 10) * 100));
 
               return (
                 <div className="fixed bottom-14 left-0 right-0 max-w-md mx-auto p-3 z-30 animate-in slide-in-from-bottom duration-300">
                   <div className="bg-slate-950 border-2 border-emerald-500 rounded-3xl p-4.5 space-y-3.5 shadow-2xl ring-2 ring-emerald-500/20 backdrop-blur-xl">
-                    {/* Header with Carousel controls & Countdown Timer */}
+                    {/* Header: Total Charge on Top (Item 10) */}
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                      <div className="flex items-center space-x-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-xs font-black text-white uppercase tracking-wider">
-                          Incoming Call ({safeIndex + 1}/{availableGroupTrips.length})
-                        </span>
-                        {availableGroupTrips.length > 1 && (
-                          <div className="flex items-center space-x-1 pl-1">
-                            <button
-                              type="button"
-                              onClick={() => setDutySlidingIndex((prev) => Math.max(0, prev - 1))}
-                              disabled={safeIndex === 0}
-                              className="p-1 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-30 text-slate-300 text-xs"
-                            >
-                              ◀
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDutySlidingIndex((prev) => Math.min(availableGroupTrips.length - 1, prev + 1))}
-                              disabled={safeIndex === availableGroupTrips.length - 1}
-                              className="p-1 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-30 text-slate-300 text-xs"
-                            >
-                              ▶
-                            </button>
-                          </div>
-                        )}
+                      <div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Total Charge</div>
+                        <div className="text-xl font-black text-emerald-400 font-mono">
+                          ₹{order.fare?.totalFare || order.fare?.driverEarnings}
+                        </div>
                       </div>
 
-                      {/* Admin-Configured Countdown Timer */}
+                      {/* Timer clock with seconds countdown happening from 10 seconds (Item 11) */}
                       <div className="flex items-center space-x-2">
                         <div className="w-16 bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
                           <div
@@ -1781,94 +2053,46 @@ export default function DriverApp() {
                             style={{ width: `${progressPct}%` }}
                           />
                         </div>
-                        <span className="text-xs font-mono font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full">
-                          ⏳ {countdown}s
+                        <span className="text-xs font-mono font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{countdown}s</span>
                         </span>
                       </div>
                     </div>
 
-                    {/* Multi-Stop Visual Indicator */}
-                    {isMultiStopIncoming && (
-                      <div className="p-2 bg-amber-500/15 border border-amber-500/40 rounded-xl flex items-center justify-between text-xs">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-sm">⚡</span>
-                          <span className="font-extrabold text-amber-300 text-[11px]">
-                            MULTI-STOP ROUTE ({numPickups} Pickups, {numDrops} Drops)
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-mono font-bold bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded-full">
-                          Multi-Leg
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Order Value Breakdown */}
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Total Fare</div>
-                        <div className="text-base font-black text-white mt-0.5">₹{payout.grossFare}</div>
-                      </div>
-                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Platform Fee</div>
-                        <div className="text-base font-bold text-slate-300 mt-0.5">₹{order.fare?.platformCommission || Math.round(payout.grossFare * 0.18)}</div>
-                      </div>
-                      <div className="bg-emerald-950/50 p-2 rounded-xl border border-emerald-800/80">
-                        <div className="text-[10px] uppercase font-bold text-emerald-300">Take-Home</div>
-                        <div className="text-base font-black text-emerald-400 mt-0.5">₹{payout.netEarnings}</div>
-                      </div>
-                    </div>
-
-                    {/* Pickup Address & Distance (km) */}
+                    {/* Pickup locality with distance from driver in km (Item 10) */}
                     <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
                       <div className="flex items-start space-x-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between font-bold text-slate-200">
-                            <span>Pickup: {order.pickup.area}</span>
-                            <span className="text-[10px] text-emerald-400 font-mono">
-                              {payout.driverDistanceToPickupKm} km from you
-                            </span>
+                          <div className="font-bold text-slate-200">
+                            Pickup: {order.pickup.area} <span className="text-emerald-400 font-mono font-black">({driverDistToPickup} km)</span>
                           </div>
                           <div className="text-[11px] text-slate-400 leading-snug">{order.pickup.address}</div>
                         </div>
                       </div>
 
-                      {/* Drop Address & Distance (km) */}
+                      {/* Drop locality and distance from pickup in km (Item 10) */}
                       <div className="flex items-start space-x-2 pt-2 border-t border-slate-800/80">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-400 mt-1 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between font-bold text-slate-200">
-                            <span>Drop: {order.drop.area}</span>
-                            <span className="text-[10px] text-rose-400 font-mono">
-                              {order.distanceKm} km from pickup
-                            </span>
+                          <div className="font-bold text-slate-200">
+                            Drop: {order.drop.area} <span className="text-rose-400 font-mono font-black">({pickupDistToDrop} km)</span>
                           </div>
                           <div className="text-[11px] text-slate-400 leading-snug">{order.drop.address}</div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons: "Skip All" & "Accept Order" taking driver to dedicated active order page */}
+                    {/* Action Buttons: Skip (closes immediately) & Accept (Item 12 & 13) */}
                     <div className="flex items-center space-x-2 pt-1">
                       <button
                         type="button"
                         onClick={() => {
                           setDismissDutyPopups(true);
-                          showToast('All order alerts dismissed');
+                          showToast('Popup skipped');
                         }}
-                        className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-bold rounded-xl text-xs border border-slate-800 transition-colors"
-                        title="Dismiss all incoming sliding popups"
-                      >
-                        Skip All
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          passTripToNextGroup(order.id);
-                          showToast(`Passed order ${order.bookingCode}`);
-                        }}
-                        className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors"
+                        className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors"
                       >
                         Skip
                       </button>
@@ -1878,13 +2102,13 @@ export default function DriverApp() {
                         onClick={() => {
                           const res = acceptTripByDriver(order.id, currentDriver.id);
                           if (res.success) {
-                            showToast(`Order ${order.bookingCode} accepted! Navigating to Active Order...`);
+                            showToast(`Order ${order.bookingCode} accepted! Opening Active Order...`);
                             setDriverPage('active_order');
                           }
                         }}
                         className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95 flex items-center justify-center space-x-1.5"
                       >
-                        <span>Accept Order (₹{payout.netEarnings}) ➔</span>
+                        <span>Accept Order (₹{order.fare?.totalFare || order.fare?.driverEarnings}) ➔</span>
                       </button>
                     </div>
                   </div>
@@ -1908,6 +2132,8 @@ export default function DriverApp() {
         </div>
       )}
 
+
+
       {/* ========================================================================= */}
       {/* ================= VIEW 3: DEDICATED ACTIVE ORDER EXECUTION PAGE ========= */}
       {/* ================= Changes Required Lines 33-45 =========================== */}
@@ -1926,6 +2152,19 @@ export default function DriverApp() {
             </button>
 
             <div className="flex items-center space-x-2">
+              {assignedTrip && ['DRIVER_ASSIGNED', 'ARRIVING_PICKUP', 'AT_PICKUP', 'IN_TRANSIT'].includes(assignedTrip.status) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCancelReason('Vehicle breakdown');
+                    setShowCancelReasonModal(true);
+                  }}
+                  className="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 rounded-xl text-[11px] font-bold flex items-center space-x-1 transition-colors"
+                >
+                  <AlertTriangle className="w-3 h-3 text-rose-400" />
+                  <span>Cancel Order</span>
+                </button>
+              )}
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
               <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">
                 {assignedTrip ? `Active Order: ${assignedTrip.bookingCode}` : 'Order Execution'}
@@ -2026,7 +2265,7 @@ export default function DriverApp() {
                     <div className="flex items-center justify-between px-2 pt-1 text-xs">
                       <div className="flex items-center space-x-1.5 font-bold text-slate-300">
                         <Navigation className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Live Route & Real-Time Tracking Simulation</span>
+                        <span>Live Route & Real-Time Tracking</span>
                       </div>
                       <span className="text-[10px] text-emerald-400 font-mono">
                         {assignedTrip.status.replace(/_/g, ' ')}
@@ -2037,12 +2276,12 @@ export default function DriverApp() {
                       pickup={{ lat: assignedTrip.pickup.lat, lng: assignedTrip.pickup.lng, label: 'Pickup' }}
                       drop={{ lat: assignedTrip.drop.lat, lng: assignedTrip.drop.lng, label: 'Drop' }}
                       driver={{
-                        lat: assignedTrip.driverLocation?.lat || currentDriver.currentLocation.lat,
-                        lng: assignedTrip.driverLocation?.lng || currentDriver.currentLocation.lng,
-                        label: 'You (Driver)',
+                        lat: driverSimCoords?.lat || assignedTrip.driverLocation?.lat || currentDriver.currentLocation.lat,
+                        lng: driverSimCoords?.lng || assignedTrip.driverLocation?.lng || currentDriver.currentLocation.lng,
+                        label: 'Driver (Live)',
                       }}
-                      targetDestination={assignedTrip.status === 'IN_TRANSIT' ? 'drop' : 'pickup'}
-                      className="h-60 w-full rounded-2xl border border-slate-800"
+                      targetDestination={['IN_TRANSIT', 'ARRIVED_DESTINATION'].includes(assignedTrip.status) ? 'drop' : 'pickup'}
+                      className="h-64 w-full rounded-2xl border border-slate-800"
                     />
 
                     {/* GPS Simulation Controls & Google Maps Link */}
@@ -2080,7 +2319,7 @@ export default function DriverApp() {
                     </div>
                   </div>
 
-                  {/* Booking Details Card with Elapsed Time & Distance Covered Tracker */}
+                  {/* Booking Details Card with Dynamic Transit Timers & Distance Trackers (Items 13, 17, 19) */}
                   <div className="bg-slate-950 rounded-3xl border border-slate-800 p-4 space-y-3 shadow-xl">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                       <div>
@@ -2097,24 +2336,109 @@ export default function DriverApp() {
                       </span>
                     </div>
 
-                    {/* Tracking Elapsed Time and Distance Covered (Line 42) */}
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Elapsed Time</div>
-                        <div className="text-sm font-black text-white mt-0.5 font-mono">{tripElapsedMins} mins</div>
+                    {/* Active Pickup Transit Tracker (Item 13: Time Elapsed & Distance Travelled) */}
+                    {assignedTrip.status === 'ARRIVING_PICKUP' && (
+                      <div className="p-3 bg-emerald-950/50 border border-emerald-600/60 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-emerald-300 flex items-center space-x-1.5">
+                            <Clock className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+                            <span>En Route to Pickup Tracker</span>
+                          </span>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono">
+                            Live Moving
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                          <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">Time Elapsed</div>
+                            <div className="text-sm font-black text-white mt-0.5 font-mono">
+                              {pickupTransitStartTime
+                                ? `${Math.floor((now - pickupTransitStartTime) / 60000)}m ${Math.floor(((now - pickupTransitStartTime) % 60000) / 1000)}s`
+                                : `${tripElapsedMins}m`}
+                            </div>
+                          </div>
+                          <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">Distance Travelled</div>
+                            <div className="text-sm font-black text-emerald-400 mt-0.5 font-mono">
+                              {(() => {
+                                const currentLoc = driverSimCoords || assignedTrip.driverLocation || currentDriver.currentLocation;
+                                const originalDriverLoc = currentDriver.currentLocation;
+                                const moved = calculateDistanceKm(originalDriverLoc, currentLoc);
+                                return `${Math.max(0.1, moved)} km`;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Distance Covered</div>
-                        <div className="text-sm font-black text-white mt-0.5 font-mono">{distanceCoveredKm} km</div>
+                    )}
+
+                    {/* Active Drop Transit Tracker (Item 17 & 19: Time Elapsed & Distance Still Pending) */}
+                    {(assignedTrip.status === 'IN_TRANSIT' || assignedTrip.status === 'ARRIVED_DESTINATION') && (
+                      <div className={`p-3 rounded-2xl border space-y-2 ${
+                        assignedTrip.status === 'ARRIVED_DESTINATION'
+                          ? 'bg-slate-900/60 border-slate-700'
+                          : 'bg-emerald-950/50 border-emerald-600/60'
+                      }`}>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-emerald-300 flex items-center space-x-1.5">
+                            <Clock className={`w-3.5 h-3.5 text-emerald-400 ${assignedTrip.status === 'IN_TRANSIT' ? 'animate-spin' : ''}`} />
+                            <span>{assignedTrip.status === 'ARRIVED_DESTINATION' ? 'Drop Transit Completed (Stopped)' : 'Drop Transit Tracker'}</span>
+                          </span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                            assignedTrip.status === 'ARRIVED_DESTINATION'
+                              ? 'bg-slate-800 text-slate-300 border border-slate-700'
+                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          }`}>
+                            {assignedTrip.status === 'ARRIVED_DESTINATION' ? 'Timer Stopped' : 'Live In Transit'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                          <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">Time Elapsed</div>
+                            <div className="text-sm font-black text-white mt-0.5 font-mono">
+                              {(() => {
+                                const start = dropTransitStartTime || (assignedTrip.driverReachedPickupAt ? new Date(assignedTrip.driverReachedPickupAt).getTime() : now);
+                                const end = assignedTrip.status === 'ARRIVED_DESTINATION' && dropTransitStoppedTime ? dropTransitStoppedTime : now;
+                                const diff = Math.max(0, end - start);
+                                return `${Math.floor(diff / 60000)}m ${Math.floor((diff % 60000) / 1000)}s`;
+                              })()}
+                            </div>
+                          </div>
+                          <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">Distance Still Pending</div>
+                            <div className="text-sm font-black text-amber-300 mt-0.5 font-mono">
+                              {(() => {
+                                if (assignedTrip.status === 'ARRIVED_DESTINATION') return '0.0 km';
+                                const currentLoc = driverSimCoords || assignedTrip.driverLocation || currentDriver.currentLocation;
+                                const pending = calculateDistanceKm(currentLoc, assignedTrip.drop);
+                                return `${Math.max(0, pending)} km`;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Total Fare</div>
-                        <div className="text-sm font-black text-emerald-400 mt-0.5 font-mono">₹{assignedTrip.fare.totalFare}</div>
+                    )}
+
+                    {/* Standard Trip Info Summary */}
+                    {['DRIVER_ASSIGNED', 'AT_PICKUP'].includes(assignedTrip.status) && (
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400">Total Route</div>
+                          <div className="text-sm font-black text-white mt-0.5 font-mono">{assignedTrip.distanceKm} km</div>
+                        </div>
+                        <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400">Platform Charge</div>
+                          <div className="text-sm font-black text-slate-300 mt-0.5 font-mono">₹{assignedTrip.fare?.platformCommission || 30}</div>
+                        </div>
+                        <div className="bg-slate-900/90 p-2 rounded-xl border border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400">Total Fare</div>
+                          <div className="text-sm font-black text-emerald-400 mt-0.5 font-mono">₹{assignedTrip.fare.totalFare}</div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Pickup Address Card with Direct Call Button (Lines 35-36) */}
+                  {/* Pickup Address Card with Direct Call Button & Start Pickup Button (Items 13-16) */}
                   <div className="bg-slate-950 rounded-3xl border border-slate-800 p-4 space-y-3 shadow-xl">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -2128,7 +2452,7 @@ export default function DriverApp() {
                         </div>
                       </div>
 
-                      {/* Direct Call Button (Line 35) */}
+                      {/* Direct Call Button */}
                       <a
                         href={`tel:${assignedTrip.pickup.senderOrReceiverPhone || assignedTrip.customerPhone}`}
                         className="px-3.5 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center space-x-1.5 shrink-0 transition-colors shadow"
@@ -2138,41 +2462,43 @@ export default function DriverApp() {
                       </a>
                     </div>
 
-                    {/* "Reached Pickup Point" Button (Line 36) */}
+                    {/* "Start Pickup" Button (Item 13) */}
                     {assignedTrip.status === 'DRIVER_ASSIGNED' && (
                       <button
                         type="button"
                         onClick={handleAdvanceStatus}
-                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95 flex items-center justify-center space-x-2"
                       >
-                        En Route to Pickup Location ➔
+                        <Navigation className="w-4 h-4" />
+                        <span>Start Pickup ➔</span>
                       </button>
                     )}
 
+                    {/* "Pickup point reached" Button (Item 14) */}
                     {assignedTrip.status === 'ARRIVING_PICKUP' && (
                       <button
                         type="button"
                         onClick={() => {
                           const res = markDriverReachedPickup(assignedTrip.id);
                           if (res.success) {
-                            showToast('Customer notified in app: You have reached pickup point!');
+                            showToast('Pickup point reached! 3-minute waiting timer started.');
                           }
                         }}
-                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95 flex items-center justify-center space-x-2"
+                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95 flex items-center justify-center space-x-2"
                       >
                         <MapPin className="w-4 h-4" />
-                        <span>Reached Pickup Point (Notify Customer in App) ➔</span>
+                        <span>Pickup point reached ➔</span>
                       </button>
                     )}
 
-                    {/* 3-Minute Free Waiting Window & Beyond 3 mins Waiting Charges (Lines 37-39) */}
+                    {/* 3-Minute Free Waiting Window & Beyond 3 mins Waiting Charges (Item 14) */}
                     {assignedTrip.status === 'AT_PICKUP' && (
                       <div className="space-y-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <Clock className="w-4 h-4 text-amber-400 animate-spin" />
                             <span className="text-xs font-black text-amber-300 uppercase tracking-wide">
-                              Pickup Waiting Timer
+                              Pickup Waiting Timer (3 Min Free)
                             </span>
                           </div>
                           <span className="text-[10px] font-mono text-slate-400">
@@ -2183,13 +2509,13 @@ export default function DriverApp() {
                         {isWithinFreeWindow ? (
                           <div className="p-3 bg-emerald-950/40 border border-emerald-700/60 rounded-xl space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-emerald-300 font-bold">3-Minute Free Waiting Window Active</span>
+                              <span className="text-emerald-300 font-bold">Standard 3-Minute Free Waiting Window Active</span>
                               <span className="font-mono font-black text-emerald-400 text-sm">
                                 {Math.floor(freeSecsLeft / 60)}m {freeSecsLeft % 60}s
                               </span>
                             </div>
                             <p className="text-[11px] text-slate-400">
-                              No waiting charges are billed during the first 3 minutes of cargo loading.
+                              3-minute standard waiting countdown. No waiting charge billed during this window.
                             </p>
                           </div>
                         ) : (
@@ -2201,12 +2527,12 @@ export default function DriverApp() {
                               </span>
                             </div>
                             <p className="text-[11px] text-amber-300/90">
-                              Free 3 minutes elapsed. Vehicle waiting fee of ₹{ratePerMin}/min is accruing in real time and displayed on customer's tracking app.
+                              Exceeded 3 minutes. Extra waiting charge ₹{ratePerMin}/min is displaying on driver & customer screens simultaneously.
                             </p>
                           </div>
                         )}
 
-                        {/* OTP Confirmation for Pickup (Line 39) */}
+                        {/* OTP Confirmation for Pickup (Item 15 & 16) */}
                         <div className="space-y-2 pt-1 border-t border-slate-800">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-slate-300 font-bold">Customer 4-Digit Pickup OTP:</span>
@@ -2228,7 +2554,7 @@ export default function DriverApp() {
                               onClick={handleAdvanceStatus}
                               className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow"
                             >
-                              Verify OTP & Start Trip ➔
+                              Verify OTP & Complete Pickup ➔
                             </button>
                           </div>
                         </div>
@@ -2236,17 +2562,17 @@ export default function DriverApp() {
                     )}
                   </div>
 
-                  {/* Multi-Stop Stop-by-Stop Leg Tracker (Lines 40-41) */}
+                  {/* Multi-Stop Stop-by-Stop Leg Tracker */}
                   <div className="bg-slate-950 rounded-3xl border border-slate-800 p-4 space-y-3 shadow-xl">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                       <div className="flex items-center space-x-1.5">
                         <Layers className="w-4 h-4 text-emerald-400" />
                         <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">
-                          Multi-Stop Leg Tracker ({completedStopsCount}/{tripStops.length} Closed)
+                          Stop Route Tracker ({completedStopsCount}/{tripStops.length} Closed)
                         </h4>
                       </div>
                       <span className="text-[10px] text-slate-400 font-mono">
-                        Individual Stop Verification
+                        Verification & Drop Point
                       </span>
                     </div>
 
@@ -2382,65 +2708,136 @@ export default function DriverApp() {
                     </div>
                   </div>
 
-                  {/* Delivery Completion & QR Code Payment Modal (Lines 42-45) */}
+                  {/* Drop Navigation, 3-min Drop Waiting & Delivery OTP Confirmation (Items 17-21) */}
                   <div className="bg-slate-950 rounded-3xl border border-slate-800 p-4 space-y-3 shadow-xl">
-                    <div className="text-xs font-black uppercase tracking-wider text-slate-300">
-                      Destination & Final Settlement
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-black uppercase tracking-wider text-slate-300">
+                        Drop Destination Execution
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {assignedTrip.drop.area}
+                      </span>
                     </div>
 
-                    {assignedTrip.status === 'IN_TRANSIT' && (
+                    {/* "Start Drop" Button (Item 17) */}
+                    {assignedTrip.status === 'IN_TRANSIT' && !isDropTransitActive && (
                       <button
                         type="button"
-                        onClick={handleAdvanceStatus}
-                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
+                        onClick={handleStartDrop}
+                        className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95 flex items-center justify-center space-x-2"
                       >
-                        I Have Reached Drop Destination ➔
+                        <Navigation className="w-4 h-4" />
+                        <span>Start Drop ➔</span>
                       </button>
                     )}
 
-                    {assignedTrip.status === 'ARRIVED_DESTINATION' && (
-                      <div className="space-y-3">
-                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-amber-300 font-bold">Collect Recipient Delivery OTP:</span>
-                            <span className="text-[10px] text-slate-500 italic">Hint: {assignedTrip.shipment.deliveryOtp}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="text"
-                              maxLength={4}
-                              placeholder="Drop OTP"
-                              value={deliveryOtpInput}
-                              onChange={(e) => setDeliveryOtpInput(e.target.value)}
-                              className="w-28 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const res = advanceTripStatus(assignedTrip.id, deliveryOtpInput);
-                                if (res.success) {
-                                  showToast('Delivery completed! Please leave feedback for customer.');
-                                  setShowCustomerFeedbackModal(true);
-                                }
-                              }}
-                              className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow"
-                            >
-                              Confirm Delivery ✓
-                            </button>
-                          </div>
-                        </div>
+                    {/* "Reached drop location" / "Reached drop destination" Button (Item 18 & 19) */}
+                    {assignedTrip.status === 'IN_TRANSIT' && isDropTransitActive && (() => {
+                      const isMultiDrop = (assignedTrip.drops && assignedTrip.drops.length > 1) || (assignedTrip.stops && assignedTrip.stops.filter((s) => s.type === 'DROP').length > 1);
+                      const remainingDropsCount = assignedTrip.stops ? assignedTrip.stops.filter((s) => s.type === 'DROP' && s.status !== 'COMPLETED').length : 1;
+                      const buttonLabel = (isMultiDrop && remainingDropsCount > 1) ? 'Reached drop location' : 'Reached drop destination';
 
-                        {/* Company QR Code Button for Payment Collection (Line 43) */}
+                      return (
                         <button
                           type="button"
-                          onClick={() => setShowCompanyQrPayModal(true)}
-                          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs flex items-center justify-center space-x-2 shadow"
+                          onClick={handleAdvanceStatus}
+                          className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95 flex items-center justify-center space-x-2"
                         >
-                          <QrCode className="w-4 h-4" />
-                          <span>Show Company Payment QR Code (Collect ₹{assignedTrip.fare.totalFare})</span>
+                          <MapPin className="w-4 h-4" />
+                          <span>{buttonLabel} ➔</span>
                         </button>
-                      </div>
-                    )}
+                      );
+                    })()}
+
+                    {/* Drop 3-Minute Waiting Timer & Excess Accrual (Item 20) */}
+                    {assignedTrip.status === 'ARRIVED_DESTINATION' && (() => {
+                      const dropArrivedTime = assignedTrip.driverReachedDropAt ? new Date(assignedTrip.driverReachedDropAt).getTime() : now;
+                      const dropWaitingTotalSecs = dropArrivedTime > 0 ? Math.max(0, Math.floor((now - dropArrivedTime) / 1000)) : 0;
+                      const isWithinDropFreeWindow = dropWaitingTotalSecs <= 180;
+                      const dropFreeSecsLeft = Math.max(0, 180 - dropWaitingTotalSecs);
+                      const dropExcessSecs = Math.max(0, dropWaitingTotalSecs - 180);
+                      const dropExcessMins = Math.ceil(dropExcessSecs / 60);
+                      const dropWaitingCharge = dropExcessMins * ratePerMin;
+
+                      return (
+                        <div className="space-y-3">
+                          <div className="space-y-2 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Clock className="w-4 h-4 text-amber-400 animate-spin" />
+                                <span className="text-xs font-black text-amber-300 uppercase tracking-wide">
+                                  Drop Waiting Timer (3 Min Free)
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                Rate: ₹{ratePerMin}/min ({assignedTrip.vehicleCategory})
+                              </span>
+                            </div>
+
+                            {isWithinDropFreeWindow ? (
+                              <div className="p-3 bg-emerald-950/40 border border-emerald-700/60 rounded-xl space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-emerald-300 font-bold">Standard 3-Minute Free Window at Drop</span>
+                                  <span className="font-mono font-black text-emerald-400 text-sm">
+                                    {Math.floor(dropFreeSecsLeft / 60)}m {dropFreeSecsLeft % 60}s
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-slate-400">
+                                  Free 3-minute unloading period. No extra fee is accrued during this window.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-amber-950/50 border border-amber-600/70 rounded-xl space-y-1 animate-pulse">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-amber-200 font-black">Excess Waiting at Drop: {dropExcessMins} mins</span>
+                                  <span className="font-mono font-black text-amber-300 text-sm">
+                                    +₹{assignedTrip.dropWaitingCharge || dropWaitingCharge}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-amber-300/90">
+                                  Exceeded 3 minutes at drop. Charge is displaying synchronously on driver & customer screens.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* OTP Confirmation to complete drop (Item 21) */}
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-amber-300 font-bold">Collect Recipient Delivery 4-Digit OTP:</span>
+                              <span className="text-[10px] text-slate-500 italic">Hint: {assignedTrip.shipment.deliveryOtp}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="Drop OTP"
+                                value={deliveryOtpInput}
+                                onChange={(e) => setDeliveryOtpInput(e.target.value)}
+                                className="w-28 bg-slate-950 border border-slate-700 text-white font-mono text-center tracking-widest text-lg py-2 rounded-xl focus:border-emerald-500 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAdvanceStatus}
+                                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow"
+                              >
+                                Confirm Delivery OTP ✓
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Company QR Code Button for Payment Collection (Item 22) */}
+                          <button
+                            type="button"
+                            onClick={() => setShowCompanyQrPayModal(true)}
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs flex items-center justify-center space-x-2 shadow"
+                          >
+                            <QrCode className="w-4 h-4" />
+                            <span>Scan Company Payment QR Code (Collect ₹{assignedTrip.fare.totalFare})</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -2742,12 +3139,12 @@ export default function DriverApp() {
                 className="p-3 bg-emerald-950/60 border border-emerald-700 rounded-2xl flex flex-col items-center justify-center space-y-1 text-emerald-300 hover:bg-emerald-900/60 transition-colors shadow"
               >
                 <PhoneCall className="w-5 h-5 text-emerald-400" />
-                <span className="font-black text-white text-xs">1800-SWIF-LOAD</span>
+                <span className="font-black text-white text-xs">{brandConfig.supportPhone}</span>
                 <span className="text-[10px] text-emerald-400 font-medium">Toll-Free Helpline</span>
               </a>
 
               <a
-                href="https://wa.me/919842200000?text=SwifLoad%20Driver%20Support%20Request"
+                href={`https://wa.me/919842200000?text=${encodeURIComponent(`${brandConfig.appName} Driver Support Request`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="p-3 bg-teal-950/60 border border-teal-700 rounded-2xl flex flex-col items-center justify-center space-y-1 text-teal-300 hover:bg-teal-900/60 transition-colors shadow"
@@ -3372,6 +3769,7 @@ export default function DriverApp() {
                 onClick={() => {
                   setShowCompanyQrPayModal(false);
                   showToast('Payment verified via company QR code.');
+                  setShowCustomerFeedbackModal(true);
                 }}
                 className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow"
               >
@@ -3461,12 +3859,12 @@ export default function DriverApp() {
                   customerFeedbackSelectedTags
                 );
                 setShowCustomerFeedbackModal(false);
-                setDriverPage('home');
+                setDriverPage('available_orders');
                 showToast(`Feedback submitted! ₹${assignedTrip.fare.driverEarnings} added to your today earnings.`);
               }}
               className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
             >
-              Submit Feedback & Return to Dashboard ➔
+              Submit Feedback & Return to Available Orders ➔
             </button>
           </div>
         </div>
@@ -3885,7 +4283,7 @@ export default function DriverApp() {
             </div>
 
             <div className="p-3 bg-amber-950/30 border border-amber-600/40 rounded-2xl text-xs text-amber-200 leading-relaxed">
-              <strong>SwifLoad Operating Policy:</strong> Cancelling an order after acceptance disrupts customer operations. Selecting a reason below will temporarily suspend your order dispatch for the mandated safety cooldown period.
+              <strong>{brandConfig.appName} Operating Policy:</strong> Cancelling an order after acceptance disrupts customer operations. Selecting a reason below will temporarily suspend your order dispatch for the mandated safety cooldown period.
             </div>
 
             <div className="space-y-2">
@@ -3949,12 +4347,12 @@ export default function DriverApp() {
                             isSelected ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-300'
                           }`}
                         >
-                          {lockoutHours} Hour{lockoutHours !== 1 ? 's' : ''} Standby
+                          {lockoutHours < 1 ? `${Math.round(lockoutHours * 60)} Mins` : `${lockoutHours} Hour${lockoutHours !== 1 ? 's' : ''}`} Standby
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{item.desc}</p>
                       <div className="text-[10px] text-amber-400/90 font-medium mt-1">
-                        ⏳ Standby rule: You will not be allowed to take orders for the next {lockoutHours} hr{lockoutHours !== 1 ? 's' : ''}.
+                        ⏳ Standby rule: You will be paused from taking orders for {lockoutHours < 1 ? `${Math.round(lockoutHours * 60)} minutes` : `${lockoutHours} hr${lockoutHours !== 1 ? 's' : ''}`} as configured in Admin Portal.
                       </div>
                     </div>
                   </button>
@@ -3976,6 +4374,7 @@ export default function DriverApp() {
                 onClick={() => {
                   cancelTripByDriver(assignedTrip.id, currentDriver.id, selectedCancelReason);
                   setShowCancelReasonModal(false);
+                  setDriverPage('home');
                 }}
                 className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs shadow-lg transition-transform active:scale-95"
               >
@@ -3993,9 +4392,9 @@ export default function DriverApp() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <h3 className="font-bold text-base text-white flex items-center space-x-2">
-                  <span>⚡ Join SwifLoad Driver Fleet</span>
+                  <span>⚡ Join {brandConfig.appName} Driver Fleet</span>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">
-                    Coimbatore Hub
+                    {brandConfig.defaultCity} Hub
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400">
@@ -4018,7 +4417,7 @@ export default function DriverApp() {
                 registerDriver({
                   name: driverName.trim(),
                   phone: driverPhone.trim().startsWith('+91') ? driverPhone.trim() : `+91 ${driverPhone.trim()}`,
-                  email: driverEmail.trim() || `${driverName.toLowerCase().replace(/\s+/g, '.')}@swifload.test`,
+                  email: driverEmail.trim() || `${driverName.toLowerCase().replace(/\s+/g, '.')}@${brandConfig.appName.toLowerCase().replace(/[^a-z0-9]/g, '')}.test`,
                   vehicleCategory: driverVehCat,
                   vehicleModel: driverVehModel.trim() || 'Commercial Carrier',
                   vehicleNumber: driverVehNumber.trim().toUpperCase(),
@@ -4137,8 +4536,33 @@ export default function DriverApp() {
               darkMode ? 'bg-slate-950 border-r border-slate-800 text-white' : 'bg-white border-r border-slate-200 text-slate-900'
             }`}
           >
-            {/* Drawer Header: Driver Name with ID, Rating and link to proceed to view their wallet details */}
+            {/* Drawer Header: Brand Header & Driver Name with ID, Rating and link to proceed to view their wallet details */}
             <div className={`p-4 border-b space-y-3 ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
+              {/* Brand Identity Badge */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-700/40">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-xs">
+                    ⚡
+                  </div>
+                  <div>
+                    <span className={`font-black text-xs tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      {brandConfig.appName} Driver Partner
+                    </span>
+                    <span className="text-[10px] text-emerald-400 block font-mono">
+                      {brandConfig.defaultCity} Operations
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSideMenu(false)}
+                  className={`p-1.5 rounded-xl transition-colors shrink-0 ${
+                    darkMode ? 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2.5 min-w-0 flex-1">
                   <div className="relative shrink-0">
@@ -4167,14 +4591,6 @@ export default function DriverApp() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowSideMenu(false)}
-                  className={`p-1.5 rounded-xl transition-colors shrink-0 ${
-                    darkMode ? 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
               {/* Link to proceed to view their wallet details */}
@@ -4418,8 +4834,8 @@ export default function DriverApp() {
             <div className={`p-4 border-t text-[11px] space-y-1 ${
               darkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-500'
             }`}>
-              <div className={`font-bold ${darkMode ? 'text-slate-400' : 'text-slate-700'}`}>SwifLoad Logistics Pvt. Ltd.</div>
-              <div>Coimbatore Freight Hub v3.8.2</div>
+              <div className={`font-bold ${darkMode ? 'text-slate-400' : 'text-slate-700'}`}>{brandConfig.companyName}</div>
+              <div>{brandConfig.defaultCity} Freight Hub v3.8.2</div>
               <div className={`text-[10px] ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>All driver partner operations secured</div>
             </div>
           </div>
@@ -4477,7 +4893,7 @@ export default function DriverApp() {
               {/* Share via WhatsApp */}
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `Join SwifLoad as a Driver Partner using my referral code: ${currentDriver.referralCode || 'SWIF-DRV01-44'} and get an instant onboarding bonus! Sign up here: https://swifload-cbe.azurewebsites.net/driver`
+                  `Join ${brandConfig.appName} as a Driver Partner using my referral code: ${currentDriver.referralCode || `${brandConfig.codePrefix}-DRV01-44`} and get an instant onboarding bonus! Sign up here: ${brandConfig.websiteUrl}/driver`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -4536,7 +4952,7 @@ export default function DriverApp() {
                     <span className="font-black text-amber-500 text-sm">+₹200</span>
                   </div>
                   <p className={`text-[11px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Earn ₹200 credited directly to your SwifLoad wallet when your referred driver partner completes their first 5 trips in Coimbatore.
+                    Earn ₹200 credited directly to your {brandConfig.appName} wallet when your referred driver partner completes their first 5 trips in {brandConfig.defaultCity}.
                   </p>
                 </div>
 
@@ -4675,7 +5091,7 @@ export default function DriverApp() {
                   Company Dynamic QR Code Payments
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Always use the SwifLoad Company QR code (<code className="text-emerald-300">swifload.ops@icici</code>) for customer digital payments to ensure automatic fare reconciliation and 0% delay in payouts.
+                  Always use the {brandConfig.appName} Company QR code (<code className="text-emerald-300">swifload.ops@icici</code>) for customer digital payments to ensure automatic fare reconciliation and 0% delay in payouts.
                 </p>
               </div>
             </div>
@@ -4754,7 +5170,9 @@ export default function DriverApp() {
                   {cancellationSlabConfigs.map((s) => (
                     <div key={s.reason} className="p-1.5 bg-slate-950 rounded border border-slate-800">
                       <span className="font-bold text-white block">{s.reason}:</span>
-                      <span className="text-amber-400">{s.lockoutHours}h Standby Cooldown</span>
+                      <span className="text-amber-400">
+                        {s.lockoutHours < 1 ? `${Math.round(s.lockoutHours * 60)}m` : `${s.lockoutHours}h`} Standby Cooldown
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -4941,7 +5359,7 @@ export default function DriverApp() {
         const stop = activeQrModalStop.stop;
         const bookingCode = activeQrModalStop.bookingCode;
         const amount = stop.associatedCharge || 250;
-        const upiUri = `upi://pay?pa=swifload.ops@icici&pn=SwifLoad%20Logistics%20Private%20Limited&am=${amount}&cu=INR&tn=SwifLoad_${bookingCode}_Stop_${stop.sequence}`;
+        const upiUri = `upi://pay?pa=swifload.ops@icici&pn=${encodeURIComponent(brandConfig.companyName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(brandConfig.appName)}_${bookingCode}_Stop_${stop.sequence}`;
         const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiUri)}`;
 
         return (
@@ -4978,20 +5396,20 @@ export default function DriverApp() {
                   ₹{amount}
                 </div>
                 <div className="text-[11px] font-bold text-white">
-                  SwifLoad Logistics Private Limited
+                  {brandConfig.companyName}
                 </div>
                 <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1 text-left">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Beneficiary:</span>
-                    <span className="font-mono font-semibold">swifload.ops@icici</span>
+                    <span className="font-mono font-semibold">ops@{brandConfig.appName.toLowerCase().replace(/[^a-z0-9]/g, '')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Bank:</span>
-                    <span>ICICI Bank Coimbatore Main</span>
+                    <span>ICICI Bank {brandConfig.defaultCity} Main</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Ref Note:</span>
-                    <span className="font-mono text-emerald-300">SwifLoad_{bookingCode}_S{stop.sequence}</span>
+                    <span className="font-mono text-emerald-300">{brandConfig.appName}_{bookingCode}_S{stop.sequence}</span>
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-400 pt-1">
@@ -5338,7 +5756,7 @@ export default function DriverApp() {
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 <div>
                   <h3 className="font-bold text-sm text-white">Company Privacy Policy</h3>
-                  <p className="text-[10px] text-slate-400">SwifLoad Logistics Private Limited</p>
+                  <p className="text-[10px] text-slate-400">{brandConfig.companyName}</p>
                 </div>
               </div>
               <button onClick={() => setShowPrivacyModal(false)} className="text-slate-400 hover:text-white p-1">
@@ -5348,13 +5766,13 @@ export default function DriverApp() {
 
             <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs text-slate-300 leading-relaxed">
               <p className="text-[11px] text-slate-400">
-                This Driver Partner Privacy Policy explains how SwifLoad Logistics Private Limited collects, uses, and protects your personal and operational information while you are on the platform.
+                This Driver Partner Privacy Policy explains how {brandConfig.companyName} collects, uses, and protects your personal and operational information while you are on the platform.
               </p>
 
               <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
                 <div className="font-bold text-white text-xs">1. Location & Telematics Tracking</div>
                 <p className="text-[11px] text-slate-400">
-                  When you toggle your status to <strong>ONLINE</strong>, SwifLoad records real-time GPS coordinates to calculate proximity to nearby freight bookings, ensure driver en-route safety, and power live customer tracking. Location sharing ceases when you toggle <strong>OFFLINE</strong>.
+                  When you toggle your status to <strong>ONLINE</strong>, {brandConfig.appName} records real-time GPS coordinates to calculate proximity to nearby freight bookings, ensure driver en-route safety, and power live customer tracking. Location sharing ceases when you toggle <strong>OFFLINE</strong>.
                 </p>
               </div>
 

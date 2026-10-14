@@ -34,7 +34,7 @@ export default function WebNavbar({
   onOpenSimulator,
   onSelectServiceTab,
 }: WebNavbarProps) {
-  const { currentCustomer } = useLogistics();
+  const { currentCustomer, brandConfig } = useLogistics();
   const [selectedCity, setSelectedCity] = useState('Coimbatore');
   const [isCityOpen, setIsCityOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
@@ -102,10 +102,10 @@ export default function WebNavbar({
             </div>
             <div>
               <div className="flex items-baseline space-x-1">
-                <span className="font-black text-xl tracking-tight text-slate-900">SwifLoad</span>
+                <span className="font-black text-xl tracking-tight text-slate-900">{brandConfig.appName}</span>
                 <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Logistics</span>
               </div>
-              <p className="text-[9px] text-slate-400 font-medium tracking-tight -mt-0.5">Move Anything, Anywhere</p>
+              <p className="text-[9px] text-slate-400 font-medium tracking-tight -mt-0.5">{brandConfig.tagline}</p>
             </div>
           </div>
 
@@ -445,7 +445,7 @@ export default function WebNavbar({
             onClick={() => scrollToSection('enterprise')}
             className="w-full text-left py-2 text-slate-800"
           >
-            🏢 SwifLoad Enterprise
+            🏢 {brandConfig.appName} Enterprise
           </button>
           <button
             onClick={() => scrollToSection('driver-partner')}

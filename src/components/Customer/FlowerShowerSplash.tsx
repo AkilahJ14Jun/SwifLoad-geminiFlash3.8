@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sparkles, ArrowRight, ShieldCheck, Truck, X } from 'lucide-react';
+import { useLogistics } from '@/context/LogisticsContext';
 
 interface FlowerShowerSplashProps {
   onDismiss: () => void;
@@ -26,6 +27,7 @@ export default function FlowerShowerSplash({
   role = 'customer',
   userName,
 }: FlowerShowerSplashProps) {
+  const { brandConfig } = useLogistics();
   const [petals, setPetals] = useState<Petal[]>([]);
   const [countdown, setCountdown] = useState<number>(4);
 
@@ -91,14 +93,14 @@ export default function FlowerShowerSplash({
         {/* Festive Badge */}
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>{role === 'driver' ? 'வணக்கம் • Driver Partner Welcome' : 'வணக்கம் • Welcome to Coimbatore'}</span>
+          <span>{role === 'driver' ? 'வணக்கம் • Driver Partner Welcome' : `வணக்கம் • Welcome to ${brandConfig.defaultCity}`}</span>
         </div>
 
         {/* Hero Title */}
         <div className="space-y-1">
           <div className="text-3xl">🌸 🌺 🌼</div>
           <h2 className="text-xl font-black tracking-tight text-white">
-            {role === 'driver' ? 'SwiftLoad Driver Partner' : 'SwiftLoad Coimbatore'}
+            {role === 'driver' ? `${brandConfig.appName} Driver Partner` : `${brandConfig.appName} ${brandConfig.defaultCity}`}
           </h2>
           <p className="text-xs text-emerald-300/90 font-medium">
             {role === 'driver'

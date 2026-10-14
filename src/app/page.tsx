@@ -25,7 +25,7 @@ import AdminPortal from '@/components/Admin/AdminPortal';
 import WebPlatform from '@/components/Website/WebPlatform';
 
 export default function Home() {
-  const { role, setRole, toastMessage } = useLogistics();
+  const { role, setRole, toastMessage, brandConfig } = useLogistics();
   const [viewMode, setViewMode] = useState<'website' | 'customer' | 'driver' | 'admin' | 'dual'>('website');
   const [isFramed, setIsFramed] = useState<boolean>(true);
 
@@ -40,7 +40,7 @@ export default function Home() {
               className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30"
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>Back to SwifLoad Website</span>
+              <span>Back to {brandConfig.appName} Website</span>
             </button>
 
             <Link
@@ -54,10 +54,9 @@ export default function Home() {
             {/* Direct 1-Click APK Download for Currently Active Simulator */}
             {viewMode === 'customer' && (
               <a
-                href="/downloads/SwifLoad-Customer.apk"
-                download="SwifLoad-Customer.apk"
+                href="/downloads"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/30 animate-pulse"
-                title="Download latest SwifLoad Customer APK"
+                title={`Download latest ${brandConfig.appName} Customer APK`}
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Customer App (.apk)</span>
@@ -67,10 +66,9 @@ export default function Home() {
 
             {viewMode === 'driver' && (
               <a
-                href="/downloads/SwifLoad-Driver.apk"
-                download="SwifLoad-Driver.apk"
+                href="/downloads"
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 animate-pulse"
-                title="Download latest SwifLoad Driver-Partner APK"
+                title={`Download latest ${brandConfig.appName} Driver-Partner APK`}
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Driver App (.apk)</span>
@@ -81,16 +79,14 @@ export default function Home() {
             {viewMode === 'dual' && (
               <div className="flex items-center space-x-2">
                 <a
-                  href="/downloads/SwifLoad-Customer.apk"
-                  download="SwifLoad-Customer.apk"
+                  href="/downloads"
                   className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all"
                 >
                   <Download className="w-3 h-3" />
                   <span>Customer (.apk)</span>
                 </a>
                 <a
-                  href="/downloads/SwifLoad-Driver.apk"
-                  download="SwifLoad-Driver.apk"
+                  href="/downloads"
                   className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
                 >
                   <Download className="w-3 h-3" />
@@ -215,8 +211,7 @@ export default function Home() {
                 <span className="text-slate-300 font-bold">Customer App Simulator</span>
                 <span className="text-slate-500">|</span>
                 <a
-                  href="/downloads/SwifLoad-Customer.apk"
-                  download="SwifLoad-Customer.apk"
+                  href="/downloads"
                   className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold hover:underline"
                 >
                   <Download className="w-3 h-3" />
@@ -272,8 +267,7 @@ export default function Home() {
                 <span className="text-slate-300 font-bold">Driver-Partner App Simulator</span>
                 <span className="text-slate-500">|</span>
                 <a
-                  href="/downloads/SwifLoad-Driver.apk"
-                  download="SwifLoad-Driver.apk"
+                  href="/downloads"
                   className="flex items-center gap-1 text-blue-400 hover:text-blue-300 font-bold hover:underline"
                 >
                   <Download className="w-3 h-3" />
